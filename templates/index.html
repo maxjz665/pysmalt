@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>СМАЛТ</title>
+
+    {% load static %}
+
+    <link rel="stylesheet" href="{% static 'css/external/bootstrap.min.css' %}">
+    {% block link %} {% endblock %}
+
+	<!-- Scripts -->
+	<script src="{% static 'js/external/bootstrap.bundle.min.js' %}"></script>
+	<script src="{% static 'js/external/jquery.min.js' %}"></script>
+
+    {% block script %} {% endblock script %}
+</head>
+<body style="height: 100%; min-height: 100%">
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <a class="navbar-brand" href=".">SMALT Shower</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+        {$panelButtons}
+    </ul>
+    {$loginForm}
+  </div>
+</nav>
+<noscript>
+<div class="alert alert-warning" role="alert">
+  Система Smalt Shower использует Javascript для обработки действий пользователей. Без Javascript ряд действий будет недоступен. Если Вы хотите выполнять операции с системой необходимо включить Javascript настройках браузера.
+</div>
+</noscript>
+
+
+<!-- Content -->
+{% block content %} {% endblock content %}
+
+<footer><div class="card text-center text-white bg-secondary">Сервис разработан при финансовой поддержке РФФИ (Отделение гуманитарных и общественных наук), проект «Проблема атрибуции анонимных и псевдонимных статей в журналах "Время", "Эпоха" и еженедельнике "Гражданин"» (No 18-012-90026).
+<div style="display: flex;justify-content: space-between;"><div><span>Замечания по работе сервиса: <a href="mailto:kulakov@cs.petrsu.ru">Кулаков Кирилл</a>.</span></div>
+<div id="stats"><!-- STATS: Total: %(total_time).2fs Python: %(python_time).2fs DB: %(db_time).2fs Queries: %(db_queries)d ENDSTATS --></div>
+</div></div></footer>
+</body>
+</html>
