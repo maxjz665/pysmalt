@@ -6,5 +6,6 @@ from django.urls import path
 from text_app import views
 
 urlpatterns = [
-    path('', views.index, name='home')
+    path('', views.index, name='home'),
+    path('papers', views.list_papers, name="text_app/papers_list")
 ]

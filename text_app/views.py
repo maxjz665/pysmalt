@@ -10,3 +10,7 @@ def index(request: HttpRequest):
     Домашняя страница: отображение текстов
     """
     return render(request, "text_app/home.html", context={})
+
+
+def list_papers(request: HttpRequest):
+    pass
