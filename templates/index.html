@@ -8,11 +8,13 @@
     {% load static %}
 
     <link rel="stylesheet" href="{% static 'css/external/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     {% block link %} {% endblock %}
 
 	<!-- Scripts -->
 	<script src="{% static 'js/external/bootstrap.bundle.min.js' %}"></script>
 	<script src="{% static 'js/external/jquery.min.js' %}"></script>
+    <script src="{% static 'js/functions.js' %}"></script>
 
     {% block script %} {% endblock script %}
 </head>
@@ -23,12 +25,7 @@
     <span class="navbar-toggler-icon"></span>
   </button>
 
-  <div class="collapse navbar-collapse" id="navbarSupportedContent">
-    <ul class="navbar-nav mr-auto">
-        {% include "top_panel.html" %}
-    </ul>
-    {$loginForm}
-  </div>
+  {% include "components/main_nav_bar.html" %}
 </nav>
 <noscript>
 <div class="alert alert-warning" role="alert">
@@ -37,9 +34,10 @@
 </noscript>
 
 
+<div class="content-with-top">
 <!-- Content -->
 {% block content %} {% endblock content %}
-
+</div>
 <footer><div class="card text-center text-white bg-secondary">Сервис разработан при финансовой поддержке РФФИ (Отделение гуманитарных и общественных наук), проект «Проблема атрибуции анонимных и псевдонимных статей в журналах "Время", "Эпоха" и еженедельнике "Гражданин"» (No 18-012-90026).
 <div style="display: flex;justify-content: space-between;"><div><span>Замечания по работе сервиса: <a href="mailto:kulakov@cs.petrsu.ru">Кулаков Кирилл</a>.</span></div>
 <div id="stats"><!-- STATS: Total: %(total_time).2fs Python: %(python_time).2fs DB: %(db_time).2fs Queries: %(db_queries)d ENDSTATS --></div>

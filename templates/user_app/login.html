@@ -1,0 +1,39 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-lg-around bd-highlight">
+<div class="p-2" style="width:30%">
+<h3>Регистрация</h3>
+  <form method="post">
+    <div class="form-group">
+    <input class="form-control mr-sm-2" type="text" placeholder="Имя пользователя" aria-label="name" name="name" value="{{form.name}}">
+    </div>
+    <div class="form-group">
+    <input class="form-control mr-sm-2" type="email" placeholder="Адрес email" aria-label="email" name="login" value="{{ form.login }}">
+    </div>
+    <div class="form-group">
+    <input class="form-control mr-sm-2" type="password" placeholder="Пароль" aria-label="password" name="password" value="{{ password }}">
+    </div>
+    <div class="form-group">
+    <input class="form-control mr-sm-2" type="password" placeholder="Повтор пароля" aria-label="password2" name="password2" value="{{ form.password2 }}">
+    </div>
+    <button class="btn btn-outline-success my-2 my-sm-0" type="submit" name="action" value="register">Регистрация</button>
+  </form>
+</div>
+
+<div class="p-2" style="width:30%">
+<h3>Авторизация</h3>
+<br>
+  <form method="post">
+    <div class="form-group">
+    <input class="form-control mr-sm-2" type="email" placeholder="Адрес email" aria-label="email" name="login" value="{{ form.login }}">
+    </div>
+    <div class="form-group">
+    <input class="form-control mr-sm-2" type="password" placeholder="Пароль" aria-label="password" name="password" value="{{ form.password }}">
+    </div>
+    <button class="btn btn-outline-success my-2 my-sm-0" type="submit" name="action" value="login">Авторизация</button>
+  </form>
+  <br>
+</div>
+</div>
+{% endblock content %}
