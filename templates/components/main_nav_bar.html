@@ -17,5 +17,9 @@
         <li class="nav-item"><a class="nav-link" href="help.html">Справка</a></li>
     </ul>
 
-    <a class="btn btn-outline-success my-2 my-sm-0" href="{% url 'user_app/login' %}">Вход / Регистрация</a>
+    {% if user.is_authenticated %}
+        <a class="btn btn-outline-success my-2 my-sm-0" href="{% url 'user_app/profile' %}">{{ user.name }}</a> &nbsp;(<a href="{% url 'user_app/logout' %}">Выход</a>)
+    {% else %}
+        <a class="btn btn-outline-success my-2 my-sm-0" href="{% url 'user_app/login' %}">Вход / Регистрация</a>
+    {% endif %}
 </div>

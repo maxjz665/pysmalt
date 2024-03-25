@@ -1,3 +1,4 @@
+from django.contrib.auth import login, logout
 from django.db import OperationalError
 from django.http import HttpRequest
 from django.shortcuts import render, redirect
@@ -6,7 +7,7 @@ from user_app.forms.user_creation_form import UserCreationForm
 from user_app.forms.user_login_form import UserLoginForm
 
 
-def login(request: HttpRequest):
+def log_in(request: HttpRequest):
     """
     Обработка запросов на авторизацию пользователя
     :param request: запрос на авторизацию
@@ -21,16 +22,21 @@ def login(request: HttpRequest):
             if form_login_user.is_valid():
                 try:
                     user = form_login_user.authenticate()
+                    login(request, user)
                 except OperationalError as exception:
                     return render(request, 'user_app/login.html', context={
                         'error_message': str(exception),
                         'form_login_user': form_login_user,
-                        'form_create_user': form_create_user
+                        'form_create_user': form_create_user,
+                        'form_login_errors': True
                     })
-                return redirect('home')
-            return render(request, "user_app/login.html", context={'form_login_user': form_login_user,
-                                                                   'form_create_user': form_create_user,
-                                                                   'form_login_errors': True})
+            else:
+                return render(request, 'user_app/login.html', context={
+                    'form_login_user': form_login_user,
+                    'form_create_user': form_create_user,
+                    'form_login_errors': True
+                })
+            return redirect('home')
         if request.POST.get('action') == 'register':
             if form_create_user.is_valid():
                 # сохранение пользователя
@@ -41,3 +47,12 @@ def login(request: HttpRequest):
     else:
         return render(request, "user_app/login.html", context={'form_login_user': form_login_user,
                                                                'form_create_user': form_create_user})
+
+
+def profile(request: HttpRequest):
+    return None
+
+
+def log_out(request: HttpRequest):
+    logout(request)
+    return redirect('home')

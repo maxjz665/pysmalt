@@ -29,3 +29,13 @@ DATABASES = {
 ```commandline
 python manage.py runserver
 ```
+
+## Для разработчиков
+### Создание миграций
+```shell
+python manage.py makemigrations
+```
+### Применение миграций
+```shell
+python manage.py migrate
+```
