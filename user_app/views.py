@@ -28,7 +28,9 @@ def login(request: HttpRequest):
                         'form_create_user': form_create_user
                     })
                 return redirect('home')
-
+            return render(request, "user_app/login.html", context={'form_login_user': form_login_user,
+                                                                   'form_create_user': form_create_user,
+                                                                   'form_login_errors': True})
         if request.POST.get('action') == 'register':
             if form_create_user.is_valid():
                 # сохранение пользователя

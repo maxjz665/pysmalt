@@ -28,7 +28,7 @@ class UserLoginForm(forms.ModelForm):
         }
 
         error_messages = {
-            'login': { 'required': "Необходимо заполнить поле"},
+            'login': {'required': "Необходимо заполнить поле"},
             "password": {"required": "Необходимо заполнить поле"}
         }
 
