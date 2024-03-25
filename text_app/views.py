@@ -4,6 +4,8 @@
 from django.http import HttpRequest
 from django.shortcuts import render
 
+from text_app.models.tbl_text import TblText
+
 
 def index(request: HttpRequest):
     """
@@ -13,4 +15,10 @@ def index(request: HttpRequest):
 
 
 def list_papers(request: HttpRequest):
-    pass
+    """
+    Отображение перечня произведений
+    :param request: параметры запроса
+    :return: перечень произведений
+    """
+    texts = TblText.objects.filter().all()
+    return render(request, "text_app/list_papers.html", context={'texts': texts})
