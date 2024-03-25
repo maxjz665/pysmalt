@@ -1,3 +1,5 @@
+import time
+
 from django.contrib.auth import login, logout
 from django.db import OperationalError
 from django.http import HttpRequest
@@ -5,6 +7,7 @@ from django.shortcuts import render, redirect
 
 from user_app.forms.user_creation_form import UserCreationForm
 from user_app.forms.user_login_form import UserLoginForm
+from user_app.models import TblUser
 
 
 def log_in(request: HttpRequest):
@@ -19,13 +22,20 @@ def log_in(request: HttpRequest):
     if request.method == 'POST':
         # обработка данных формы
         if request.POST.get('action') == 'login':
+            if request.POST['login'] == '':
+                form_login_user.add_error('login', 'Пожалуйста, введите логин')
+
+            if request.POST['password'] == '':
+                form_login_user.add_error('password', 'Пожалуйста, введите пароль')
+
             if form_login_user.is_valid():
                 try:
                     user = form_login_user.authenticate()
                     login(request, user)
-                except OperationalError as exception:
+                except (OperationalError, TblUser.DoesNotExist):
+                    time.sleep(5)
                     return render(request, 'user_app/login.html', context={
-                        'error_message': str(exception),
+                        'error_message': "Неверный логин и/или пароль",
                         'form_login_user': form_login_user,
                         'form_create_user': form_create_user,
                         'form_login_errors': True

@@ -14,14 +14,17 @@ class UserLoginForm(forms.Form):
     Модель данных авторизации пользователя
     """
     login = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control',
-                                                          'required': 'required',
                                                           'autocomplete': 'on',
                                                           'unique': 'false',
                                                           'placeholder': 'Адрес email'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control',
-                                                                 'required': 'required',
                                                                  'autocomplete': 'on',
                                                                  'placeholder': 'Пароль'}))
+
+    def __init__(self, *args, **kwargs):
+        super(UserLoginForm, self).__init__(*args, **kwargs)
+        self.fields['login'].required = False
+        self.fields['password'].required = False
 
     def authenticate(self):
         """
