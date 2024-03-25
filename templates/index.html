@@ -35,6 +35,11 @@
 
 
 <div class="content-with-top">
+<!-- отображение ошибок -->
+    {% if error_message is not null %}
+        <div class="alert alert-danger">{{error_message}}</div>
+    {% endif %}
+
 <!-- Content -->
 {% block content %} {% endblock content %}
 </div>

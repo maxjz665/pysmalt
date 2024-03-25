@@ -7,16 +7,16 @@
   <form method="post">
     {% csrf_token %}
     <div class="form-group">
-    <input class="form-control mr-sm-2" type="text" placeholder="Имя пользователя" aria-label="name" name="name" value="{{form.name}}">
+    <input class="form-control mr-sm-2" type="text" placeholder="Имя пользователя" aria-label="name" name="name" value="{{form_create_user.name}}">
     </div>
     <div class="form-group">
-    <input class="form-control mr-sm-2" type="email" placeholder="Адрес email" aria-label="email" name="login" value="{{ form.login }}">
+    <input class="form-control mr-sm-2" type="email" placeholder="Адрес email" aria-label="email" name="login" value="{{ form_create_user.login }}">
     </div>
     <div class="form-group">
-    <input class="form-control mr-sm-2" type="password" placeholder="Пароль" aria-label="password" name="password" value="{{ password }}">
+    <input class="form-control mr-sm-2" type="password" placeholder="Пароль" aria-label="password" name="password" value="{{ form_create_user.password }}">
     </div>
     <div class="form-group">
-    <input class="form-control mr-sm-2" type="password" placeholder="Повтор пароля" aria-label="password2" name="password2" value="{{ form.password2 }}">
+    <input class="form-control mr-sm-2" type="password" placeholder="Повтор пароля" aria-label="password2" name="password2" value="{{ form_create_user.password2 }}">
     </div>
     <button class="btn btn-outline-success my-2 my-sm-0" type="submit" name="action" value="register">Регистрация</button>
   </form>
@@ -28,10 +28,16 @@
   <form method="post">
     {% csrf_token %}
     <div class="form-group">
-    <input class="form-control mr-sm-2" type="email" placeholder="Адрес email" aria-label="email" name="login" value="{{ form.login }}">
+        {{ form_login_user.login }}
+        {% for error in form_login_user.login.errors %}
+            <div class="alert alert-danger">{{error}}</div>
+        {% endfor %}
     </div>
     <div class="form-group">
-    <input class="form-control mr-sm-2" type="password" placeholder="Пароль" aria-label="password" name="password" value="{{ form.password }}">
+        {{ form_login_user.password }}
+        {% for error in form_login_user.password.errors %}
+            <div class="alert alert-danger">{{error}}</div>
+        {% endfor %}
     </div>
     <button class="btn btn-outline-success my-2 my-sm-0" type="submit" name="action" value="login">Авторизация</button>
   </form>
