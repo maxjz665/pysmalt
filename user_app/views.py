@@ -16,6 +16,7 @@ def log_in(request: HttpRequest):
     :param request: запрос на авторизацию
     :return: форма или редирект с куками
     """
+    next_url = request.GET.get("next", "")
     form_login_user = UserLoginForm(request.POST)
     form_create_user = UserCreationForm(request.POST)
 
@@ -38,14 +39,18 @@ def log_in(request: HttpRequest):
                         'error_message': "Неверный логин и/или пароль",
                         'form_login_user': form_login_user,
                         'form_create_user': form_create_user,
-                        'form_login_errors': True
+                        'form_login_errors': True,
+                        next: next_url
                     })
             else:
                 return render(request, 'user_app/login.html', context={
                     'form_login_user': form_login_user,
                     'form_create_user': form_create_user,
-                    'form_login_errors': True
+                    'form_login_errors': True,
+                    next: next_url
                 })
+            if next_url and next_url != "/":
+                return redirect(next_url)
             return redirect('home')
         if request.POST.get('action') == 'register':
             if form_create_user.is_valid():
@@ -54,9 +59,9 @@ def log_in(request: HttpRequest):
         return render(request, "user_app/login.html", context={"error_message": "Неизвестное действие",
                                                                'form_login_user': form_login_user,
                                                                'form_create_user': form_create_user})
-    else:
+    else: # GET
         return render(request, "user_app/login.html", context={'form_login_user': form_login_user,
-                                                               'form_create_user': form_create_user})
+                                                               'form_create_user': form_create_user, 'next': next_url})
 
 
 def profile(request: HttpRequest):
@@ -65,4 +70,7 @@ def profile(request: HttpRequest):
 
 def log_out(request: HttpRequest):
     logout(request)
+    next_url = request.GET.get('next', "")
+    if next_url and next_url != "/":
+        return redirect(next_url)
     return redirect('home')
