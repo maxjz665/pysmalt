@@ -4,6 +4,7 @@
 from django.db import models
 
 from text_app.models.tbl_author import TblAuthor
+from text_app.models.tbl_magazine import TblMagazine
 
 
 class TblText(models.Model):
@@ -18,5 +19,7 @@ class TblText(models.Model):
     title = models.CharField()
     inuse1 = models.IntegerField(default=1)
     inuse2 = models.IntegerField(default=0)  # Возможно в будущем удалить тексты новой разметки т.к. не используются
+    category = models.IntegerField(default=0)
     status = models.IntegerField(default=0)
     author = models.ForeignKey(TblAuthor, on_delete=models.SET_NULL)
+    magazine = models.ForeignKey(TblMagazine, on_delete=models.SET_NULL)

@@ -1,0 +1,14 @@
+<div class='paper'
+     data-title='{{ text_data.title }}'
+     data-id='{{ text_data.id }}'
+     data-year='{{ text_data.publicaton_date }}'
+     data-mag='{{text_data.magazine.name }}'
+     data-num='{{ text_data.magazine_no }}'
+     data-author1='{{ text_data.author }}'
+     data-author2='{{ text_data.author2 }}'
+     data-author3='{{ text_data.author3 }}'>
+    <div style='display: flex; align-items: center;'>
+        {{ text_data.title }}
+        <div class='comment'>{{ text_data.comment }}</div>
+    </div>
+</div>
