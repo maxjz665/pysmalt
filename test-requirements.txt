@@ -1,1 +1,2 @@
 pylint-django~=2.5
+pylint
