@@ -1,5 +1,6 @@
 import time
 
+from django.conf import settings
 from django.contrib.auth import login, logout
 from django.db import OperationalError
 from django.http import HttpRequest
@@ -34,14 +35,14 @@ def log_in(request: HttpRequest):
                     user = form_login_user.authenticate()
                     login(request, user)
                 except (OperationalError, TblUser.DoesNotExist):
-                    time.sleep(5)
+                    time.sleep(settings.LOGIN_DELAY_SECONDS)
                     return render(request, 'user_app/login.html', context={
                         'error_message': "Неверный логин и/или пароль",
                         'form_login_user': form_login_user,
                         'form_create_user': form_create_user,
                         'form_login_errors': True,
                         next: next_url
-                    })
+                    }, status=404)
             else:
                 return render(request, 'user_app/login.html', context={
                     'form_login_user': form_login_user,
@@ -56,9 +57,10 @@ def log_in(request: HttpRequest):
             if form_create_user.is_valid():
                 # сохранение пользователя
                 user = form_create_user.save()
+            return redirect('home')
         return render(request, "user_app/login.html", context={"error_message": "Неизвестное действие",
                                                                'form_login_user': form_login_user,
-                                                               'form_create_user': form_create_user})
+                                                               'form_create_user': form_create_user}, status=404)
     else: # GET
         return render(request, "user_app/login.html", context={'form_login_user': form_login_user,
                                                                'form_create_user': form_create_user, 'next': next_url})
