@@ -32,11 +32,12 @@ pylint:
     - source .venv/bin/activate
     - pip install --upgrade pip
     - pip install -r requirements.txt
+    - pip install -r test-requirements.txt
     - pip install pylint-gitlab anybadge
   script:
     - mkdir ./pylint
-    - pylint --exit-zero --output-format=text $(find -type f -name "*.py" ! -path "**/.venv/**" ! -path "**/.cache/**"  ! -path "**/migrations/**") | tee ./pylint/pylint.log
-    - pylint --exit-zero --output-format=pylint_gitlab.GitlabCodeClimateReporter:codeclimate.json $(find -type f -name "*.py" ! -path "**/.venv/**" ! -path "**/.cache/**"  ! -path "**/migrations/**")
+    - pylint --exit-zero --load-plugins pylint_django --output-format=text $(find -type f -name "*.py" ! -path "**/.venv/**" ! -path "**/.cache/**"  ! -path "**/migrations/**") | tee ./pylint/pylint.log
+    - pylint --exit-zero --load-plugins pylint_django --output-format=pylint_gitlab.GitlabCodeClimateReporter:codeclimate.json $(find -type f -name "*.py" ! -path "**/.venv/**" ! -path "**/.cache/**"  ! -path "**/migrations/**")
     - PYLINT_SCORE=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' ./pylint/pylint.log)
     - python3 -m anybadge --label=Pylint --file=pylint/pylint.svg --value=$PYLINT_SCORE 2=red 4=orange 8=yellow 10=green
     - echo "Pylint score is $PYLINT_SCORE"
@@ -65,7 +66,6 @@ pytest:
       - source .venv/bin/activate
       - pip install --upgrade pip
       - pip install -r requirements.txt
-      - pip install -r tests/requirements.txt
       - pip install pytest-cov
     script:
       - coverage run -m manage.py test --settings=shower.settings.test --junitxml=report.xml
