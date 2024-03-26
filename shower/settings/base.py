@@ -9,13 +9,11 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-import importlib.util
 import os
-import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -45,6 +43,9 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = 'user_app.TblUser'
+
+# задержка выдачи ответа при неверном логине/пароле
+LOGIN_DELAY_SECONDS = 5
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -138,7 +139,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # подключаем сюда локальные настройки
 try:
-    from .local_settings import *
+    from shower.settings.local import *
 except ImportError:
     print("LOCAL SETTINGS NOT FOUND, USE DEFAULT SETTINGS!")
 
