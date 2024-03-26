@@ -20,5 +20,8 @@ def list_papers(request: HttpRequest):
     :param request: параметры запроса
     :return: перечень произведений
     """
-    texts = TblText.objects.filter().all()
-    return render(request, "text_app/list_papers.html", context={'texts': texts})
+    # получение параметров просмотра списка
+    view = request.GET.get("view", "list")
+
+    texts = TblText.objects.filter(inuse1=1).order_by('status').order_by('title').all()
+    return render(request, "text_app/list_papers.html", context={'texts': texts, "view": view})
