@@ -1,0 +1,89 @@
+image: ubuntu
+
+stages:
+  - test
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/reference/pip_install/#caching
+cache:
+  paths:
+    - .apt
+    - .cache/pip
+
+pylint:
+  stage: build
+  only:
+  - main
+  - develop
+  - merge_requests
+  image: python:3.10-slim
+  before_script:
+    - rm -f /etc/apt/apt.conf.d/docker-clean
+    #- mkdir -p .apt && rm -rf /var/cache/apt/archives/* && mount --bind .apt /var/cache/apt/archives/
+    #- '( apt-get update -y && apt-get install gcc libpq-dev make -y )'
+    - python -V               # Print out python version for debugging
+    - pip install virtualenv
+    - virtualenv .venv
+    - source .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install pylint-gitlab anybadge
+  script:
+    - mkdir ./pylint
+    - pylint --exit-zero --output-format=text $(find -type f -name "*.py" ! -path "**/.venv/**" ! -path "**/.cache/**"  ! -path "**/migrations/**") | tee ./pylint/pylint.log
+    - pylint --exit-zero --output-format=pylint_gitlab.GitlabCodeClimateReporter:codeclimate.json $(find -type f -name "*.py" ! -path "**/.venv/**" ! -path "**/.cache/**"  ! -path "**/migrations/**")
+    - PYLINT_SCORE=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' ./pylint/pylint.log)
+    - python3 -m anybadge --label=Pylint --file=pylint/pylint.svg --value=$PYLINT_SCORE 2=red 4=orange 8=yellow 10=green
+    - echo "Pylint score is $PYLINT_SCORE"
+  artifacts:
+    paths:
+      - ./pylint/
+    reports:
+      codequality: codeclimate.json
+    when: always
+
+pytest:
+    stage: build
+    image: python:3.10-slim
+    only:
+    - main
+    - develop
+    - merge_requests
+
+    services:
+      - postgres
+    variables:
+    # Configure postgres service (https://hub.docker.com/_/postgres/)
+      POSTGRES_DB: platform_test
+      POSTGRES_USER: custom_user
+      POSTGRES_PASSWORD: custom_pass
+
+    before_script:
+      - rm -f /etc/apt/apt.conf.d/docker-clean
+      #- mkdir -p .apt && rm -rf /var/cache/apt/archives/* && mount --bind .apt /var/cache/apt/archives/
+      #- '( apt-get update -y && apt-get install gcc libpq-dev make -y )'
+      - python -V               # Print out python version for debugging
+      - pip install virtualenv
+      - virtualenv .venv
+      - source .venv/bin/activate
+      - pip install --upgrade pip
+      - pip install -r requirements.txt
+      - pip install -r tests/requirements.txt
+      - pip install pytest-cov
+    script:
+      - coverage run -m manage.py test --settings=shower.settings.test --junitxml=report.xml
+      - coverage report
+      - coverage xml
+
+    coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+    artifacts:
+      reports:
+        junit: report.xml
+        coverage_report:
+          coverage_format: cobertura
+          path: coverage.xml
