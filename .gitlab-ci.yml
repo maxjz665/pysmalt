@@ -66,9 +66,10 @@ pytest:
       - source .venv/bin/activate
       - pip install --upgrade pip
       - pip install -r requirements.txt
-      - pip install coverage
+      - pip install -r test-requirements.txt
+      - pip install pytest-cov
     script:
-      - coverage run manage.py test --settings=shower.settings.test
+      - coverage run -m pytest --junitxml=report.xml
       - coverage report
       - coverage xml
 
