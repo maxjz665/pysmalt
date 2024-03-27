@@ -1,6 +1,6 @@
-[![pipeline status](https://gl.petrsu.ru/platform/api/badges/develop/pipeline.svg)](https://gl.petrsu.ru/platform/api/-/commits/develop)
-[![coverage report](https://gl.petrsu.ru/platform/api/badges/develop/coverage.svg)](https://gl.petrsu.ru/platform/api/-/commits/develop)
-[![pylint](https://gl.petrsu.ru/platform/api/-/jobs/artifacts/develop/raw/pylint/pylint.svg?job=pylint)](https://gl.petrsu.ru/platform/api/-/jobs/artifacts/develop/raw/pylint/pylint.log?job=pylint)
+[![pipeline status](https://gitlab.dckarelia.ru/smalt/pysmalt/badges/main/pipeline.svg)](https://gitlab.dckarelia.ru/smalt/pysmalt/-/commits/main)
+[![coverage report](https://gitlab.dckarelia.ru/smalt/pysmalt/badges/main/coverage.svg)](https://gitlab.dckarelia.ru/smalt/pysmalt/-/commits/main)
+[![pylint](https://gitlab.dckarelia.ru/smalt/pysmalt/-/jobs/artifacts/main/raw/pylint/pylint.svg?job=pylint)](https://gitlab.dckarelia.ru/smalt/pysmalt/-/jobs/artifacts/main/raw/pylint/pylint.log?job=pylint)
 
 # SMALT Shower (Python edition)
 Приложение для работы с корпусом дореволюционных текстов.

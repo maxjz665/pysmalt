@@ -1,0 +1,21 @@
+<tr class='paper'
+    data-title='{{ text_data.title }}'
+    data-year='{{ text_data.publication_date.year }}'
+    data-mag='{{ text_data.magazine.title }}'
+    data-num='{{ text_data.magazine_no }}'
+    data-author1='{{ text_data.author.name }}'
+    data-author2='{{ text_data.author2.name }}'
+    data-author3='{{ text_data.author3.name }}'>
+    <td class='text-center'>{{ text_data.id }}</td>
+    <td><a href="?id={{ text_data.id }}&type={% if type == "old" %}old{% else %}new{% endif %}"
+           target="_top">{{ text_data.title }}</a></td>
+    <td>
+        {% if text_data.author %}{{ text_data.author.name }}{% endif %}
+        {% if text_data.author2 %},{{ text_data.author2.name }}{% endif %}
+        {% if text_data.author3 %},{{ text_data.author3.name }}{% endif %}
+    </td>
+    <td class='text-center'>{{ text_data.magazine.title }}</td>
+    <td class='text-center'>{% if text_data.publication_date %}{{ text_data.publication_date.year }}{% endif %}</td>
+    <td class="text-center">{{ text_data.magazine_no|default_if_none:"" }}</td>
+    <td>{{ text_data.comment|default_if_none:"" }}</td>
+</tr>

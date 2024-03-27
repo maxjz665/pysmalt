@@ -1,0 +1,14 @@
+<div class='paper'
+     data-title='{{ text_data.title }}'
+     data-id='{{ text_data.id }}'
+     data-year='{{ text_data.publication_date.year }}'
+     data-mag='{{text_data.magazine.title }}'
+     data-num='{{ text_data.magazine_no }}'
+     data-author1='{{ text_data.author.name }}'
+     data-author2='{{ text_data.author2.name }}'
+     data-author3='{{ text_data.author3.name }}'>
+    <div style='display: flex; align-items: center;'>
+        {{ text_data.bib_item }}
+        {% if text_data.comment %}<div class='comment'>{{ text_data.comment }}</div>{% endif %}
+    </div>
+</div>

@@ -6,6 +6,10 @@ from django.db import models
 
 
 class TblUser(AbstractBaseUser):
+    LEVEL_USER = 0
+    LEVEL_EDITOR = 1
+    LEVEL_MANAGER = 2
+    LEVEL_ADMIN = 3
     class Meta:
         db_table = 'sys_users'
 
@@ -24,3 +28,6 @@ class TblUser(AbstractBaseUser):
     name = models.CharField(max_length=200)
     level = models.IntegerField(default=0)
     researcher = models.IntegerField(default=0)
+
+    def has_level(self, level):
+        return self.level >= level

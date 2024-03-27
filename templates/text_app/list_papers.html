@@ -1,0 +1,30 @@
+{% extends "index.html" %}
+
+{% block content %}
+    <div class="d-flex justify-content-between">
+        <div class="p-2">
+            <a type="button" class="btn btn-info" href="?type=old&amp;view={% if view == "list" %}table{% else %}list{% endif %}">Просмотр в виде {% if view == "list" %}таблицы{% else %}списка{% endif %}</a>&nbsp;
+            <a type="button" class="btn btn-info" href="?type=old&amp;view=table&amp;xls=true">Экспорт списка в Excel</a>
+            <a class="btn btn-primary dropdown dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Сортировать по</a>
+     <div class="dropdown-menu">
+      <a class="dropdown-item" href="#" onclick="sortListByName(event)">названиям произведений</a>
+      <a class="dropdown-item" href="#" onclick="sortListByYearMagNum(event)">годам, изданиям, номерам</a>
+      <a class="dropdown-item" href="#" onclick="sortListByMagYearNum(event)">изданиям, годам, номерам</a>
+      <a class="dropdown-item" href="#" onclick="sortListBySigns(event)">подписям</a>
+    </div>
+            <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample" onclick="updateFilters('block')">
+                Панель фильтрации
+            </button></div>
+        <div class="p-2"><form class="form-inline" action="words.php">
+            <input type="text" id="searchWord" name="searchWord" class="form-control" placeholder="Введите слово для поиска">
+            <button type="submit" class="btn btn-primary" value="search-word">Поиск</button>
+        </form>
+        </div>
+    </div>
+    <!-- тело списка -->
+    {% if view == "table" %}
+    {% include "text_app/components/list_papers_table.html" %}
+    {% else %}
+    {% include "text_app/components/list_papers_list.html" %}
+    {% endif %}
+{% endblock content %}
