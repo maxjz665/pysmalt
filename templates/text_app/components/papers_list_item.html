@@ -8,7 +8,7 @@
      data-author2='{{ text_data.author2 }}'
      data-author3='{{ text_data.author3 }}'>
     <div style='display: flex; align-items: center;'>
-        {{ text_data.title }}
-        <div class='comment'>{{ text_data.comment }}</div>
+        {{ text_data.bib_item }}
+        {% if text_data.comment %}<div class='comment'>{{ text_data.comment }}</div>{% endif %}
     </div>
 </div>
