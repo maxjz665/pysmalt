@@ -7,5 +7,6 @@ from text_app import views
 
 urlpatterns = [
     path('', views.index, name='home'),
-    path('papers', views.list_papers, name="text_app/papers_list")
+    path('papers', views.list_papers, name="text_app/papers_list"),
+    path('attrs', views.list_attrs, name="text_app/attrs_list")
 ]
