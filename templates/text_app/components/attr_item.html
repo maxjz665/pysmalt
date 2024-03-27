@@ -1,0 +1,17 @@
+{{ attr_data.name }} ({{ attr_data.id }})
+{% if attr_data.attr_values|length > 0 %}
+    <ol>
+    {% for item in attr_data.attr_values %}
+
+        <li>{% include "text_app/components/attr_item.html" with attr_data=item %}</li>
+    {% endfor %}
+    </ol>
+{% endif %}
+
+{% if attr_data.attr_items|length > 0 %}
+    <ul>
+    {% for item in attr_data.attr_items %}
+        <li>{% include "text_app/components/attr_item.html" with attr_data=item %}</li>
+    {% endfor %}
+    </ul>
+{% endif %}

@@ -1,0 +1,9 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="btn-group" role="group" aria-label="Вариант разбора">
+<a type="button" class="btn btn-secondary{% if type == "old" %} active{% endif %}" href="?type=old">Старый набор атрибутов</a>
+<a type="button" class="btn btn-secondary{% if type != "old" %} active{% endif %}" href="?type=new">Новый набор атрибутов</a>
+</div><hr/>
+    {% include "text_app/components/attr_item.html" with attr_data=attrs %}
+{% endblock content %}
