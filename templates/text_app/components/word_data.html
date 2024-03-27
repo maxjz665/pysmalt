@@ -1,0 +1,14 @@
+<span
+        onclick='showProperty(this, {"ID": {{ dictword.id }},
+                "WORD": "{{ dictword.word }}",
+                "ID_WORD": {{ item.id_word }},
+                "WORD_01": "{{ item.word }}",
+                "INITIAL_FORM": "{{ dictword.initial_form }}",
+                "MODERN": "{{ dictword.modern }}",
+                "TEXT_ID": {{ item.text_id }},
+                "CHAPTER_INDEX": {{ item.chapter_index }},
+                "PARAGRAPH_INDEX": {{ item.paragraph_index }},
+                "SENTENCE_INDEX": {{ item.sentence_index }},
+                "WORD_INDEX": {{ item.word_index }}}, {% if type == "old" %}1{% else %}0{% endif %})'>
+    {{ item.word }}
+</span>

@@ -2,12 +2,13 @@
 Контроллер обработки запросов на работу с текстами
 """
 from django.db.models import Q
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
+from text_app.models.tbl_word import TblWord
 from user_app.models import TblUser
 
 
@@ -33,7 +34,8 @@ def list_papers(request: HttpRequest):
     if not (request.user.is_authenticated and request.user.has_level(TblUser.LEVEL_MANAGER)):
         texts = texts.filter(~Q(category=1))
     texts = texts.order_by('status').order_by('title').all()
-    return render(request, "text_app/list_papers.html", context={'texts': texts, "view": view})
+    return render(request, "text_app/list_papers.html", context={'texts': texts, "view": view,
+                                                                 "link": "text_app/papers_data"})
 
 
 def list_attrs(request: HttpRequest):
@@ -77,3 +79,21 @@ def generate_tree(menu_items, menu_params, start_param=0, user=None):
                                            start_param=getattr(value_row, "param_" + str(j)), user=user))
         values.append({"id": item_value, "name": value_row.item_caption, "attr_items": items})
     return {"id": start_param, "name":key, "attr_values": values}
+
+
+def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
+    """
+    Печать содержимого статьи
+    :return: содержимое статьи
+    """
+    useOldType = request.GET.get("type", "old")
+
+    text_data = TblText.objects.filter(id=paper_id).get()
+
+    content = TblWord.objects.filter(text_id=paper_id).order_by("chapter_index",
+                                                                "paragraph_index",
+                                                                "sentence_index",
+                                                                "word_index").all()
+
+    return render(request, "text_app/paper_data.html",
+                  context={"type": useOldType, "text_data": text_data, "content": content})
