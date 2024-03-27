@@ -12,7 +12,7 @@ register = template.Library()
 
 
 @register.filter(name='bib_item', is_safe=True, needs_autoescape=False)
-def bib_item(value, arg):
+def bib_item(value: TblText, arg: str):
     """
     Формирование библиографического описания
     :return: строка с библиографическим описанием
@@ -29,8 +29,10 @@ def bib_item(value, arg):
             ret += ". "
 
     # печать названия.
-    if link is not None:
-        ret += f' <a href="{reverse(link, kwargs={"paper_id": text_data.id})}">{text_data.title}</a>'
+    if link is not None and len(link) > 0:
+        ret += f' <a href="{reverse(link, args=[text_data.id])}">{text_data.title}</a>'
+    else:
+        ret += text_data.title
 
     # печать перечня авторов. TODO: перевернуть ФИО на ИОФ
     has_author = False

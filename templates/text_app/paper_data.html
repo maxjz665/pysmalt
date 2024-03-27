@@ -1,1 +1,70 @@
-ertfghnm
+{% extends "index.html" %}
+
+{% load bib_item %}
+{% load update_variable %}
+
+{% block content %}
+<div style='display: flex'>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="location.href='{% url "text_app/papers_list" %}'">Назад к списку</button>
+    </div>
+    <div style="margin: 5px 20px"><div>{{ text_data|bib_item:"" }}</div>
+        {% if text_data.comment %}[{{ text_data.comment }}]{% endif %}
+        </div>
+    {% if text_data.url %}
+        <div><a class='btn btn-primary' href='{{ text_data.url }}' target='_blank'>Смотреть оригинал</a></div>
+    {% endif %}
+</div>
+    <a class="btn btn-primary" data-toggle="collapse" href="#collapsePaper" role="button" aria-expanded="false" aria-controls="collapsePaper">
+Параметры просмотра</a>
+<div class="collapse" id="collapsePaper">
+    <select id="word-type">{{word_type_options}}</select>
+    <button class="btn btn-info" onclick="showWordsWithType()">Отобразить слова с частью речи</button>
+</div>
+    {% if text_data.category > 0 %}
+ <div class="alert alert-warning alert-dismissible fade show" role="alert">
+ВНИМАНИЕ! Текст скрыт (помечен на удаление)!
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+ </div>
+    {% endif %}
+
+    {% if type == "old" %}
+    <br/><b>Используется СТАРЫЙ набор атрибутов!</b><br/>
+    {% else %}
+    <br/><b>Используется НОВЫЙ набор атрибутов!</b><br/>
+    {% endif %}
+    <br/>===========<br/>
+
+    <p>
+    {% with current_chapter=0 %}
+    {% with current_paragraph=0 %}
+    {% with current_sentence=0 %}
+    {% for item in content %}
+        {% if current_chapter != item.chapter_index %}
+            </p><p><span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.chapter_index as current_chapter %}
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_paragraph != item.paragraph_index %}
+            </p><p><span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_sentence != item.sentence_index %}
+            |<span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if type == "old" %}
+            {% include "text_app/components/word_data.html" with item=item dictword=item.dictword2 %}
+        {% else %}
+            {% include "text_app/components/word_data.html" with item=item dictword=item.dictword %}
+        {% endif %}
+    {% endfor %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    </p>
+{% endblock %}
