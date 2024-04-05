@@ -9,5 +9,6 @@ urlpatterns = [
     path('', views.index, name='home'),
     path('papers', views.list_papers, name="text_app/papers_list"),
     path('papers/<int:paper_id>', views.paper_data, name="text_app/papers_data"),
-    path('attrs', views.list_attrs, name="text_app/attrs_list")
+    path('attrs', views.list_attrs, name="text_app/attrs_list"),
+    path('lists', views.text_lists, name="text_app/text_lists"),
 ]

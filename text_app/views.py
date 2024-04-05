@@ -8,6 +8,7 @@ from django.shortcuts import render
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
+from text_app.models.tbl_textlist_description import TblTextListDescription
 from text_app.models.tbl_word import TblWord
 from user_app.models import TblUser
 
@@ -97,3 +98,13 @@ def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
 
     return render(request, "text_app/paper_data.html",
                   context={"type": useOldType, "text_data": text_data, "content": content})
+
+
+def text_lists(request: HttpRequest):
+    """
+    Отображение списков текстов
+    :return: списки текстов
+    """
+    content = TblTextListDescription.objects.filter(is_deleted=False).all()
+
+    return render(request, "text_app/text_lists.html", context={"content": content})

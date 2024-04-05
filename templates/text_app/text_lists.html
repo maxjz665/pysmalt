@@ -1,0 +1,14 @@
+{% extends "index.html" %}
+
+{% block content %}
+    <h2>Списки текстов</h2>
+
+    <table class='table table-bordered border-primary'>
+    <thead><tr><th class="col-1">№</th><th>Название списка</th><th class="col-1">Количество текстов</th><th class="col-1">Доступность</th><th class="col-1">Владелец</th></tr></thead>
+    <tbody>
+    {% for item in content %}
+        <tr><td>{{ item.id }}</td><td>{{ item.name }}</td><td>{{ item.items }}</td><td>{{ item.available }}</td><td>{{ item.user_name }}</td></tr>
+    {% endfor %}
+    </tbody>
+    </table>
+{% endblock content %}
