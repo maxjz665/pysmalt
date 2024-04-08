@@ -15,7 +15,7 @@ def get_model(db_table_name):
             db_table = db_table_name
 
         id = models.AutoField(primary_key=True)
-        param_caption = models.CharField()
+        param_caption = models.TextField()
         items_count = models.IntegerField()
         item_1 = models.IntegerField()
         item_2 = models.IntegerField()

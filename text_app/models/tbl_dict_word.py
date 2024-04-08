@@ -15,7 +15,7 @@ def _get_model(db_table_name):
             db_table = db_table_name
 
         id = models.AutoField(primary_key=True)
-        word = models.CharField()
+        word = models.TextField()
         initial_form = models.TextField()
         param_01 = models.IntegerField(default=0)
         param_02 = models.IntegerField(default=0)
