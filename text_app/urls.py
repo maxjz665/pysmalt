@@ -11,4 +11,5 @@ urlpatterns = [
     path('papers/<int:paper_id>', views.paper_data, name="text_app/papers_data"),
     path('attrs', views.list_attrs, name="text_app/attrs_list"),
     path('lists', views.text_lists, name="text_app/text_lists"),
+    path('lists/<int:list_id>', views.text_list_item, name="text_app/text_list_item"),
 ]

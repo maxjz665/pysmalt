@@ -7,7 +7,12 @@
     <thead><tr><th class="col-1">№</th><th>Название списка</th><th class="col-1">Количество текстов</th><th class="col-1">Доступность</th><th class="col-1">Владелец</th></tr></thead>
     <tbody>
     {% for item in content %}
-        <tr><td>{{ item.id }}</td><td>{{ item.name }}</td><td>{{ item.items }}</td><td>{{ item.available }}</td><td>{{ item.user_name }}</td></tr>
+        <tr><td>{{ item.id }}</td><td>{{ item.name }}</td><td>{{ item.items|length }}</td>
+            <td>
+                {% if item.public %}Публичный{% else %}Приватный{% endif %}
+                {% if item.favorited %}В избранном{% endif %}
+            <a class='btn btn-info' href='{% url 'text_app/text_list_item' item.id %}?view=csv'>Экспорт списка</a>
+            </td><td>{{ item.owner.name }}</td></tr>
     {% endfor %}
     </tbody>
     </table>

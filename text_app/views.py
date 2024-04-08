@@ -1,14 +1,14 @@
 """
 Контроллер обработки запросов на работу с текстами
 """
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
-from text_app.models.tbl_textlist_description import TblTextListDescription
+from text_app.models.tbl_textlist import TblTextListDescription, TblTextListItems
 from text_app.models.tbl_word import TblWord
 from user_app.models import TblUser
 
@@ -87,7 +87,7 @@ def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
     Печать содержимого статьи
     :return: содержимое статьи
     """
-    useOldType = request.GET.get("type", "old")
+    use_old_type = request.GET.get("type", "old")
 
     text_data = TblText.objects.filter(id=paper_id).get()
 
@@ -97,7 +97,7 @@ def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
                                                                 "word_index").all()
 
     return render(request, "text_app/paper_data.html",
-                  context={"type": useOldType, "text_data": text_data, "content": content})
+                  context={"type": use_old_type, "text_data": text_data, "content": content})
 
 
 def text_lists(request: HttpRequest):
@@ -108,3 +108,7 @@ def text_lists(request: HttpRequest):
     content = TblTextListDescription.objects.filter(is_deleted=False).all()
 
     return render(request, "text_app/text_lists.html", context={"content": content})
+
+
+def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
+    return None
