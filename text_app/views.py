@@ -1,14 +1,14 @@
 """
 Контроллер обработки запросов на работу с текстами
 """
-from django.db.models import Q, Count
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
-from text_app.models.tbl_textlist import TblTextListDescription, TblTextListItems
+from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_word import TblWord
 from user_app.models import TblUser
 

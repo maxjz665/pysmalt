@@ -44,6 +44,11 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
+Если миграции применяются к уже существующей БД, то можно пропустить создание таблиц с помощью команды
+```shell
+python manage.py migrate --fake-initial
+```
+
 ### Запуск тестов
 ```shell
 python manage.py test --settings=shower.settings.test

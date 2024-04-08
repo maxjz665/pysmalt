@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
                 ('modern', models.TextField()),
             ],
             options={
-                'db_table': 'entries2',
+                'db_table': 'entries',
             },
         ),
         migrations.CreateModel(
@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
                 ('param_30', models.IntegerField()),
             ],
             options={
-                'db_table': 'menu_items2',
+                'db_table': 'menu_items',
             },
         ),
         migrations.CreateModel(
@@ -127,7 +127,7 @@ class Migration(migrations.Migration):
                 ('item_30', models.IntegerField()),
             ],
             options={
-                'db_table': 'menu_params2',
+                'db_table': 'menu_params',
             },
         ),
         migrations.CreateModel(

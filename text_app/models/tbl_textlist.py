@@ -16,7 +16,8 @@ class TblTextListDescription(models.Model):
 
     id = models.AutoField(primary_key=True)
     name = models.TextField(max_length=200)
-    owner = models.ForeignKey(TblUser, db_column="owner", on_delete=models.SET_NULL, null=True, blank=True)
+    owner = models.ForeignKey(TblUser, db_column="owner", on_delete=models.SET_NULL,
+                              null=True, blank=True)
     public = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
 
