@@ -79,7 +79,7 @@ def generate_tree(menu_items, menu_params, start_param=0, user=None):
                 items.append(generate_tree(menu_items, menu_params,
                                            start_param=getattr(value_row, "param_" + str(j)), user=user))
         values.append({"id": item_value, "name": value_row.item_caption, "attr_items": items})
-    return {"id": start_param, "name":key, "attr_values": values}
+    return {"id": start_param, "name": key, "attr_values": values}
 
 
 def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
@@ -144,7 +144,12 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
             item.save()
             return redirect("text_app/text_lists")
 
-    return render(request, "text_app/text_list_item.html", context={"content": item, "link": "text_app/papers_data"})
+    texts = []
+    if request.user.is_authenticated:
+        # если пользователь авторизован, то показываем ему список текстов
+        texts = TblText.objects.filter(inuse1=1, status=2).all()
+
+    return render(request, "text_app/text_list_item.html", context={"content": item, "link": "text_app/papers_data", "texts": texts})
 
 
 def text_list_create(request: HttpRequest):

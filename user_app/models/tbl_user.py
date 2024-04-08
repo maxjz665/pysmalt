@@ -40,3 +40,7 @@ class TblUser(AbstractBaseUser):
     @property
     def has_manager(self):
         return self.has_level(self.LEVEL_MANAGER)
+
+    @property
+    def has_admin(self):
+        return self.has_level(self.LEVEL_ADMIN)

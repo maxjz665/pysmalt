@@ -11,6 +11,26 @@
 <div class="p-1">
 <a class="btn btn-primary" href="{% url 'text_app/text_lists' %}">Назад к списку</a>
 </div>
+{% if user.is_authenticated %}
+    {% if user.has_admin or user.id == content.owner.id %}
+    <div class="p-1" style="width: 100%"><form class="form-inline" method="post">
+            <div class="form-group mb-2" style="width: 100%">
+                    <select class="form-control selectpicker" data-live-search="true" name="selectionTextId" style="width: 100%">
+                        {% for item in texts %}
+                            <option>{{ item|bib_item:link }}</option>
+                        {% endfor %}
+                    </select>
+            </div>
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary" name="action" value="insertText">Добавить текст</button>
+        </form>
+    </div>
+    <div class="p-1">
+        <a class="btn btn-secondary" href="lists.php?view=update&id={$_REQUEST['id']}">Редактировать список</a>
+        <a class="btn btn-danger" href="lists.php?view=update&id={$_REQUEST['id']}&action=delete">Удаление списка</a>
+    </div>
+    {% endif %}
+{%  endif %}
 </div>
 <hr>
     <ol>
