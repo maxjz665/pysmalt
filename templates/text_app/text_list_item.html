@@ -1,0 +1,23 @@
+{% extends "index.html" %}
+{% load bib_item %}
+
+{% block content %}
+<h2>Список текстов "{{ content.name }}"</h2>
+<ul>
+<li>Владелец: {{ content.owner.name }}</li>
+<li>Доступность: {% if content.public %}Публичный список{% else %}Персональный список{% endif %}</li>
+</ul>
+<div class="d-inline-flex bd-highlight">
+<div class="p-1">
+<a class="btn btn-primary" href="{% url 'text_app/text_lists' %}">Назад к списку</a>
+</div>
+</div>
+<hr>
+    <ol>
+{% for text_item in content.items %}
+    <li>
+    {{ text_item.text|bib_item:link }}
+    </li>
+{% endfor %}
+    </ol>
+{% endblock content %}

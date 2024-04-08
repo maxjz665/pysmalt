@@ -26,7 +26,7 @@ class TblTextListDescription(models.Model):
         Маппинг с списка текстов с текстами
         :return:
         """
-        return TblTextListItems.objects.filter(list_id=self.id).all()
+        return TblTextListItems.objects.filter(list_id=self.id).order_by('text_id').all()
 
 
 class TblTextListItems(models.Model):

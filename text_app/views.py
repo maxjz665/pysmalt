@@ -111,4 +111,9 @@ def text_lists(request: HttpRequest):
 
 
 def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
-    return None
+    item = TblTextListDescription.objects.filter(id=list_id).first()
+
+    if item is None:
+        return render(request, "not_found.html", context={"message": "Список не найден"})
+
+    return render(request, "text_app/text_list_item.html", context={"content": item, "link": "text_app/papers_data"})
