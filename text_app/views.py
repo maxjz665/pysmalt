@@ -3,7 +3,7 @@
 """
 from django.db.models import Q, Count
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
@@ -96,6 +96,11 @@ def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
                                                                 "sentence_index",
                                                                 "word_index").all()
 
+    if text_data is None or content is None:
+        return render(request, "not_found.html", context={"message": "Текст не найден",
+                                                          "return_url": "text_app/papers_list",
+                                                          "return_name": "К списку текстов"})
+
     return render(request, "text_app/paper_data.html",
                   context={"type": use_old_type, "text_data": text_data, "content": content})
 
@@ -111,9 +116,40 @@ def text_lists(request: HttpRequest):
 
 
 def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
+    """
+    Печать содержимого списка текстов
+    :param request: запрос
+    :param list_id: номер списка текстов
+    :return: содержимое списка текстов
+    """
     item = TblTextListDescription.objects.filter(id=list_id).first()
 
     if item is None:
-        return render(request, "not_found.html", context={"message": "Список не найден"})
+        return render(request, "not_found.html", context={"message": "Список не найден",
+                                                          "return_url": "text_app/text_lists",
+                                                          "return_name": "К спискам текстов"})
+
+    if request.GET.get("action") is not None:
+        action = request.GET.get("action")
+        if action == "unpublish":
+            if not request.user.is_authenticated or not request.user.has_manager:
+                return render(request, "not_found.html", context={"message": "Недостаточно прав"})
+            item.public = False
+            item.save()
+            return redirect("text_app/text_lists")
+        if action == "publish":
+            if not request.user.is_authenticated or not request.user.has_manager:
+                return render(request, "not_found.html", context={"message": "Недостаточно прав"})
+            item.public = True
+            item.save()
+            return redirect("text_app/text_lists")
 
     return render(request, "text_app/text_list_item.html", context={"content": item, "link": "text_app/papers_data"})
+
+
+def text_list_create(request: HttpRequest):
+    """
+    Создание списка текстов
+    :return:
+    """
+    return None
