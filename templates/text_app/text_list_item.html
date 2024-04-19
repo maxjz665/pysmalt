@@ -35,8 +35,14 @@
 <hr>
     <ol>
 {% for text_item in content.items %}
-    <li>
-    {{ text_item.text|bib_item:link }}
+    <li><div class="d-inline-flex align-items-baseline">
+    <div>{{ text_item.text|bib_item:link }}</div>
+    {% if user.is_authenticated %}
+        {% if user.has_admin or user.id == content.owner.id %}
+            <div class='p-1'><form method='post'>{% csrf_token %}<input type='hidden' name='textId' value='{{ text_item.text.id }}'><button type='submit' class='btn btn-danger' name='action' value='removeText'>Удалить</button></form></div>
+        {% endif %}
+    {% endif %}
+    </div>
     </li>
 {% endfor %}
     </ol>

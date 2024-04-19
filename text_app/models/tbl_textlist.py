@@ -46,6 +46,16 @@ class TblTextListDescription(models.Model):
         item = TblTextListItems(list=self, text=text)
         item.save()
 
+    def remove_text(self, text_id: int):
+        """
+        Удаление текста из списка
+        :param text_id: идентификатор удаляемого текста
+        """
+        item = TblTextListItems.objects.filter(list__id=self.id, text__id=text_id).first()
+        if not item:
+            raise ValueError(f"Текст {text_id} в списке {self.id} не найден")
+        item.delete()
+
 
 class TblTextListItems(models.Model):
     """

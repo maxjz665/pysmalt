@@ -157,12 +157,21 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
             if action == "insertText":
                 text_id = request.POST.get("selectionTextId")
                 if text_id is None or int(text_id) == 0:
-                    raise Exception("Не задан идентификатор текста")
+                    raise ValueError("Не задан идентификатор текста")
                 if not request.user.is_authenticated or (
                         not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner):
                     raise PermissionError("Нет прав на добавление текста")
                 item.append_text(text_id)
                 success_message = "Текст успешно добавлен к списку"
+            elif action == "removeText":
+                text_id = request.POST.get("textId")
+                if text_id is None or int(text_id) == 0:
+                    raise ValueError("Не задан идентификатор текста")
+                if not request.user.is_authenticated or (
+                        not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner):
+                    raise PermissionError("Нет прав на удаление текста")
+                item.remove_text(text_id)
+                success_message = "Текст успешно удален из списка"
             else:
                 return render(request, "not_found.html",
                               context={"message": "Неизвестное действие " + request.POST.get("action"),
