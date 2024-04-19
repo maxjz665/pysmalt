@@ -144,10 +144,15 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
             item.save()
             return redirect("text_app/text_lists")
 
+    included_texts = item.item_ids
+
     texts = []
     if request.user.is_authenticated:
         # если пользователь авторизован, то показываем ему список текстов
-        texts = TblText.objects.filter(inuse1=1, status=2).all()
+        texts = TblText.objects.filter(inuse1=1)
+        if not request.user.has_level(TblUser.LEVEL_USER):
+            texts = texts.filter(status=2)
+        texts = texts.exclude(id__in=included_texts)
 
     return render(request, "text_app/text_list_item.html", context={"content": item, "link": "text_app/papers_data", "texts": texts})
 

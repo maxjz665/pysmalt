@@ -29,6 +29,14 @@ class TblTextListDescription(models.Model):
         """
         return TblTextListItems.objects.filter(list_id=self.id).order_by('text_id').all()
 
+    @property
+    def item_ids(self):
+        """
+        Получение списка прицепленных идентификаторов текстов
+        :return:
+        """
+        return TblTextListItems.objects.filter(list_id=self.id).values_list('text', flat=True).all()
+
 
 class TblTextListItems(models.Model):
     """

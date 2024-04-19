@@ -14,8 +14,8 @@
 {% if user.is_authenticated %}
     {% if user.has_admin or user.id == content.owner.id %}
     <div class="p-1" style="width: 100%"><form class="form-inline" method="post">
-            <div class="form-group mb-2" style="width: 100%">
-                    <select class="form-control selectpicker" data-live-search="true" name="selectionTextId" style="width: 100%">
+            <div class="form-group mb-2">
+                    <select class="form-control selectpicker" data-live-search="true" name="selectionTextId" style="width: 90%">
                         {% for item in texts %}
                             <option>{{ item|bib_item:link }}</option>
                         {% endfor %}
