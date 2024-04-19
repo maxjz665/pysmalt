@@ -5,6 +5,7 @@ from django.db import models
 
 from text_app.models.tbl_author import TblAuthor
 from text_app.models.tbl_magazine import TblMagazine
+from user_app.models import TblUser
 
 
 class TblText(models.Model):
@@ -31,9 +32,11 @@ class TblText(models.Model):
     text_type = models.IntegerField(default=0)
     author_verify = models.IntegerField(default=0)
     author_type = models.IntegerField(default=0)
-    author2 = models.ForeignKey(TblAuthor, related_name='author2_data', on_delete=models.SET_NULL, null=True, blank=True)
+    author2 = models.ForeignKey(TblAuthor, related_name='author2_data', on_delete=models.SET_NULL, null=True,
+                                blank=True)
     author2_type = models.IntegerField(default=0)
-    author3 = models.ForeignKey(TblAuthor, related_name='author3_data', on_delete=models.SET_NULL, null=True, blank=True)
+    author3 = models.ForeignKey(TblAuthor, related_name='author3_data', on_delete=models.SET_NULL, null=True,
+                                blank=True)
     author3_type = models.IntegerField(default=0)
     short_title = models.TextField()
     magazine_volume = models.CharField(max_length=255)
@@ -44,3 +47,20 @@ class TblText(models.Model):
     status = models.IntegerField(default=0)
     idkey = models.CharField(max_length=255)
     origin_title = models.TextField()
+
+    @staticmethod
+    def get_texts(user, exclude_list: set = None):
+        """
+        Получение перечня текстов в зависимости от пользователя
+        :param exclude_list: перечень исключенных текстов
+        :param user: пользователь
+        :return: список текстов
+        """
+        texts = TblText.objects.filter(inuse1=1)
+        if not user.is_authenticated or not user.has_level(TblUser.LEVEL_USER):
+            texts = texts.filter(status=2)
+
+        if exclude_list:
+            texts = texts.exclude(id__in=exclude_list)
+
+        return texts

@@ -1,6 +1,7 @@
 """
 Контроллер обработки запросов на работу с текстами
 """
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
@@ -29,9 +30,7 @@ def list_papers(request: HttpRequest):
     # получение параметров просмотра списка
     view = request.GET.get("view", "list")
 
-    texts = TblText.objects.filter(inuse1=1)
-    if not (request.user.is_authenticated and request.user.has_level(TblUser.LEVEL_USER)):
-        texts = texts.filter(status=2)
+    texts = TblText.get_texts(request.user)
     if not (request.user.is_authenticated and request.user.has_level(TblUser.LEVEL_MANAGER)):
         texts = texts.filter(~Q(category=1))
     texts = texts.order_by('status').order_by('title').all()
@@ -184,10 +183,7 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
     texts = []
     if request.user.is_authenticated:
         # если пользователь авторизован, то показываем ему список текстов
-        texts = TblText.objects.filter(inuse1=1)
-        if not request.user.has_level(TblUser.LEVEL_USER):
-            texts = texts.filter(status=2)
-        texts = texts.exclude(id__in=item.item_ids)
+        texts = TblText.get_texts(request.user, item.item_ids)
 
     return render(request, "text_app/text_list_item.html",
                   context={"content": item, "link": "text_app/papers_data", "texts": texts,
@@ -197,26 +193,48 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
 def text_list_create(request: HttpRequest):
     """
     Создание списка текстов
-    :return:
     """
-    return None
+    if not request.user.is_authenticated:
+        return render(request, "not_found.html",
+                      context={"message": "Нет прав на создание списка",
+                               "return_url": "text_app/text_lists",
+                               "return_name": "К спискам текстов"})
+
+    if request.method == "GET":
+        texts = TblText.get_texts(request.user)
+        return render(request, "text_app/text_list_create.html", context={"texts": texts})
+
+    list_name = request.POST.get("inputName")
+    items = request.POST.getlist("item")
+    if list_name is None or len (list_name) == 0 or items is None or len(items) == 0:
+        texts = TblText.get_texts(request.user)
+        return render(request, "text_app/text_list_create.html",
+                      context={"texts": texts, 'inputName': list_name, 'items': items,
+                               "error_message": "Введите название списка и выберите тексты"})
+
+    list_item = TblTextListDescription(name=list_name, owner=request.user, public=False, is_deleted=False)
+    try:
+        with transaction.atomic():
+            list_item.save()
+            for text in items:
+                list_item.append_text(text)
+    except Exception as e:
+        texts = TblText.get_texts(request.user)
+        return render(request, "text_app/text_list_create.html",
+                      context={"texts": texts, 'inputName': list_name, 'items': items,
+                               "error_message": "Введите название списка и выберите тексты"})
+    return redirect("text_app/text_list_item", list_id=list_item.id)
 
 
 def text_list_edit(request: HttpRequest, list_id: int) -> HttpResponse:
     item = TblTextListDescription.objects.filter(id=list_id).first()
 
     if not request.user.is_authenticated or (not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
-        texts = []
-        if request.user.is_authenticated:
-            # если пользователь авторизован, то показываем ему список текстов
-            texts = TblText.objects.filter(inuse1=1)
-            if not request.user.has_level(TblUser.LEVEL_USER):
-                texts = texts.filter(status=2)
-            texts = texts.exclude(id__in=item.item_ids)
-
-        return render(request, "text_app/text_list_item.html",
-                      context={"content": item, "link": "text_app/papers_data", "texts": texts,
-                               "error_message": "Недостаточно прав для редактирования списка"})
+        return render(request, "not_found.html",
+                      context={"message": "Нет прав на редактирование списка",
+                               "return_url": "text_app/text_list_item",
+                               "return_param": list_id,
+                               "return_name": "К списку текстов"})
 
     if request.method == "GET":
         return render(request, "text_app/text_list_edit.html", context={"content": item})
