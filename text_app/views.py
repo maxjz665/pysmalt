@@ -123,6 +123,8 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
     :return: содержимое списка текстов
     """
     item = TblTextListDescription.objects.filter(id=list_id).first()
+    error_message = None
+    success_message = None
 
     if item is None:
         return render(request, "not_found.html", context={"message": "Список не найден",
@@ -143,6 +145,32 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
             item.public = True
             item.save()
             return redirect("text_app/text_lists")
+        return render(request, "not_found.html",
+                      context={"message": "Неизвестное действие " + request.GET.get("action"),
+                               "return_url": "text_app/text_list_item",
+                               "return_param": list_id,
+                               "return_name": "К списку текстов"})
+
+    if request.POST.get("action") is not None:
+        try:
+            action = request.POST.get("action")
+            if action == "insertText":
+                text_id = request.POST.get("selectionTextId")
+                if text_id is None or int(text_id) == 0:
+                    raise Exception("Не задан идентификатор текста")
+                if not request.user.is_authenticated or (
+                        not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner):
+                    raise PermissionError("Нет прав на добавление текста")
+                item.append_text(text_id)
+                success_message = "Текст успешно добавлен к списку"
+            else:
+                return render(request, "not_found.html",
+                              context={"message": "Неизвестное действие " + request.POST.get("action"),
+                                       "return_url": "text_app/text_list_item",
+                                       "return_param": list_id,
+                                       "return_name": "К списку текстов"})
+        except Exception as e:
+            error_message = str(e)
 
     included_texts = item.item_ids
 
@@ -154,7 +182,9 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
             texts = texts.filter(status=2)
         texts = texts.exclude(id__in=included_texts)
 
-    return render(request, "text_app/text_list_item.html", context={"content": item, "link": "text_app/papers_data", "texts": texts})
+    return render(request, "text_app/text_list_item.html",
+                  context={"content": item, "link": "text_app/papers_data", "texts": texts,
+                           "error_message": error_message, "success_message": success_message})
 
 
 def text_list_create(request: HttpRequest):

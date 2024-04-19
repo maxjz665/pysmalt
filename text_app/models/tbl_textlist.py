@@ -24,7 +24,7 @@ class TblTextListDescription(models.Model):
     @property
     def items(self):
         """
-        Маппинг с списка текстов с текстами
+        Маппинг списка текстов с текстами
         :return:
         """
         return TblTextListItems.objects.filter(list_id=self.id).order_by('text_id').all()
@@ -36,6 +36,15 @@ class TblTextListDescription(models.Model):
         :return:
         """
         return TblTextListItems.objects.filter(list_id=self.id).values_list('text', flat=True).all()
+
+    def append_text(self, text_id: int):
+        """
+        Добавление нового текста к списку
+        :param text_id: идентификатор нового текста
+        """
+        text = TblText.objects.get(id=text_id)
+        item = TblTextListItems(list=self, text=text)
+        item.save()
 
 
 class TblTextListItems(models.Model):

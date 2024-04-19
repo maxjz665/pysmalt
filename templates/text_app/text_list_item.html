@@ -17,7 +17,7 @@
             <div class="form-group mb-2">
                     <select class="form-control selectpicker" data-live-search="true" name="selectionTextId" style="width: 90%">
                         {% for item in texts %}
-                            <option>{{ item|bib_item:link }}</option>
+                            <option value="{{ item.id }}">{{ item|bib_item:link }}</option>
                         {% endfor %}
                     </select>
             </div>
