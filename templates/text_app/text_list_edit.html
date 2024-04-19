@@ -1,0 +1,15 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h2>Редактирование списка текстов №{{ content.id }}</h2>
+<form method="post" enctype="multipart/form-data">
+<div class="form-group">
+        <label for="inputName">Название набора текстов</label>
+        <input type="text" class="form-control" name="inputName" id="inputName" placeholder="Введите название набора текстов" value="{{ content.name }}">
+</div>
+{% csrf_token %}
+<button type="submit" class="btn btn-primary" name="submit" id="submit" value="update">Изменить</button>
+<button type="reset" class="btn btn-info">Сбросить</button>
+</form>
+
+{% endblock %}

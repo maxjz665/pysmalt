@@ -159,7 +159,7 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
                 if text_id is None or int(text_id) == 0:
                     raise ValueError("Не задан идентификатор текста")
                 if not request.user.is_authenticated or (
-                        not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner):
+                        not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
                     raise PermissionError("Нет прав на добавление текста")
                 item.append_text(text_id)
                 success_message = "Текст успешно добавлен к списку"
@@ -168,7 +168,7 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
                 if text_id is None or int(text_id) == 0:
                     raise ValueError("Не задан идентификатор текста")
                 if not request.user.is_authenticated or (
-                        not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner):
+                        not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
                     raise PermissionError("Нет прав на удаление текста")
                 item.remove_text(text_id)
                 success_message = "Текст успешно удален из списка"
@@ -181,15 +181,13 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
         except Exception as e:
             error_message = str(e)
 
-    included_texts = item.item_ids
-
     texts = []
     if request.user.is_authenticated:
         # если пользователь авторизован, то показываем ему список текстов
         texts = TblText.objects.filter(inuse1=1)
         if not request.user.has_level(TblUser.LEVEL_USER):
             texts = texts.filter(status=2)
-        texts = texts.exclude(id__in=included_texts)
+        texts = texts.exclude(id__in=item.item_ids)
 
     return render(request, "text_app/text_list_item.html",
                   context={"content": item, "link": "text_app/papers_data", "texts": texts,
@@ -201,4 +199,32 @@ def text_list_create(request: HttpRequest):
     Создание списка текстов
     :return:
     """
+    return None
+
+
+def text_list_edit(request: HttpRequest, list_id: int) -> HttpResponse:
+    item = TblTextListDescription.objects.filter(id=list_id).first()
+
+    if not request.user.is_authenticated or (not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
+        texts = []
+        if request.user.is_authenticated:
+            # если пользователь авторизован, то показываем ему список текстов
+            texts = TblText.objects.filter(inuse1=1)
+            if not request.user.has_level(TblUser.LEVEL_USER):
+                texts = texts.filter(status=2)
+            texts = texts.exclude(id__in=item.item_ids)
+
+        return render(request, "text_app/text_list_item.html",
+                      context={"content": item, "link": "text_app/papers_data", "texts": texts,
+                               "error_message": "Недостаточно прав для редактирования списка"})
+
+    if request.method == "GET":
+        return render(request, "text_app/text_list_edit.html", context={"content": item})
+
+    item.name = request.POST.get("inputName")
+    item.save()
+    return redirect("text_app/text_list_item", list_id=list_id)
+
+
+def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
     return None

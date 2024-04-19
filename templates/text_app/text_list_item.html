@@ -26,8 +26,8 @@
         </form>
     </div>
     <div class="p-1">
-        <a class="btn btn-secondary" href="lists.php?view=update&id={$_REQUEST['id']}">Редактировать список</a>
-        <a class="btn btn-danger" href="lists.php?view=update&id={$_REQUEST['id']}&action=delete">Удаление списка</a>
+        <a class="btn btn-secondary" href="{% url 'text_app/text_list_edit' content.id %}">Редактировать список</a>
+        <a class="btn btn-danger" href="{% url 'text_app/text_list_delete' content.id %}">Удаление списка</a>
     </div>
     {% endif %}
 {%  endif %}
