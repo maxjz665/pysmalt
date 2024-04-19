@@ -1,0 +1,12 @@
+{% extends 'index.html' %}
+
+{% block content %}
+    <p><b>{{ message }}</b></p>
+    {% if return_url %}
+        {% if return_param %}
+            <a href="{% url return_url return_param %}">{{ return_name|default_if_none:"Назад" }}</a>
+        {% else %}
+            <a href="{% url return_url %}">{{ return_name|default_if_none:"Назад" }}</a>
+        {% endif %}
+    {% endif %}
+{% endblock content %}

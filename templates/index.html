@@ -8,12 +8,14 @@
     {% load static %}
 
     <link rel="stylesheet" href="{% static 'css/external/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/external/bootstrap-select.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     {% block link %} {% endblock %}
 
 	<!-- Scripts -->
 	<script src="{% static 'js/external/jquery.min.js' %}"></script>
 	<script src="{% static 'js/external/bootstrap.bundle.min.js' %}"></script>
+	<script src="{% static 'js/external/bootstrap-select.min.js' %}"></script>
     <script src="{% static 'js/functions.js' %}"></script>
 
     {% block script %} {% endblock script %}
@@ -37,7 +39,20 @@
 <div class="content-with-top">
 <!-- отображение ошибок -->
     {% if error_message is not null %}
-        <div class="alert alert-danger">{{error_message}}</div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{error_message}}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+    {% endif %}
+    {% if success_message is not null %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{success_message}}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
     {% endif %}
 
 <!-- Content -->

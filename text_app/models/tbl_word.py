@@ -22,7 +22,7 @@ class TblWord(models.Model):
     sentence_index = models.IntegerField(default=0)
     word_index = models.IntegerField(default=0)
     chdate = models.DateTimeField()
-    word = models.CharField()
+    word = models.TextField()
     dictword = models.ForeignKey(TblDictWord, on_delete=models.SET_NULL, null=True, blank=True)
     dictword2 = models.ForeignKey(TblDictWord2, on_delete=models.SET_NULL, null=True, blank=True)
     wordorder = models.IntegerField(default=0)

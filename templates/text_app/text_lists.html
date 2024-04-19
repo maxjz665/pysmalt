@@ -1,0 +1,29 @@
+{% extends "index.html" %}
+
+{% block content %}
+    <h2>Списки текстов</h2>
+    {% if user.is_authenticated %}
+    	<div><a type="button" class="btn btn-primary" href="{% url 'text_app/text_list_create' %}">Создать список</a></div>
+        <br>
+    {% endif %} 
+    <table class='table table-bordered border-primary'>
+    <thead><tr><th class="col-1">№</th><th>Название списка</th><th class="col-1">Количество текстов</th><th class="col-1">Доступность</th><th class="col-1">Владелец</th></tr></thead>
+    <tbody>
+    {% for item in content %}
+        <tr><td>{{ item.id }}</td><td><a href="{% url 'text_app/text_list_item' item.id %}">{{ item.name }}</a></td><td>{{ item.items|length }}</td>
+            <td>
+                {% if item.public %}Публичный{% else %}Приватный{% endif %}
+                {% if item.favorited %}В избранном{% endif %}
+            <a class='btn btn-info' href='{% url 'text_app/text_list_item' item.id %}?view=csv'>Экспорт списка</a>
+            {% if user.is_authenticated and user.has_manager %}
+                {% if item.public %}
+                    <a class='btn btn-danger' href='{% url 'text_app/text_list_item' item.id %}?action=unpublish'>Снять с публикации</a>
+                {%  else %}
+                    <a class='btn btn-danger' href='{% url 'text_app/text_list_item' item.id %}?action=publish'>Опубликовать</a>
+                {% endif %}
+            {% endif %}
+            </td><td>{{ item.owner.name }}</td></tr>
+    {% endfor %}
+    </tbody>
+    </table>
+{% endblock content %}
