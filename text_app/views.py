@@ -206,7 +206,7 @@ def text_list_create(request: HttpRequest):
 
     list_name = request.POST.get("inputName")
     items = request.POST.getlist("item")
-    if list_name is None or len (list_name) == 0 or items is None or len(items) == 0:
+    if list_name is None or len(list_name) == 0 or items is None or len(items) == 0:
         texts = TblText.get_texts(request.user)
         return render(request, "text_app/text_list_create.html",
                       context={"texts": texts, 'inputName': list_name, 'items': items,
@@ -229,7 +229,8 @@ def text_list_create(request: HttpRequest):
 def text_list_edit(request: HttpRequest, list_id: int) -> HttpResponse:
     item = TblTextListDescription.objects.filter(id=list_id).first()
 
-    if not request.user.is_authenticated or (not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
+    if not request.user.is_authenticated or (
+            not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
         return render(request, "not_found.html",
                       context={"message": "Нет прав на редактирование списка",
                                "return_url": "text_app/text_list_item",
@@ -245,4 +246,20 @@ def text_list_edit(request: HttpRequest, list_id: int) -> HttpResponse:
 
 
 def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
-    return None
+    item = TblTextListDescription.objects.filter(id=list_id).first()
+
+    if item is None:
+        return render(request, "not_found.html", context={"message": "Список не найден",
+                                                          "return_url": "text_app/text_lists",
+                                                          "return_name": "К спискам текстов"})
+
+    if not request.user.is_authenticated or (
+            not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
+        return render(request, "not_found.html",
+                      context={"message": "Нет прав на удаление списка",
+                               "return_url": "text_app/text_list_item",
+                               "return_param": list_id,
+                               "return_name": "К списку текстов"})
+
+    item.delete()
+    return redirect("text_app/text_lists")
