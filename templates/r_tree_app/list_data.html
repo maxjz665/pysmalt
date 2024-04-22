@@ -1,0 +1,32 @@
+{% extends 'index.html' %}
+
+{% load bib_item %}
+
+{%  block content %}
+    <h2>Дерево решений "{{ content.name }}"</h2>
+    <div class="container">
+    <div class="row">
+        <div class="col">
+            <h3>Первая группа</h3>
+            <ul>
+                {% for item in first_texts %}
+            	    <li>{{ item.text|bib_item:"" }}
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col">
+            <h3>Вторая группа</h3>
+            <ul>
+                {% for item in second_texts %}
+            	    <li>{{ item.text|bib_item:"" }}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать дерево</button>
+    </form>
+{% endblock %}

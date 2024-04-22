@@ -2,12 +2,12 @@
 
 {% block content %}
     <a href="{% url 'r_tree_app/add_list' %}">Добавить дерево</a>
-    
+
     <table class='table table-bordered border-primary'>
     <thead><tr><th>№</th><th>Название</th><th>Первый список</th><th>Второй список</th><th>Размер блока</th></tr></thead>
     <tbody>
     {% for item in items %}
-        <tr><td>{{ item.id }}</td><td>{{ item.name }}</td><td>{{ item.first_list.name }}</td><td>{{ item.second_list.name }}</td><td>{{ item.block_size }}</td></tr>
+        <tr><td>{{ item.id }}</td><td><a href="{% url 'r_tree_app/show_list' item.id %}">{{ item.name }}</a></td><td>{{ item.first_list.name }}</td><td>{{ item.second_list.name }}</td><td>{{ item.block_size }}</td></tr>
     {% endfor %}
     </tbody>
     </table>
