@@ -15,7 +15,8 @@ def tree_list(request: HttpRequest) -> HttpResponse:
     :param request:
     :return:
     """
-    return render(request, "r_tree_app/tree_list.html")
+    items = TblTreeDescription.objects.filter(is_deleted=False).filter(Q(public=True) | Q(owner=request.user))
+    return render(request, "r_tree_app/tree_list.html", context={"items": items})
 
 
 def add_list(request: HttpRequest) -> HttpResponse:
@@ -66,8 +67,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
-                              first_list=TblTextListDescription.objects.get(id=first_list),
-                              second_list=TblTextListDescription.objects.get(id=second_list))
+                                  first_list=TblTextListDescription.objects.get(id=first_list),
+                                  second_list=TblTextListDescription.objects.get(id=second_list))
         item.save()
         return redirect("r_tree_app/tree_list")
     except Exception as e:
