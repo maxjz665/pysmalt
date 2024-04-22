@@ -1,8 +1,12 @@
 """
 Обработка запросов к деревьям решений
 """
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+
+from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
+from text_app.models.tbl_textlist import TblTextListDescription
 
 
 def tree_list(request: HttpRequest) -> HttpResponse:
@@ -19,4 +23,56 @@ def add_list(request: HttpRequest) -> HttpResponse:
     Форма добавления/добавление нового дерева решений
     :return:
     """
-    return render(request, "r_tree_app/add_list.html")
+    if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
+        print(request.user.researcher)
+        return render(request, "not_found.html", context={"message": "Нет прав на добавление дерева ршений",
+                                                          "return_url": "r_tree_app/tree_list",
+                                                          "return_name": "К списку деревьев решений"})
+
+    input_name = request.POST.get("input_name", "Дерево решений")
+    first_list = request.POST.get("first_list", 0)
+    second_list = request.POST.get("second_list", 0)
+    block_size = request.POST.get("block_size", 200)
+    lists = TblTextListDescription.objects.filter(Q(public=True) | Q(owner=request.user))
+
+    print(first_list, second_list)
+
+    if request.method == "GET":
+        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                    'first_list': first_list,
+                                                                    'second_list': second_list,
+                                                                    'block_size': block_size})
+    err_msg = ""
+
+    if input_name == "":
+        err_msg = "Введите название дерева решений"
+    if first_list == "" or second_list == "":
+        err_msg = "Выберите списки текстов"
+    if first_list == second_list:
+        err_msg = "Списки текстов должны различаться"
+    try:
+        block_size = int(block_size)
+        if block_size <= 0:
+            raise ValueError
+    except ValueError:
+        err_msg = "Размер блока должен быть целым положительным числом"
+
+    if err_msg:
+        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                    'first_list': first_list,
+                                                                    'second_list': second_list,
+                                                                    'block_size': block_size,
+                                                                    "error_message": err_msg})
+
+    try:
+        item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
+                              first_list=TblTextListDescription.objects.get(id=first_list),
+                              second_list=TblTextListDescription.objects.get(id=second_list))
+        item.save()
+        return redirect("r_tree_app/tree_list")
+    except Exception as e:
+        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                    'first_list': first_list,
+                                                                    'second_list': second_list,
+                                                                    'block_size': block_size,
+                                                                    "error_message": e})
