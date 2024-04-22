@@ -19,5 +19,6 @@ from django.urls import path, include
 urlpatterns = [
     # path('admin/', admin.site.urls),
     path('', include('text_app.urls')),  # работа с текстом (просмотр и редактирование)
-    path('', include('user_app.urls'))  # профили пользователя + авторизация
+    path('', include('user_app.urls')),  # профили пользователя + авторизация
+    path('research/r_tree/', include('r_tree_app.urls'))  # работа с деревьями решений
 ]

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -39,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'text_app',
-    'user_app'
+    'user_app',
+    'research.r_tree_app'
 ]
 
 AUTH_USER_MODEL = 'user_app.TblUser'
@@ -136,6 +138,8 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+sys.path.append(os.path.join(BASE_DIR, 'research'))
 
 # подключаем сюда локальные настройки
 try:
