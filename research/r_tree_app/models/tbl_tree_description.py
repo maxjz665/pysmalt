@@ -20,5 +20,5 @@ class TblTreeDescription(models.Model):
     public = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
     block_size = models.IntegerField(default=0)
-    first_list = models.ForeignKey(TblTextListDescription, db_column="first_list", on_delete=models.CASCADE)
-    second_list = models.ForeignKey(TblTextListDescription, db_column="second_list", on_delete=models.CASCADE)
+    first_list = models.ForeignKey(TblTextListDescription, related_name="first_list_data", db_column="first_list", on_delete=models.CASCADE)
+    second_list = models.ForeignKey(TblTextListDescription, related_name="second_list_data", db_column="second_list", on_delete=models.CASCADE)

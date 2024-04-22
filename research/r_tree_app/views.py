@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from sklearn import tree
+import graphviz
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -15,7 +16,11 @@ def tree_list(request: HttpRequest) -> HttpResponse:
     """
     Получение списка деревьев решений
     """
-    items = TblTreeDescription.objects.filter(is_deleted=False).filter(Q(public=True) | Q(owner=request.user))
+    items = TblTreeDescription.objects.filter(is_deleted=False)
+    if request.user.is_authenticated:
+        items = items.filter(Q(public=True) | Q(owner__id=request.user.id))
+    else:
+        items = items.filter(public=True)
     return render(request, "r_tree_app/tree_list.html", context={"items": items})
 
 
@@ -145,8 +150,9 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
         result = [0] * min_size + [1] * min_size
         clf = tree.DecisionTreeClassifier()
         clf = clf.fit(table1 + table2, result)
-        tree.plot_tree(clf)
-        pass
+        dot_data = tree.export_graphviz(clf, out_file=None)
+        graph = graphviz.Source(dot_data)
+        graph.render("iris")
 
     return render(request, "r_tree_app/list_data.html",
                   context={"error_message": "Неизвестная операция над деревом решений",
