@@ -141,9 +141,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 sys.path.append(os.path.join(BASE_DIR, 'research'))
 
+# настройки подключения к брокеру сообщений
+BROKER_HOST = 'localhost'
+BROKER_PORT = 1883
+
+
 # подключаем сюда локальные настройки
 try:
     from shower.settings.local import *
 except ImportError:
     print("LOCAL SETTINGS NOT FOUND, USE DEFAULT SETTINGS!")
-
