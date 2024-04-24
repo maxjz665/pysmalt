@@ -4,6 +4,7 @@
 import asyncio
 import json
 import logging
+import time
 from json import JSONDecodeError
 
 import graphviz
@@ -31,6 +32,7 @@ class TreeWorkerHandler(object):
                     await client.subscribe("service/tree_worker/#")
                     async for message in client.messages:
                         topic = str(message.topic)
+                        logging.error("Got message from topic: " + topic)
                         if topic == "service/tree_worker/build":
                             try:
                                 await self.build_tree(json.loads(message.payload))
@@ -103,6 +105,9 @@ class TreeWorkerHandler(object):
         clf = tree.DecisionTreeClassifier()
         clf = clf.fit(table1 + table2, result)
         dot_data = tree.export_graphviz(clf, out_file=None)
-        graph = graphviz.Source(dot_data)
-        graph.render("iris")
+        tree_data.build_time = time.ctime()
+        tree_data.graph = dot_data
+        tree_data.save()
+        # graph = graphviz.Source(dot_data)
+        # graph.render("iris")
         logging.error(f"project: {params['project_id']}: done")

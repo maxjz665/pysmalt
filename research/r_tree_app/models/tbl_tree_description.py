@@ -1,24 +1,27 @@
 from django.db import models
 
+from shower.models import BaseModel
 from text_app.models.tbl_textlist import TblTextListDescription
 from user_app.models import TblUser
 
 
 # Create your models here.
-class TblTreeDescription(models.Model):
+class TblTreeDescription(BaseModel):
     """
     Модель дерева решений
     """
 
     class Meta:
         db_table = 'r_tree_description'
+        db_table_comment = 'Проекты деревьев решений'
 
     id = models.AutoField(primary_key=True)
-    name = models.TextField(max_length=200)
+    name = models.TextField(max_length=200, db_comment='Название проекта/дерева')
     owner = models.ForeignKey(TblUser, db_column="owner", on_delete=models.SET_NULL,
-                              null=True, blank=True)
-    public = models.BooleanField(default=False)
-    is_deleted = models.BooleanField(default=False)
+                              null=True, blank=True, db_comment='Владелец проекта/дерева')
+    public = models.BooleanField(default=False, db_comment='Публичный доступ к проекту/дереву')
     block_size = models.IntegerField(default=0)
     first_list = models.ForeignKey(TblTextListDescription, related_name="first_list_data", db_column="first_list", on_delete=models.CASCADE)
     second_list = models.ForeignKey(TblTextListDescription, related_name="second_list_data", db_column="second_list", on_delete=models.CASCADE)
+    build_at = models.DateTimeField(null=True, default=None)
+    graph = models.TextField(blank=True, null=True)

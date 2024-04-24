@@ -1,11 +1,16 @@
 """
 Обработка запросов к деревьям решений
 """
+import asyncio
+import json
+
+from aiomqtt import Client
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
+from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_textlist import TblTextListDescription
 
 
@@ -69,7 +74,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
                                   first_list=TblTextListDescription.objects.get(id=first_list),
-                                  second_list=TblTextListDescription.objects.get(id=second_list))
+                                  second_list=TblTextListDescription.objects.get(id=second_list),
+                                  created_by=request.user.id, updated_by=request.user.id)
         item.save()
         return redirect("r_tree_app/tree_list")
     except Exception as e:
@@ -78,6 +84,13 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
                                                                     "error_message": e})
+
+
+async def send_broker_message(list_id: int):
+    async with Client(BROKER_HOST, BROKER_PORT, identifier="django_" + str(list_id)) as client:
+        await client.publish("service/tree_worker/build", json.dumps({"project_id": list_id}))
+        print("BINGO!!!")
+    pass
 
 
 def show_list(request: HttpRequest, list_id) -> HttpResponse:
@@ -104,7 +117,12 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
     action = request.POST.get("action")
     if action == "recalc":
         # TODO: обнуление даты генерации дерева и отправка задачи в брокер
-        pass
+        list_data.build_at = None
+        list_data.save()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        task = loop.create_task(send_broker_message(list_id))
+        loop.run_until_complete(asyncio.gather(task))
 
     return render(request, "r_tree_app/list_data.html",
                   context={"error_message": "Неизвестная операция над деревом решений",
