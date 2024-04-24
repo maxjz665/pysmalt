@@ -76,6 +76,7 @@ pytest:
 
     coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
     artifacts:
+      when: always
       reports:
         junit: report.xml
         coverage_report:
