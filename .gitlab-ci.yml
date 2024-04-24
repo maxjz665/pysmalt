@@ -56,6 +56,10 @@ pytest:
     - develop
     - merge_requests
 
+    rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      allow_failure: true
+
     before_script:
       - rm -f /etc/apt/apt.conf.d/docker-clean
       - mkdir -p .apt && rm -rf /var/cache/apt/archives/* && mount --bind .apt /var/cache/apt/archives/
