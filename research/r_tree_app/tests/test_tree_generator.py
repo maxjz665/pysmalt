@@ -1,7 +1,6 @@
 from django.test import TestCase
 
-from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
-from research.r_tree_app.views import _generate_table
+from research.r_tree_app.tree_worker_hanlder import TreeWorkerHandler
 from text_app.models.tbl_textlist import TblTextListDescription
 
 
@@ -19,5 +18,5 @@ class StatDataGeneratorTest(TestCase):
         """
         item = TblTextListDescription.objects.get(id=1)
 
-        table1 = _generate_table(item, 200)
+        table1 = TreeWorkerHandler._generate_table(item, 200, 23)
         self.assertTrue(len(table1) > 0)
