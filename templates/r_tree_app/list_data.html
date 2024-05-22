@@ -6,6 +6,14 @@
     <h2>Дерево решений "{{ content.name }}"</h2>
     <div class="container">
     <div class="row">
+        {% if content.build_at %}
+        Сборка: {{ content.build_at }}
+        Граф: {{ content.graph }}
+        {% else %}
+        Статус: {{ content.build_status }}
+        {% endif %}
+    </div>
+    <div class="row">
         <div class="col">
             <h3>Первая группа</h3>
             <ul>

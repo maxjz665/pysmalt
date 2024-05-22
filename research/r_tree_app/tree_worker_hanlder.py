@@ -5,9 +5,9 @@ import asyncio
 import json
 import logging
 import time
+from datetime import datetime, timezone
 from json import JSONDecodeError
 
-import graphviz
 from aiomqtt import MqttError, Client
 from asgiref.sync import sync_to_async
 from sklearn import tree
@@ -94,18 +94,24 @@ class TreeWorkerHandler(object):
             logging.error("Invalid project_id")
             return
 
+        tree_data.build_status = "Построение матриц"
+        tree_data.save()
+
         # перестраиваем дерево решений
         table1 = self._generate_table(tree_data.first_list, tree_data.block_size, 23)
         table2 = self._generate_table(tree_data.second_list, tree_data.block_size, 23)
         logging.error(f"project: {params['project_id']}: table1: {len(table1)}, table2: {len(table2)}")
+        tree_data.build_status = "Построение дерева"
+        tree_data.save()
         min_size = min(len(table1), len(table2))
         table1 = table1[:min_size]
         table2 = table2[:min_size]
         result = [0] * min_size + [1] * min_size
         clf = tree.DecisionTreeClassifier()
         clf = clf.fit(table1 + table2, result)
+        tree_data.build_status = "Выполнено"
+        tree_data.build_at = datetime.now(timezone.utc)
         dot_data = tree.export_graphviz(clf, out_file=None)
-        tree_data.build_time = time.ctime()
         tree_data.graph = dot_data
         tree_data.save()
         # graph = graphviz.Source(dot_data)

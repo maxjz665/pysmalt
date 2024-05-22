@@ -31,7 +31,6 @@ def add_list(request: HttpRequest) -> HttpResponse:
     Форма добавления/добавление нового дерева решений
     """
     if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
-        print(request.user.researcher)
         return render(request, "not_found.html", context={"message": "Нет прав на добавление дерева решений",
                                                           "return_url": "r_tree_app/tree_list",
                                                           "return_name": "К списку деревьев решений"})
@@ -113,16 +112,26 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
                                                                      "first_texts": first_texts,
                                                                      "second_texts": second_texts})
 
-    action = request.POST.get("action")
+    action = request.POST.get("action", "")
     if action == "recalc":
         # Обнуление даты генерации дерева и отправка задачи в брокер
+        if list_data.build_at is None and not request.user.has_admin:
+            return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                     "first_texts": first_texts,
+                                                                     "second_texts": second_texts,
+                                                                     "error_message": "Дерево в прцессе построения"})
         list_data.build_at = None
+        list_data.build_status = "В очереди"
         list_data.save()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         task = loop.create_task(send_broker_message(list_id))
         loop.run_until_complete(asyncio.gather(task))
         loop.close()
+        return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                     "first_texts": first_texts,
+                                                                     "second_texts": second_texts,
+                                                                     "success_message": "Запущена задача построения дерева"})
 
     return render(request, "r_tree_app/list_data.html",
                   context={"error_message": "Неизвестная операция над деревом решений",

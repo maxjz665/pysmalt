@@ -24,4 +24,5 @@ class TblTreeDescription(BaseModel):
     first_list = models.ForeignKey(TblTextListDescription, related_name="first_list_data", db_column="first_list", on_delete=models.CASCADE)
     second_list = models.ForeignKey(TblTextListDescription, related_name="second_list_data", db_column="second_list", on_delete=models.CASCADE)
     build_at = models.DateTimeField(null=True, default=None)
+    build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)
     graph = models.TextField(blank=True, null=True)
