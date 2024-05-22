@@ -8,7 +8,7 @@
     <div class="row">
         {% if content.build_at %}
         Сборка: {{ content.build_at }}
-        Граф: {{ content.graph }}
+        <img src="{% url 'r_tree_app/list_graph' content.id %}" alt="Модель графа">
         {% else %}
         Статус: {{ content.build_status }}
         {% endif %}

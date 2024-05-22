@@ -16,6 +16,8 @@ from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_word import TblWord
+from text_app.models.tbl_menu_items import TblMenuItems
+from text_app.models.tbl_menu_params import TblMenuParams
 
 
 class TreeWorkerHandler(object):
@@ -79,6 +81,32 @@ class TreeWorkerHandler(object):
                     word_index = 0
         return ret
 
+    @staticmethod
+    def _get_pos():
+        """
+        Получение перечня частей речи
+        """
+        menu_items = TblMenuItems.objects.all()
+        menu_params = TblMenuParams.objects.all()
+        param_row = menu_params.get(id=0)
+        values = []
+        for i in range(1, param_row.items_count + 1):
+            item_value = getattr(param_row, 'item_' + str(i))
+            value_row = menu_items.get(id=item_value)
+            values.append(value_row.item_caption)
+        return values
+
+    @staticmethod
+    def _generate_features(pos):
+        """
+        Построение пар часть речи - часть речи
+        """
+        ret = []
+        for item1 in pos:
+            for item2 in pos:
+                ret.append(item1 + "-" + item2)
+        return ret
+
     @sync_to_async
     def build_tree(self, params):
         """
@@ -98,8 +126,10 @@ class TreeWorkerHandler(object):
         tree_data.save()
 
         # перестраиваем дерево решений
-        table1 = self._generate_table(tree_data.first_list, tree_data.block_size, 23)
-        table2 = self._generate_table(tree_data.second_list, tree_data.block_size, 23)
+        pos = self._get_pos()
+        table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len(pos))
+        table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len(pos))
+        features = self._generate_features(pos)
         logging.error(f"project: {params['project_id']}: table1: {len(table1)}, table2: {len(table2)}")
         tree_data.build_status = "Построение дерева"
         tree_data.save()
@@ -111,7 +141,8 @@ class TreeWorkerHandler(object):
         clf = clf.fit(table1 + table2, result)
         tree_data.build_status = "Выполнено"
         tree_data.build_at = datetime.now(timezone.utc)
-        dot_data = tree.export_graphviz(clf, out_file=None)
+        classes = ["list1", "list2"]
+        dot_data = tree.export_graphviz(clf, out_file=None, feature_names=features, class_names=classes)
         tree_data.graph = dot_data
         tree_data.save()
         # graph = graphviz.Source(dot_data)

@@ -8,6 +8,7 @@ from aiomqtt import Client
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
+import graphviz
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
 from shower.settings import BROKER_HOST, BROKER_PORT
@@ -97,8 +98,7 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
     """
     list_data = TblTreeDescription.objects.get(id=list_id)
     if list_data is None or (list_data.public == 0 and (not request.user.is_authenticated or
-                                                        (
-                                                                request.user.id != list_data.owner.id and not request.user.has_admin))):
+                                                        (request.user.id != list_data.owner.id and not request.user.has_admin))):
         render(request, "not_found.html", context={
             "message": "Нет прав на просмотр дерева решений",
             "return_url": "r_tree_app/tree_list",
@@ -138,3 +138,16 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
                            "content": list_data,
                            "first_texts": first_texts,
                            "second_texts": second_texts})
+
+
+def get_graph(request: HttpRequest, list_id) -> HttpResponse:
+    list_data = TblTreeDescription.objects.get(id=list_id)
+    if list_data is None or (list_data.public == 0 and (not request.user.is_authenticated or
+                                                        (request.user.id != list_data.owner.id and not request.user.has_admin))):
+        render(request, "not_found.html", context={
+            "message": "Нет прав на просмотр дерева решений",
+            "return_url": "r_tree_app/tree_list",
+            "return_name": "К списку деревьев решений"
+        })
+    graph = graphviz.Source(list_data.graph)
+    return HttpResponse(graph.pipe(format='svg', encoding='utf-8'), content_type="image/svg+xml")
