@@ -1,4 +1,5 @@
 from django.db import models
+from picklefield.fields import PickledObjectField
 
 from shower.models import BaseModel
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -25,4 +26,5 @@ class TblTreeDescription(BaseModel):
     second_list = models.ForeignKey(TblTextListDescription, related_name="second_list_data", db_column="second_list", on_delete=models.CASCADE)
     build_at = models.DateTimeField(null=True, default=None)
     build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)
-    graph = models.TextField(blank=True, null=True)
+    graph_dot = models.TextField(blank=True, null=True, db_comment="Граф дерева решений")
+    graph_pickle = PickledObjectField(null=True, db_comment="Бинарное дерево решений")

@@ -149,5 +149,5 @@ def get_graph(request: HttpRequest, list_id) -> HttpResponse:
             "return_url": "r_tree_app/tree_list",
             "return_name": "К списку деревьев решений"
         })
-    graph = graphviz.Source(list_data.graph)
+    graph = graphviz.Source(list_data.graph_dot)
     return HttpResponse(graph.pipe(format='svg', encoding='utf-8'), content_type="image/svg+xml")

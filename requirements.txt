@@ -5,4 +5,5 @@ matplotlib  # отрисовка дерева решений
 graphviz~=0.20.3
 aiomqtt~=2.0.1  # общение с воркерами через mqtt протокол
 
-asgiref  # sync_to_async
+asgiref~=3.8.1
+django-picklefield~=3.2  # для хранения дерева решения в БД

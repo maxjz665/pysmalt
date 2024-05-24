@@ -143,7 +143,8 @@ class TreeWorkerHandler(object):
         tree_data.build_at = datetime.now(timezone.utc)
         classes = ["list1", "list2"]
         dot_data = tree.export_graphviz(clf, out_file=None, feature_names=features, class_names=classes)
-        tree_data.graph = dot_data
+        tree_data.graph_dot = dot_data
+        tree_data.graph_pickle = clf
         tree_data.save()
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
