@@ -4,20 +4,18 @@
 import asyncio
 import json
 import logging
-import time
 from datetime import datetime, timezone
 from json import JSONDecodeError
 
 from aiomqtt import MqttError, Client
 from asgiref.sync import sync_to_async
-from sklearn import tree
+from sklearn import ensemble, tree
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
+from research.r_tree_app.utils import get_pos
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_word import TblWord
-from text_app.models.tbl_menu_items import TblMenuItems
-from text_app.models.tbl_menu_params import TblMenuParams
 
 
 class TreeWorkerHandler(object):
@@ -82,21 +80,6 @@ class TreeWorkerHandler(object):
         return ret
 
     @staticmethod
-    def _get_pos():
-        """
-        Получение перечня частей речи
-        """
-        menu_items = TblMenuItems.objects.all()
-        menu_params = TblMenuParams.objects.all()
-        param_row = menu_params.get(id=0)
-        values = []
-        for i in range(1, param_row.items_count + 1):
-            item_value = getattr(param_row, 'item_' + str(i))
-            value_row = menu_items.get(id=item_value)
-            values.append(value_row.item_caption)
-        return values
-
-    @staticmethod
     def _generate_features(pos):
         """
         Построение пар часть речи - часть речи
@@ -126,7 +109,7 @@ class TreeWorkerHandler(object):
         tree_data.save()
 
         # перестраиваем дерево решений
-        pos = self._get_pos()
+        pos = get_pos()
         table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len(pos))
         table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len(pos))
         features = self._generate_features(pos)
@@ -137,12 +120,12 @@ class TreeWorkerHandler(object):
         table1 = table1[:min_size]
         table2 = table2[:min_size]
         result = [0] * min_size + [1] * min_size
-        clf = tree.DecisionTreeClassifier()
+        clf = ensemble.RandomForestClassifier()
         clf = clf.fit(table1 + table2, result)
         tree_data.build_status = "Выполнено"
         tree_data.build_at = datetime.now(timezone.utc)
         classes = ["list1", "list2"]
-        dot_data = tree.export_graphviz(clf, out_file=None, feature_names=features, class_names=classes)
+        dot_data = tree.export_graphviz(clf.estimators_[0], out_file=None, feature_names=features, class_names=classes)
         tree_data.graph_dot = dot_data
         tree_data.graph_pickle = clf
         tree_data.save()

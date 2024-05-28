@@ -7,7 +7,9 @@
     <div class="container">
     <div class="row">
         {% if content.build_at %}
-        Сборка: {{ content.build_at }}
+        Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_tree_app/check_text' content.id %}">Проверить текст</a>
+            </div>
+            <div class="row">
         <img src="{% url 'r_tree_app/list_graph' content.id %}" alt="Модель графа">
         {% else %}
         Статус: {{ content.build_status }}

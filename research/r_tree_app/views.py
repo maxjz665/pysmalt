@@ -11,8 +11,11 @@ from django.shortcuts import render, redirect
 import graphviz
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
+from research.r_tree_app.utils import get_pos
 from shower.settings import BROKER_HOST, BROKER_PORT
+from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
+from text_app.models.tbl_word import TblWord
 
 
 def tree_list(request: HttpRequest) -> HttpResponse:
@@ -99,7 +102,7 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
     list_data = TblTreeDescription.objects.get(id=list_id)
     if list_data is None or (list_data.public == 0 and (not request.user.is_authenticated or
                                                         (request.user.id != list_data.owner.id and not request.user.has_admin))):
-        render(request, "not_found.html", context={
+        return render(request, "not_found.html", context={
             "message": "Нет прав на просмотр дерева решений",
             "return_url": "r_tree_app/tree_list",
             "return_name": "К списку деревьев решений"
@@ -141,6 +144,25 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
 
 
 def get_graph(request: HttpRequest, list_id) -> HttpResponse:
+    """
+    Получение картинки графа дерева решений
+    """
+    list_data = TblTreeDescription.objects.get(id=list_id)
+    if list_data is None or (list_data.public == 0 and (not request.user.is_authenticated or
+                                                        (request.user.id != list_data.owner.id and not request.user.has_admin))):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на просмотр дерева решений",
+            "return_url": "r_tree_app/tree_list",
+            "return_name": "К списку деревьев решений"
+        })
+    graph = graphviz.Source(list_data.graph_dot)
+    return HttpResponse(graph.pipe(format='svg', encoding='utf-8'), content_type="image/svg+xml")
+
+
+def check_text(request: HttpRequest, list_id):
+    """
+    Проверка текста в дереве решений
+    """
     list_data = TblTreeDescription.objects.get(id=list_id)
     if list_data is None or (list_data.public == 0 and (not request.user.is_authenticated or
                                                         (request.user.id != list_data.owner.id and not request.user.has_admin))):
@@ -149,5 +171,53 @@ def get_graph(request: HttpRequest, list_id) -> HttpResponse:
             "return_url": "r_tree_app/tree_list",
             "return_name": "К списку деревьев решений"
         })
-    graph = graphviz.Source(list_data.graph_dot)
-    return HttpResponse(graph.pipe(format='svg', encoding='utf-8'), content_type="image/svg+xml")
+
+    texts = TblText.get_texts(request.user)
+    paper_id = request.POST.get("selectionTextId", None)
+    if paper_id is not None:
+        paper_id = int(paper_id)
+
+    paper = texts.get(id=paper_id)
+
+    if request.method == "GET":
+        # выдаем форму для GET запроса
+        return render(request, "r_tree_app/check.html", context={"content": list_data, "texts": texts,
+                                                                 "link": "text_app/papers_data",
+                                                                 "selectionTextId": paper_id})
+
+    # получаем текст и разбиваем его на блоки
+    content = TblWord.objects.filter(text_id=paper_id).order_by("chapter_index",
+                                                                "paragraph_index",
+                                                                "sentence_index",
+                                                                "word_index").all()
+
+    clf = list_data.graph_pickle
+
+    part_size = 200  # TODO: либо вынести в настройки проверки, либо брать из свойств дерева
+    parts = int(len(content) / part_size)
+    pos = get_pos()
+    dict_size = len(pos)
+    ret = []
+    for i in range(parts):  # делим текст на блоки и бежим по блокам
+        data = content[i * part_size: (i + 1) * part_size]
+        ret_item = [0] * dict_size * dict_size  # найденные переходы в текущем блоке текста
+        prev_pos = -1  # предыдущая часть речи
+        for word in data:  # для каждого блока вычисляем вектор биграмм
+            part_of_speech = word.dictword.param_01
+            if part_of_speech < 0:  # если битая часть речи, то пропускаем
+                prev_pos = -1
+                continue
+            if prev_pos < 0:  # если это первое слово в биграмме, то запоминаем его
+                prev_pos = part_of_speech
+                continue
+            ret_item[prev_pos * dict_size + part_of_speech] += 1
+
+        # обработка вектора деревом решений
+        result = clf.predict_proba([ret_item])
+        print(result)
+        ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1]})
+
+    return render(request, "r_tree_app/check.html", context={"content": list_data, "texts": texts,
+                                                             "link": "text_app/papers_data", "selectionTextId": paper_id,
+                                                             "paper": paper,
+                                                             "text": content, "colormap": ret})

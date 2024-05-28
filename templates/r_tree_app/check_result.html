@@ -1,0 +1,77 @@
+{% load bib_item %}
+{% load update_variable %}
+{% load search_color %}
+
+<hr>
+<div>{{ paper|bib_item:"text_app/papers_data" }}</div>
+
+<div>
+    {% if paper.url %}
+        <a class="btn btn-primary" href="{{ paper.url }}" target="_blank">Смотреть оригинал</a>
+    {% endif %}
+     <button type='button' class='btn btn-primary' data-toggle='modal' data-target='#colormap-table'>Просмотр раскраски в виде таблицы</button>
+    <b>Легенда:</b> "<span style='background-color:Khaki'>{{ content.first_list.name }}</span>" ({$percentPros}%), 
+ "<span style='background-color:LightGreen'>50/50</span>" ({$percentEqual}%), "<span>{{ content.second_list.name }}</span>" ({$percentCons}%)
+</div>
+<div class='alert alert-warning' role='alert'>Внимание! Размеры выделенного фрагмента определены приблизительно. Более точное их определение требует других методов.</div>
+
+    <p>
+    {% with current_chapter=0 %}
+    {% with current_paragraph=0 %}
+    {% with current_sentence=0 %}
+    {% for item in text %}
+        {% if current_chapter != item.chapter_index %}
+            </p><p><span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.chapter_index as current_chapter %}
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_paragraph != item.paragraph_index %}
+            </p><p><span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_sentence != item.sentence_index %}
+            |<span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if type != "old" %}
+            {% include "text_app/components/word_data.html" with item=item dictword=item.dictword2 style=colormap|search_color:forloop.counter0 %}
+        {% else %}
+            {% include "text_app/components/word_data.html" with item=item dictword=item.dictword style=colormap|search_color:forloop.counter0 %}
+        {% endif %}
+    {% endfor %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    </p>
+
+
+<div class="modal fade" id="colormap-table" tabindex="-1" role="dialog" aria-labelledby="colormap-table" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="colormap-table">Таблица раскраски</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      <b>Легенда:</b> "<span style='background-color:Khaki'>{{ content.first_list.name }}</span> ({$percentPros}%)", 
+      "<span style='background-color:LightGreen'>50/50</span> ({$percentEqual}%)", "<span>{{ content.second_list.name }}</span> ({$percentCons}%)"
+      <a type="button" class="btn btn-secondary" href="?action=export-colormap&id={$_REQUEST['id']}">Экспорт</a>
+        <table class="table table-bordered">
+            <thead><tr><th>Начало</th><th>Конец</th><th>{{ content.first_list.name }}</th><th>{{ content.second_list.name }}</th></tr></thead>
+            <tbody>
+            {% for item in colormap %}
+            <tr><td>{{ item.start }}</td><td>{{ item.end }}</td><td>{{ item.pros }}</td><td>{{ item.cons }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
