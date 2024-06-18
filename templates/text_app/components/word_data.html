@@ -9,6 +9,7 @@
                 "CHAPTER_INDEX": {{ item.chapter_index }},
                 "PARAGRAPH_INDEX": {{ item.paragraph_index }},
                 "SENTENCE_INDEX": {{ item.sentence_index }},
-                "WORD_INDEX": {{ item.word_index }}}, {% if type == "old" %}1{% else %}0{% endif %})'>
+                "WORD_INDEX": {{ item.word_index }}}, {% if type == "old" %}1{% else %}0{% endif %})'
+        style="{{ style }}">
     {{ item.word }}
 </span>

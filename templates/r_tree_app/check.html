@@ -1,0 +1,23 @@
+{% extends 'index.html' %}
+
+{% load bib_item %}
+
+{%  block content %}
+    <h2>Проверка текста в дереве решений "{{ content.name }}"</h2>
+    
+    <div class="p-1" style="width: 100%"><form class="form-inline" method="post">
+            <div class="form-group mb-2">
+                    <select class="form-control selectpicker" data-live-search="true" name="selectionTextId" style="width: 90%">
+                        {% for item in texts %}
+                            <option value="{{ item.id }}" {% if item.id == selectionTextId %}selected{% endif %}>{{ item|bib_item:link }}</option>
+                        {% endfor %}
+                    </select>
+            </div>
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary" name="action" value="check_text">Проверить текст</button>
+        </form>
+    </div>
+    {% if colormap %}
+        {% include 'r_tree_app/check_result.html' %}
+    {% endif %}
+{% endblock %}

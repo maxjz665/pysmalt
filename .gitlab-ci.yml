@@ -69,12 +69,14 @@ pytest:
       - pip install -r test-requirements.txt
       - pip install pytest-cov
     script:
-      - coverage run -m pytest --junitxml=report.xml
+      - coverage run -m pytest --junitxml=report.xml || EXIT_CODE=$?
       - coverage report
       - coverage xml
+      - exit $EXIT_CODE
 
     coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
     artifacts:
+      when: always
       reports:
         junit: report.xml
         coverage_report:
