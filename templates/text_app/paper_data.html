@@ -58,9 +58,9 @@
             {% update_variable item.sentence_index as current_sentence %}
         {% endif %}
         {% if type == "old" %}
-            {% include "text_app/components/word_data.html" with item=item dictword=item.dictword2 %}
-        {% else %}
             {% include "text_app/components/word_data.html" with item=item dictword=item.dictword %}
+        {% else %}
+            {% include "text_app/components/word_data.html" with item=item dictword=item.dictword2 %}
         {% endif %}
     {% endfor %}
     {% endwith %}
