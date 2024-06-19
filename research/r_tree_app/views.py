@@ -176,8 +176,9 @@ def check_text(request: HttpRequest, list_id):
     paper_id = request.POST.get("selectionTextId", None)
     if paper_id is not None:
         paper_id = int(paper_id)
-
-    paper = texts.get(id=paper_id)
+        paper = texts.get(id=paper_id)
+    else:
+        paper = None
 
     if request.method == "GET":
         # выдаем форму для GET запроса
