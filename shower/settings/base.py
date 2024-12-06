@@ -41,7 +41,8 @@ INSTALLED_APPS = [
 
     'text_app',
     'user_app',
-    'research.r_tree_app'
+    'research.r_tree_app',
+    'research.r_bigrams_app'
 ]
 
 AUTH_USER_MODEL = 'user_app.TblUser'

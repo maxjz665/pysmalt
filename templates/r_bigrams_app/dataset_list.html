@@ -1,0 +1,15 @@
+{% extends 'index.html' %}
+
+{% block content %}
+    <a href="{% url 'r_bigrams_app/dataset_add' %}">Добавить датасет</a>
+
+    <table class='table table-bordered border-primary'>
+    <thead><tr><th>№</th><th>Название</th><th>Список текстов</th></tr></thead>
+    <tbody>
+    {% for item in items %}
+        <tr><td>{{ item.id }}</td><td><a href="{% url 'r_bigrams_app/dataset_show' item.id %}">{{ item.name }}</a></td>
+            <td>{{ item.text_group.name }}</td></tr>
+    {% endfor %}
+    </tbody>
+    </table>
+{% endblock %}
