@@ -45,8 +45,6 @@ def add_list(request: HttpRequest) -> HttpResponse:
     block_size = request.POST.get("block_size", 200)
     lists = TblTextListDescription.objects.filter(Q(public=True) | Q(owner=request.user))
 
-    print(first_list, second_list)
-
     if request.method == "GET":
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
