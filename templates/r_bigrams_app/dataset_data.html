@@ -9,7 +9,7 @@
         {% csrf_token %}
         <div class="row">
             {% if content.build_at %}
-                <div class="col">Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_dataset_app/check_text' content.id %}">Проверить текст</a></div>
+                <div class="col">Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_bigrams_app/check_text' content.id %}">Проверить текст</a></div>
             {% else %}
                 <div class="col">Статус: {{ content.build_status }}</div>
             {% endif %}
@@ -27,5 +27,8 @@
     {% else %}
     Все тексты
     {%  endif %}
+    
+    <h3>Биграммы</h3>
+    {{ content.content }}
     </div>
 {% endblock %}

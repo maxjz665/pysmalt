@@ -135,3 +135,7 @@ async def send_broker_message(list_id: int):
     async with Client(BROKER_HOST, BROKER_PORT, identifier="django_" + str(list_id)) as client:
         await client.publish("service/bigrams_worker/build", json.dumps({"project_id": list_id}))
     pass
+
+
+def check_text(request):
+    return None
