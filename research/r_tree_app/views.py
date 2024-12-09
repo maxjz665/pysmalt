@@ -45,8 +45,6 @@ def add_list(request: HttpRequest) -> HttpResponse:
     block_size = request.POST.get("block_size", 200)
     lists = TblTextListDescription.objects.filter(Q(public=True) | Q(owner=request.user))
 
-    print(first_list, second_list)
-
     if request.method == "GET":
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
@@ -122,7 +120,7 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
             return render(request, "r_tree_app/list_data.html", context={"content": list_data,
                                                                      "first_texts": first_texts,
                                                                      "second_texts": second_texts,
-                                                                     "error_message": "Дерево в прцессе построения"})
+                                                                     "error_message": "Дерево в процессе построения"})
         list_data.build_at = None
         list_data.build_status = "В очереди"
         list_data.save()

@@ -67,3 +67,6 @@ class TblTextListItems(models.Model):
     id = models.AutoField(primary_key=True)
     list = models.ForeignKey(TblTextListDescription, db_column="listid", on_delete=models.CASCADE)
     text = models.ForeignKey(TblText, db_column="textid", on_delete=models.CASCADE)
+
+    def get_content(self):
+        return self.text.get_content()

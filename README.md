@@ -30,8 +30,19 @@ DATABASES = {
 
 ## Запуск приложения
 
+Основной веб сервер
 ```commandline
 python manage.py runserver
+```
+
+Модуль генерации деревьев решений
+```commandline
+python manage.py run_tree_worker
+```
+
+Модуль генерации датасетов биграмм
+```commandline
+python manage.py  run_bigrams_worker
 ```
 
 ## Для разработчиков

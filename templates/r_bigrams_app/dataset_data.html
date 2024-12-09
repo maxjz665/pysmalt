@@ -1,0 +1,38 @@
+{% extends 'index.html' %}
+
+{% load bib_item %}
+
+{%  block content %}
+    <h2>Датасет биграмм "{{ content.name }}"</h2>
+    <div class="container">
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            {% if content.build_at %}
+                <div class="col">Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_bigrams_app/check_text' content.id %}">Проверить текст</a></div>
+            {% else %}
+                <div class="col">Статус: {{ content.build_status }}</div>
+            {% endif %}
+        <div class="col"><button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать датасет</button></div>
+        </div>
+    </form>
+        
+    <h3>Список текстов</h3>
+    {%  if content.text_group %}
+            <ul>
+                {% for item in content.text_group.items %}
+            	    <li>{{ item.text|bib_item:"" }}
+                {% endfor %}
+            </ul>
+    {% else %}
+    Все тексты
+    {%  endif %}
+    
+    <h3>Биграммы</h3>
+    <ul>
+    {%  for item in content.content %}
+        <li>{{ item.0 }} -> {{ item.1 }}</li>
+    {% endfor %}
+    </ul>
+    </div>
+{% endblock %}

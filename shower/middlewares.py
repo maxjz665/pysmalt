@@ -1,14 +1,12 @@
 """
 Обработчики всех запросов к серверу
 """
+import re
 from functools import reduce
+from operator import add
+from time import time
 
 from django.db import connection
-from time import time
-from operator import add
-import re
-
-from django.http import HttpResponse
 
 
 def stats_middleware(get_response):
