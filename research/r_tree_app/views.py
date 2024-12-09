@@ -120,7 +120,7 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
             return render(request, "r_tree_app/list_data.html", context={"content": list_data,
                                                                      "first_texts": first_texts,
                                                                      "second_texts": second_texts,
-                                                                     "error_message": "Дерево в прцессе построения"})
+                                                                     "error_message": "Дерево в процессе построения"})
         list_data.build_at = None
         list_data.build_status = "В очереди"
         list_data.save()

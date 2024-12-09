@@ -29,3 +29,5 @@ class TblBigramDataset(BaseModel):
     is_use_initial = models.BooleanField(default=False, db_comment='расчет биграмм по словоформам (False) или по начальным значениям (True)')
     is_sentence_split = models.BooleanField(default=True, db_comment='расчет биграмм по предложениям или по абзацам')
     content = models.JSONField(default=list, db_comment='Перечень биграмм')
+    build_at = models.DateTimeField(null=True, default=None, db_comment="Время последней сборки")
+    build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)

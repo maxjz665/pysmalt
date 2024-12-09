@@ -1,11 +1,16 @@
 """
 Обработки запросов к биграммам
 """
+import asyncio
+import json
+
+from aiomqtt import Client
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 
 from research.r_bigrams_app.models.tbl_bigram_dataset import TblBigramDataset
+from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_textlist import TblTextListDescription
 
 
@@ -91,5 +96,42 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
                       "error_message": e})
 
 
-def dataset_show_list(request: HttpRequest) -> HttpResponse:
-    return None
+def dataset_show_list(request: HttpRequest, list_id: int) -> HttpResponse:
+    dataset_data = TblBigramDataset.objects.get(id=list_id)
+    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
+                                                        (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на просмотр датасета биграмм",
+            "return_url": "r_bigrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+
+    if request.method == "GET":
+        return render(request, "r_bigrams_app/dataset_data.html", context={"content": dataset_data})
+
+    action = request.POST.get("action", "")
+    if action == "recalc":
+        # Обнуление даты генерации дерева и отправка задачи в брокер
+        if dataset_data.build_at is None and not request.user.has_admin:
+            return render(request, "r_bigrams_app/dataset_data.html", context={"content": dataset_data,
+                                                                         "error_message": "Датасет в процессе построения"})
+        dataset_data.build_at = None
+        dataset_data.build_status = "В очереди"
+        dataset_data.save()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        task = loop.create_task(send_broker_message(list_id))
+        loop.run_until_complete(asyncio.gather(task))
+        loop.close()
+        return render(request, "r_bigrams_app/dataset_data.html", context={"content": dataset_data,
+                                                                     "success_message": "Запущена задача построения датасета"})
+
+    return render(request, "r_bigrams_app/dataset_data.html",
+                  context={"error_message": "Неизвестная операция над деревом решений",
+                           "content": dataset_data})
+
+async def send_broker_message(list_id: int):
+    async with Client(BROKER_HOST, BROKER_PORT, identifier="django_" + str(list_id)) as client:
+        await client.publish("service/bigrams_worker/build", json.dumps({"project_id": list_id}))
+    pass
