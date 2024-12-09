@@ -3,7 +3,7 @@
 """
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 from research.r_bigrams_app.models.tbl_bigram_dataset import TblBigramDataset
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -14,10 +14,12 @@ def dataset_list(request: HttpRequest) -> HttpResponse:
     Получение списка датасетов
     """
     items = TblBigramDataset.objects.filter(is_deleted=False)
+    print(len(items))
     if request.user.is_authenticated:
         items = items.filter(Q(is_public=True) | Q(owner__id=request.user.id))
     else:
         items = items.filter(is_public=True)
+    print(len(items))
     return render(request, "r_bigrams_app/dataset_list.html", context={"items": items})
 
 
@@ -45,7 +47,48 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
                                                                        'text_group': text_group,
                                                                        'is_use_initial': is_use_initial,
                                                                        'is_sentence_split': is_sentence_split})
-    return None
+    # проверка входных данных
+    error_msg = ""
+    if input_name == "":
+        error_msg = "Введите название датасета биграмм"
+    try:
+        max_bigrams = int(max_bigrams)
+        if max_bigrams <= 0:
+            raise ValueError
+    except ValueError:
+        error_msg = "Максимальное число биграмм в датасете должно быть целым положительным числом"
+
+    try:
+        min_occurrence = int(min_occurrence)
+        if min_occurrence < 0:
+            raise ValueError
+    except ValueError:
+        error_msg = "Минимальное количество встречаемости биграммы должно быть целым неотрицательным числом"
+
+    if error_msg:
+        return render(request, "r_bigrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                       'max_bigrams': max_bigrams,
+                                                                       'min_occurrence': min_occurrence,
+                                                                       'text_group': text_group,
+                                                                       'is_use_initial': is_use_initial,
+                                                                       'is_sentence_split': is_sentence_split,
+                      "error_message": error_msg})
+
+    try:
+        item = TblBigramDataset(name=input_name, max_bigrams=max_bigrams, min_occurrence=min_occurrence, is_use_initial=(True if is_use_initial == "on" else False),
+                                is_sentence_split=(True if is_sentence_split == "on" else False), owner=request.user, created_by=request.user.id, updated_by=request.user.id)
+        if int(text_group) != 0:
+            item.text_group = TblTextListDescription.objects.get(id=text_group)
+        item.save()
+        return redirect("r_bigrams_app/dataset_list")
+    except Exception as e:
+        return render(request, "r_bigrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                       'max_bigrams': max_bigrams,
+                                                                       'min_occurrence': min_occurrence,
+                                                                       'text_group': text_group,
+                                                                       'is_use_initial': is_use_initial,
+                                                                       'is_sentence_split': is_sentence_split,
+                      "error_message": e})
 
 
 def dataset_show_list(request: HttpRequest) -> HttpResponse:
