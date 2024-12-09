@@ -90,10 +90,7 @@ def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
 
     text_data = TblText.objects.filter(id=paper_id).get()
 
-    content = TblWord.objects.filter(text_id=paper_id).order_by("chapter_index",
-                                                                "paragraph_index",
-                                                                "sentence_index",
-                                                                "word_index").all()
+    content = text_data.get_content()
 
     if text_data is None or content is None:
         return render(request, "not_found.html", context={"message": "Текст не найден",

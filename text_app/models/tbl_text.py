@@ -1,6 +1,10 @@
 """
 Модель текста
 """
+from operator import and_
+from unicodedata import category
+
+from django.contrib.auth.models import AnonymousUser
 from django.db import models
 
 from text_app.models.tbl_author import TblAuthor
@@ -49,18 +53,30 @@ class TblText(models.Model):
     origin_title = models.TextField()
 
     @staticmethod
-    def get_texts(user, exclude_list: set = None):
+    def get_texts(user = AnonymousUser, exclude_list: set = None, exclude_deleted: bool = False, exclude_not_verified: bool = False):
         """
         Получение перечня текстов в зависимости от пользователя
-        :param exclude_list: перечень исключенных текстов
         :param user: пользователь
+        :param exclude_list: перечень исключенных текстов
+        :param exclude_deleted: исключить удаленные тексты
+        :param exclude_not_verified: исключить непроверенные тексты
         :return: список текстов
         """
         texts = TblText.objects.filter(inuse1=1)
-        if not user.is_authenticated or not user.has_level(TblUser.LEVEL_USER):
+        if user.is_anonymous or not user.is_authenticated or not user.has_level(TblUser.LEVEL_USER) or exclude_not_verified:
             texts = texts.filter(status=2)
+
+        if user.is_anonymous or not user.is_authenticated or not user.has_level(TblUser.LEVEL_EDITOR) or exclude_deleted:
+            texts = texts.filter(category=0)
 
         if exclude_list:
             texts = texts.exclude(id__in=exclude_list)
 
         return texts
+
+    def get_content(self):
+        from text_app.models.tbl_word import TblWord
+        return TblWord.objects.filter(text_id=self.id).order_by("chapter_index",
+                                                                    "paragraph_index",
+                                                                    "sentence_index",
+                                                                    "word_index").all()

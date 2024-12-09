@@ -27,3 +27,17 @@ class TblWord(models.Model):
     dictword2 = models.ForeignKey(TblDictWord2, on_delete=models.SET_NULL, null=True, blank=True)
     wordorder = models.IntegerField(default=0)
     wordno = models.IntegerField(default=0)
+
+    def is_new_sentence(self, next_word):
+        """
+        Определяем следующее предложение или нет
+        """
+        if self.is_new_paragraph(next_word) or \
+            self.sentence_index != next_word.sentence_index:
+            return True
+        return False
+
+    def is_new_paragraph(self, next_word):
+        if self.chapter_index != next_word.chapter_index or self.paragraph_index != next_word.paragraph_index:
+            return True
+        return False

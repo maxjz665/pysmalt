@@ -18,9 +18,9 @@
     </form>
         
     <h3>Список текстов</h3>
-    {%  if content.text_data %}
+    {%  if content.text_group %}
             <ul>
-                {% for item in content.text_data %}
+                {% for item in content.text_group.items %}
             	    <li>{{ item.text|bib_item:"" }}
                 {% endfor %}
             </ul>
@@ -29,6 +29,10 @@
     {%  endif %}
     
     <h3>Биграммы</h3>
-    {{ content.content }}
+    <ul>
+    {%  for item in content.content %}
+        <li>{{ item.0 }} -> {{ item.1 }}</li>
+    {% endfor %}
+    </ul>
     </div>
 {% endblock %}
