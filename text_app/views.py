@@ -31,11 +31,20 @@ def list_papers(request: HttpRequest):
     view = request.GET.get("view", "list")
 
     texts = TblText.get_texts(request.user)
+    text_lists = TblTextListDescription.objects
     if not (request.user.is_authenticated and request.user.has_level(TblUser.LEVEL_MANAGER)):
         texts = texts.filter(~Q(category=1))
+        text_lists = text_lists.filter(is_deleted=False)
+    if not request.user.is_authenticated:
+        text_lists = text_lists.filter(public=True)
+    else:
+        if not request.user.has_level(TblUser.LEVEL_ADMIN):
+            text_lists = text_lists.filter(owner=request.user)
     texts = texts.order_by('status').order_by('title').all()
+    text_lists = text_lists.order_by('name').all()
+
     return render(request, "text_app/list_papers.html", context={'texts': texts, "view": view,
-                                                                 "link": "text_app/papers_data"})
+                                                                 "link": "text_app/papers_data", 'text_lists': text_lists})
 
 
 def list_attrs(request: HttpRequest):
@@ -101,7 +110,7 @@ def paper_data(request: HttpRequest, paper_id: int) -> HttpResponse:
                   context={"type": use_old_type, "text_data": text_data, "content": content})
 
 
-def text_lists(request: HttpRequest):
+def get_text_lists(request: HttpRequest):
     """
     Отображение списков текстов
     :return: списки текстов

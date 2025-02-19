@@ -1653,9 +1653,9 @@ function updateFilters(displayType) {
     const mapSort1 = new Map([...yearArray.entries()].sort((a, b) => b[1] - a[1]));
     const magSort = new Map([...magArray.entries()].sort((a, b) => b[1] - a[1]));
 
-    var yearBox = document.getElementById('yearList');
-    var yearData = "<div class=\"years\">";
-    var counter = 0;
+    const yearBox = document.getElementById('yearList');
+    let yearData = "<div class=\"years\">";
+    let counter = 0;
 
     for (let key of mapSort1.keys()) {
         if (counter === 4) {
@@ -1693,12 +1693,12 @@ function updateFilters(displayType) {
 }
 
 function changeFilter(displayType) {
-    var yearCbs = document.querySelectorAll(".years input[type='checkbox']");
-    var magCbs = document.querySelectorAll(".mags input[type='checkbox']");
-    var textListsCbs  =document.querySelectorAll(".textLists input[type='checkbox']");
+    const yearCbs = document.querySelectorAll(".years input[type='checkbox']");
+    const magCbs = document.querySelectorAll(".mags input[type='checkbox']");
+    const textListsCbs  =document.querySelectorAll(".textLists input[type='checkbox']");
 
     console.log(textListsCbs.length);
-    var filters = {
+    const filters = {
         years: getClassOfCheckedCheckboxes(yearCbs),
         mags: getClassOfCheckedCheckboxes(magCbs),
         textLists: getClassOfCheckedCheckboxes(textListsCbs)
@@ -1742,10 +1742,10 @@ Object.defineProperty(Array.prototype, 'unique', {
 });
 
 function filterResults(filters, displayType) {
-    var nodeList = document.querySelectorAll('.paper');
-    var hiddenElems = [];
+    const nodeList = document.querySelectorAll('.paper');
+    let hiddenElems = [];
 
-    var textListItems = [];
+    let textListItems = [];
     if (filters.textLists.length > 0) {
         for (let textListsKey in filters.textLists) {
             let curList = filters.textLists[textListsKey].split(",");
