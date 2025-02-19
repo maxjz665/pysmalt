@@ -12,5 +12,18 @@
     <div style='display: flex; align-items: center;'>
         {{ text_data|bib_item:link }}
         {% if text_data.comment %}<div class='comment'>{{ text_data.comment }}</div>{% endif %}
+        {% if text_data.category != 1 %}
+            {% if text_data.status >= 3 %}
+                &nbsp;<div class="badge badge-pill badge-secondary">С ошибками</div>
+            {% elif text_data.status >= 2 %}
+                &nbsp;<div class="badge badge-pill badge-success">Проверено</div>
+            {% elif text_data.status >= 1 %}
+                &nbsp;<div class="badge badge-pill badge-warning">На редактировании</div>
+            {% else %}
+                &nbsp;<div class="badge badge-pill badge-danger">Новая</div>
+            {% endif %}
+        {%  else %}
+            &nbsp;<div class="badge badge-pill badge-danger">Удалено</div>
+        {% endif %}
     </div>
 </div>

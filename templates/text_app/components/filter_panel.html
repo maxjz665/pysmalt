@@ -1,0 +1,28 @@
+<div class="col-md-2 float-left col-1 collapse width" style="width: 25%" id="collapseExample">
+    <div class="card m-2">
+        <div class="card-header">Фильтрация по годам</div>
+        <div class="card-body" id="yearList">
+        </div>
+    </div>
+
+    <div class="card m-2">
+        <div class="card-header">Фильтрация по журналам</div>
+        <div class="card-body" id="magazineList">
+        </div>
+    </div>
+
+    {% if text_lists %}
+    <div class="card m-2">
+        <div class="card-header">Фильтрация по спискам</div>
+        <div class="card-body" id="textListList">
+            <div>
+                <div class="textLists">
+                    {% for item in text_lists %}
+                        <div class='checkbox'><label><input type='checkbox' rel='{{ item.item_ids|join:"," }}' onchange="changeFilter('{% if view == "table" %}table-row{% else %}block{% endif %}')"/> {{ item.name }}</label></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

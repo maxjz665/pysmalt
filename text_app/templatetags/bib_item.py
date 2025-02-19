@@ -20,7 +20,10 @@ def bib_item(value: TblText, arg: str):
     text_data = value
     link = arg
 
-    ret = f"[{text_data.idkey}] "
+    if text_data.idkey is None:
+        ret = "[] "
+    else:
+        ret = f"[{text_data.idkey}] "
     if text_data.author is not None:
         ret += text_data.author.name
         if text_data.author.name[-1] == '.':

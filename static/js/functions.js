@@ -1630,20 +1630,20 @@ function sortListBySigns(event) {
 }
 
 function updateFilters(displayType) {
-    var nodeList = document.querySelectorAll('.paper');
-    var yearArray = new Map();
+    const nodeList = document.querySelectorAll('.paper');
+    const yearArray = new Map();
     // журналы
-    var magArray = new Map();
+    const magArray = new Map();
 
 
     nodeList.forEach(function(item, i) {
-        var year = item.getAttribute('data-year');
+        const year = item.getAttribute('data-year');
         if (yearArray.has(year))
             yearArray.set(year, yearArray.get(year) + 1);
         else
             yearArray.set(year, 1);
 
-        var mag = item.getAttribute('data-mag');
+        const mag = item.getAttribute('data-mag');
         if (magArray.has(mag))
             magArray.set(mag, magArray.get(mag) + 1);
         else
@@ -1653,9 +1653,9 @@ function updateFilters(displayType) {
     const mapSort1 = new Map([...yearArray.entries()].sort((a, b) => b[1] - a[1]));
     const magSort = new Map([...magArray.entries()].sort((a, b) => b[1] - a[1]));
 
-    var yearBox = document.getElementById('yearList');
-    var yearData = "<div class=\"years\">";
-    var counter = 0;
+    const yearBox = document.getElementById('yearList');
+    let yearData = "<div class=\"years\">";
+    let counter = 0;
 
     for (let key of mapSort1.keys()) {
         if (counter === 4) {
@@ -1672,8 +1672,8 @@ function updateFilters(displayType) {
 
     yearBox.innerHTML = "<div>" + yearData + "</div>";
 
-    var magBox = document.getElementById('magazineList');
-    var magData = "<div class=\"mags\">";
+    const magBox = document.getElementById('magazineList');
+    let magData = "<div class=\"mags\">";
     counter = 0;
 
     for (let key of magSort.keys()) {
@@ -1693,12 +1693,12 @@ function updateFilters(displayType) {
 }
 
 function changeFilter(displayType) {
-    var yearCbs = document.querySelectorAll(".years input[type='checkbox']");
-    var magCbs = document.querySelectorAll(".mags input[type='checkbox']");
-    var textListsCbs  =document.querySelectorAll(".textLists input[type='checkbox']");
+    const yearCbs = document.querySelectorAll(".years input[type='checkbox']");
+    const magCbs = document.querySelectorAll(".mags input[type='checkbox']");
+    const textListsCbs  =document.querySelectorAll(".textLists input[type='checkbox']");
 
     console.log(textListsCbs.length);
-    var filters = {
+    const filters = {
         years: getClassOfCheckedCheckboxes(yearCbs),
         mags: getClassOfCheckedCheckboxes(magCbs),
         textLists: getClassOfCheckedCheckboxes(textListsCbs)
@@ -1742,10 +1742,10 @@ Object.defineProperty(Array.prototype, 'unique', {
 });
 
 function filterResults(filters, displayType) {
-    var nodeList = document.querySelectorAll('.paper');
-    var hiddenElems = [];
+    const nodeList = document.querySelectorAll('.paper');
+    let hiddenElems = [];
 
-    var textListItems = [];
+    let textListItems = [];
     if (filters.textLists.length > 0) {
         for (let textListsKey in filters.textLists) {
             let curList = filters.textLists[textListsKey].split(",");
