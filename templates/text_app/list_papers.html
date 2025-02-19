@@ -12,7 +12,8 @@
       <a class="dropdown-item" href="#" onclick="sortListByMagYearNum(event)">изданиям, годам, номерам</a>
       <a class="dropdown-item" href="#" onclick="sortListBySigns(event)">подписям</a>
     </div>
-            <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample" onclick="updateFilters('block')">
+            <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample"
+                    onclick="updateFilters('{% if view == "table" %}table-row{% else %}block{% endif %}')">
                 Панель фильтрации
             </button></div>
         <div class="p-2">
