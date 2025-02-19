@@ -31,10 +31,12 @@ def list_papers(request: HttpRequest):
     view = request.GET.get("view", "list")
 
     texts = TblText.get_texts(request.user)
-    text_lists = TblTextListDescription.objects
+    text_lists = TblTextListDescription.objects.filter(is_deleted=False)
     if not (request.user.is_authenticated and request.user.has_level(TblUser.LEVEL_MANAGER)):
+        # если пользователь не менеджер, то скрываем удаленные тексты
         texts = texts.filter(~Q(category=1))
-        text_lists = text_lists.filter(is_deleted=False)
+    if not (request.user.is_authenticated and request.user.has_level(TblUser.LEVEL_USER)):
+        texts = texts.filter(status=2)
     if not request.user.is_authenticated:
         text_lists = text_lists.filter(public=True)
     else:
