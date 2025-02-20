@@ -67,7 +67,7 @@ class TreeWorkerHandler(object):
                 if part_of_speech < 0:  # если битая часть речи, то пропускаем
                     prev_pos = -1
                     continue
-                if prev_pos < 0:  # если это первое слово в биграмме, то запоминаем его
+                if prev_pos < 0:  # если это первое слово в N-грамме, то запоминаем его
                     prev_pos = part_of_speech
                     continue
                 ret_item[prev_pos * dict_size + part_of_speech] += 1

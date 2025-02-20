@@ -1,5 +1,5 @@
 """
-Обработки запросов к биграммам
+Обработки запросов к N-граммам
 """
 import asyncio
 import json
@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 
-from research.r_bigrams_app.models.tbl_bigram_dataset import TblBigramDataset
+from research.r_ngrams_app.models.tbl_ngram_dataset import TblBigramDataset
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -24,7 +24,7 @@ def dataset_list(request: HttpRequest) -> HttpResponse:
         items = items.filter(Q(is_public=True) | Q(owner__id=request.user.id))
     else:
         items = items.filter(is_public=True)
-    return render(request, "r_bigrams_app/dataset_list.html", context={"items": items})
+    return render(request, "r_ngrams_app/dataset_list.html", context={"items": items})
 
 
 def dataset_add_list(request: HttpRequest) -> HttpResponse:
@@ -32,12 +32,12 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
     Форма добавления/добавление нового датасета
     """
     if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
-        return render(request, "not_found.html", context={"message": "Нет прав на добавление датасета биграмм",
-                                                          "return_url": "r_bigrams_app/dataset_list",
-                                                          "return_name": "К списку датасетов биграмм"})
+        return render(request, "not_found.html", context={"message": "Нет прав на добавление датасета N-грамм",
+                                                          "return_url": "r_ngrams_app/dataset_list",
+                                                          "return_name": "К списку датасетов N-грамм"})
 
-    input_name = request.POST.get("input_name", "Датасет биграмм")
-    max_bigrams = request.POST.get("max_bigrams", 100)
+    input_name = request.POST.get("input_name", "Датасет N-грамм")
+    max_ngrams = request.POST.get("max_ngrams", 100)
     min_occurrence = request.POST.get("min_occurrence", 1)
     text_group = request.POST.get("text_group", 0)
     is_use_initial = request.POST.get("is_use_initial", False)
@@ -45,8 +45,8 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
     lists = TblTextListDescription.objects.filter(Q(public=True) | Q(owner=request.user))
 
     if request.method == "GET":
-        return render(request, "r_bigrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
-                                                                       'max_bigrams': max_bigrams,
+        return render(request, "r_ngrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                       'max_ngrams': max_ngrams,
                                                                        'min_occurrence': min_occurrence,
                                                                        'text_group': int(text_group),
                                                                        'is_use_initial': is_use_initial,
@@ -54,24 +54,24 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
     # проверка входных данных
     error_msg = ""
     if input_name == "":
-        error_msg = "Введите название датасета биграмм"
+        error_msg = "Введите название датасета N-грамм"
     try:
-        max_bigrams = int(max_bigrams)
-        if max_bigrams <= 0:
+        max_ngrams = int(max_ngrams)
+        if max_ngrams <= 0:
             raise ValueError
     except ValueError:
-        error_msg = "Максимальное число биграмм в датасете должно быть целым положительным числом"
+        error_msg = "Максимальное число N-грамм в датасете должно быть целым положительным числом"
 
     try:
         min_occurrence = int(min_occurrence)
         if min_occurrence < 0:
             raise ValueError
     except ValueError:
-        error_msg = "Минимальное количество встречаемости биграммы должно быть целым неотрицательным числом"
+        error_msg = "Минимальное количество встречаемости N-граммы должно быть целым неотрицательным числом"
 
     if error_msg:
-        return render(request, "r_bigrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
-                                                                       'max_bigrams': max_bigrams,
+        return render(request, "r_ngrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                       'max_ngrams': max_ngrams,
                                                                        'min_occurrence': min_occurrence,
                                                                        'text_group': text_group,
                                                                        'is_use_initial': is_use_initial,
@@ -79,15 +79,15 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
                       "error_message": error_msg})
 
     try:
-        item = TblBigramDataset(name=input_name, max_bigrams=max_bigrams, min_occurrence=min_occurrence, is_use_initial=(True if is_use_initial == "on" else False),
-                                is_sentence_split=(True if is_sentence_split == "on" else False), owner=request.user, created_by=request.user.id, updated_by=request.user.id)
+        item = TblBigramDataset(name=input_name, max_ngrams=max_ngrams, min_occurrence=min_occurrence, is_use_initial=(is_use_initial == "on"),
+                                is_sentence_split=(is_sentence_split == "on"), owner=request.user, created_by=request.user.id, updated_by=request.user.id)
         if int(text_group) != 0:
             item.text_group = TblTextListDescription.objects.get(id=text_group)
         item.save()
-        return redirect("r_bigrams_app/dataset_list")
+        return redirect("r_ngrams_app/dataset_list")
     except Exception as e:
-        return render(request, "r_bigrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
-                                                                       'max_bigrams': max_bigrams,
+        return render(request, "r_ngrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                       'max_ngrams': max_ngrams,
                                                                        'min_occurrence': min_occurrence,
                                                                        'text_group': text_group,
                                                                        'is_use_initial': is_use_initial,
@@ -96,24 +96,27 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
 
 
 def dataset_show_list(request: HttpRequest, list_id: int) -> HttpResponse:
+    """
+    Отображение содержимого датасета
+    """
     dataset_data = TblBigramDataset.objects.get(id=list_id)
     if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
                                                         (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
         return render(request, "not_found.html", context={
-            "message": "Нет прав на просмотр датасета биграмм",
-            "return_url": "r_bigrams_app/dataset_list",
+            "message": "Нет прав на просмотр датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
             "return_name": "К списку датасетов"
         })
 
 
     if request.method == "GET":
-        return render(request, "r_bigrams_app/dataset_data.html", context={"content": dataset_data})
+        return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data})
 
     action = request.POST.get("action", "")
     if action == "recalc":
         # Обнуление даты генерации дерева и отправка задачи в брокер
         if dataset_data.build_at is None and not request.user.has_admin:
-            return render(request, "r_bigrams_app/dataset_data.html", context={"content": dataset_data,
+            return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data,
                                                                          "error_message": "Датасет в процессе построения"})
         dataset_data.build_at = None
         dataset_data.build_status = "В очереди"
@@ -123,16 +126,16 @@ def dataset_show_list(request: HttpRequest, list_id: int) -> HttpResponse:
         task = loop.create_task(send_broker_message(list_id))
         loop.run_until_complete(asyncio.gather(task))
         loop.close()
-        return render(request, "r_bigrams_app/dataset_data.html", context={"content": dataset_data,
+        return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data,
                                                                      "success_message": "Запущена задача построения датасета"})
 
-    return render(request, "r_bigrams_app/dataset_data.html",
+    return render(request, "r_ngrams_app/dataset_data.html",
                   context={"error_message": "Неизвестная операция над деревом решений",
                            "content": dataset_data})
 
 async def send_broker_message(list_id: int):
     async with Client(BROKER_HOST, BROKER_PORT, identifier="django_" + str(list_id)) as client:
-        await client.publish("service/bigrams_worker/build", json.dumps({"project_id": list_id}))
+        await client.publish("service/ngrams_worker/build", json.dumps({"project_id": list_id}))
     pass
 
 
@@ -142,19 +145,19 @@ def check_text(request, list_id: int) -> HttpResponse:
                                                                  (
                                                                          request.user.id != dataset_data.owner.id and not request.user.has_admin))):
         return render(request, "not_found.html", context={
-            "message": "Нет прав на просмотр датасета биграмм",
-            "return_url": "r_bigrams_app/dataset_list",
+            "message": "Нет прав на просмотр датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
             "return_name": "К списку датасетов"
         })
 
     texts = TblText.get_texts(request.user, None, True, True).all()
 
     if request.method == "GET":
-        return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts})
+        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts})
 
     text_id = request.POST.get("text_id", 0)
     if text_id == 0:
-        return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст"})
+        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст"})
 
     result = dataset_data.check_text(TblText.objects.get(id=text_id).get_content())
-    return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})
+    return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})

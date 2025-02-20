@@ -4,7 +4,7 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">Лексический спектр N-грамм</li>
-            <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_list" %}">Список датасетов</a></li>
             <li class="breadcrumb-item active" aria-current="page">Добавление нового датасета</li>
         </ol>
     </nav>
@@ -16,7 +16,7 @@
     <div class="row">
     <div class="form-group col-lg-10">
         <label for="input_name">Название датасета</label>
-        <input type="text" class="form-control" name="input_name" id="input_name" placeholder="Введите название датасета биграмм" value="{{ input_name }}">
+        <input type="text" class="form-control" name="input_name" id="input_name" placeholder="Введите название датасета N-грамм" value="{{ input_name }}">
     </div>
     </div>
     <div class="row">
@@ -34,8 +34,8 @@
         {% endif %}
     </div>
         <div class="form-group col-lg-3">
-            <label for="max_bigrams">Максимальное число биграмм в датасете</label>
-            <input type="text" class="form-control" name="max_bigrams" id="max_bigrams" placeholder="Введите число" value="{{ max_bigrams }}">
+            <label for="max_ngrams">Максимальное число N-грамм в датасете</label>
+            <input type="text" class="form-control" name="max_ngrams" id="max_bigrams" placeholder="Введите число" value="{{ max_bigrams }}">
         </div>
         <div class="form-group col-lg-3">
             <label for="min_occurrence">Минимальное количество встречаемости N-граммы</label>

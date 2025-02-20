@@ -40,9 +40,9 @@ python manage.py runserver
 python manage.py run_tree_worker
 ```
 
-Модуль генерации датасетов биграмм
+Модуль генерации датасетов N-грамм
 ```commandline
-python manage.py  run_bigrams_worker
+python manage.py  run_ngrams_worker
 ```
 
 ## Для разработчиков

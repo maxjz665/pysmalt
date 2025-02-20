@@ -1,11 +1,11 @@
 """
-Команда для запуска генератора датасетов биграмм
+Команда для запуска генератора датасетов N-грамм
 """
 import asyncio
 
 from django.core.management import BaseCommand
 
-from research.r_bigrams_app.bigrams_worker_hanlder import BigramsWorkerHandler
+from research.r_ngrams_app.ngrams_worker_hanlder import BigramsWorkerHandler
 
 
 class Command(BaseCommand):
