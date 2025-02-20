@@ -14,11 +14,15 @@
     <div class="form-group mb-2 col-lg-5">
         <label for="text_group">Список текстов</label>
          <select class="form-control selectpicker" data-live-search="true" id="text_group" name="text_group" style="width: 90%">
-            <option value="0" {% if text_group == 0 %}selected{% endif %}>Все тексты</option>
+            <option value="0">Все тексты</option>
              {% for item in lists %}
-                 <option value="{{ item.id }}" {% if text_group == item.id %}selected{% endif %}>{{ item.name }}</option>
+                 <option value="{{ item.id }}">{{ item.name }}</option>
              {% endfor %}
          </select>
+
+        {% if text_group is not None %}
+            <script>$('#text_group').selectpicker('val', {{ text_group }})</script>
+        {% endif %}
     </div>
         <div class="form-group col-lg-3">
             <label for="max_bigrams">Максимальное число биграмм в датасете</label>
