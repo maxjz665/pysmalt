@@ -20,12 +20,10 @@ def dataset_list(request: HttpRequest) -> HttpResponse:
     Получение списка датасетов
     """
     items = TblBigramDataset.objects.filter(is_deleted=False)
-    print(len(items))
     if request.user.is_authenticated:
         items = items.filter(Q(is_public=True) | Q(owner__id=request.user.id))
     else:
         items = items.filter(is_public=True)
-    print(len(items))
     return render(request, "r_bigrams_app/dataset_list.html", context={"items": items})
 
 
@@ -159,5 +157,4 @@ def check_text(request, list_id: int) -> HttpResponse:
         return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст"})
 
     result = dataset_data.check_text(TblText.objects.get(id=text_id).get_content())
-    print(text_id, result)
     return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})

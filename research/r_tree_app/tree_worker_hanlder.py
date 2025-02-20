@@ -32,7 +32,7 @@ class TreeWorkerHandler(object):
                     await client.subscribe("service/tree_worker/#")
                     async for message in client.messages:
                         topic = str(message.topic)
-                        logging.error("Got message from topic: " + topic)
+                        logging.error("Got message from topic: %s", topic)
                         if topic == "service/tree_worker/build":
                             try:
                                 await self.build_tree(json.loads(message.payload))
@@ -113,7 +113,7 @@ class TreeWorkerHandler(object):
         table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len(pos))
         table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len(pos))
         features = self._generate_features(pos)
-        logging.error(f"project: {params['project_id']}: table1: {len(table1)}, table2: {len(table2)}")
+        logging.error(f"project: %s: table1: %s, table2: %s", params['project_id'], len(table1), len(table2))
         tree_data.build_status = "Построение дерева"
         tree_data.save()
         min_size = min(len(table1), len(table2))
@@ -131,4 +131,4 @@ class TreeWorkerHandler(object):
         tree_data.save()
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
-        logging.error(f"project: {params['project_id']}: done")
+        logging.error(f"project: %s: done", params['project_id'])
