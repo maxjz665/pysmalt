@@ -45,7 +45,9 @@ class TblBigramDataset(BaseModel):
             total_ngrams += item[1]
         ret = []
         total_ngrams = 1000 / total_ngrams # делаем множитель для нормализации значений по словарю
+
         ngrams = self.extract_ngrams(text_data)
+
         ResultItem = namedtuple("ResultItem", ['ngram', 'value', 'dict_value', 'dict_pos'])
         for item in ngrams:
             if item in dataset.keys():
@@ -66,7 +68,7 @@ class TblBigramDataset(BaseModel):
             item.is_new_sentence(first_item) if self.is_sentence_split else item.is_new_paragraph(first_item)):
                 first_item = item
                 continue
-            key = first_item.word + " - " + item.word
+            key = first_item.word.lower() + " - " + item.word.lower()
             if key in result:
                 result[key] += 1
             else:

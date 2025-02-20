@@ -2,16 +2,31 @@
 
 {% load bib_item %}
 
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ content.name }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {%  block content %}
     <h2>Датасет биграмм "{{ content.name }}"</h2>
-    <div class="container">
     <form method="post">
         {% csrf_token %}
         <div class="row">
             {% if content.build_at %}
-                <div class="col">Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_bigrams_app/check_text' content.id %}">Проверить текст</a></div>
+                <div class="col">Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_bigrams_app/check_text' content.id %}">Построение лексического спектра текста по словарю</a></div>
             {% else %}
-                <div class="col">Статус: {{ content.build_status }}</div>
+                <div class="col">Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
+                <script>
+                $(document).ready(function () {
+                    window.setTimeout(function() {
+                        window.location.href = "{% url "r_bigrams_app/dataset_show" content.id %}";
+                    }, 5000);
+                });
+                </script>
             {% endif %}
         <div class="col"><button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать датасет</button></div>
         </div>
@@ -34,5 +49,4 @@
         <li>{{ item.0 }} -> {{ item.1 }}</li>
     {% endfor %}
     </ul>
-    </div>
 {% endblock %}

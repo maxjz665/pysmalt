@@ -1,9 +1,17 @@
 {% extends 'index.html' %}
 {% load bib_item %}
 
-{% block content %}
-    <h2>Построение лексического спектра текста по словарю "{{ content.name }}"</h2>
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_show" content.id %}">{{ content.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Построение лексического спектра текста по словарю</li>
+        </ol>
+    </nav>
+{%  endblock %}
 
+{% block content %}
     <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
         <div class="form-row">
