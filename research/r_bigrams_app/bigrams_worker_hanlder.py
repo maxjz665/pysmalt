@@ -30,7 +30,7 @@ class BigramsWorkerHandler(object):
                     await client.subscribe("service/bigrams_worker/#")
                     async for message in client.messages:
                         topic = str(message.topic)
-                        logging.debug("Got message from topic: " + topic)
+                        logging.debug("Got message from topic: %s", topic)
                         if topic == "service/bigrams_worker/build":
                             try:
                                 await self.build_dataset(json.loads(message.payload))
@@ -38,7 +38,7 @@ class BigramsWorkerHandler(object):
                                 logging.error("JSON decode error")
 
             except MqttError as error:
-                logging.error(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
+                logging.error(f'Error "%s". Reconnecting in %s seconds.', error, reconnect_interval)
                 await asyncio.sleep(reconnect_interval)
             except KeyboardInterrupt:
                 return
@@ -80,4 +80,4 @@ class BigramsWorkerHandler(object):
         dataset_data.save()
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
-        logging.debug(f"project: {params['project_id']}: done")
+        logging.debug(f"project: %s: done", params['project_id'])
