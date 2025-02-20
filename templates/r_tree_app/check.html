@@ -2,19 +2,45 @@
 
 {% load bib_item %}
 
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Деревья решений</li>
+            <li class="breadcrumb-item"><a href="{% url "r_tree_app/tree_list" %}">Список деревьев</a></li>
+            <li class="breadcrumb-item"><a href="{%  url "r_tree_app/show_list" content.id %}">{{ content.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Проверка текста в дереве решений</li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {%  block content %}
     <h2>Проверка текста в дереве решений "{{ content.name }}"</h2>
     
-    <div class="p-1" style="width: 100%"><form class="form-inline" method="post">
-            <div class="form-group mb-2">
-                    <select class="form-control selectpicker" data-live-search="true" name="selectionTextId" style="width: 90%">
-                        {% for item in texts %}
-                            <option value="{{ item.id }}" {% if item.id == selectionTextId %}selected{% endif %}>{{ item|bib_item:link }}</option>
-                        {% endfor %}
-                    </select>
+    <div class="p-1" style="width: 100%">
+        <form method="post">
+            <div class="form-row">
+                <div class="col-8">
+                    <div class="form-group row">
+                        <div class="input-group col">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">Выберите текст:</div>
+                            </div>
+                            <select class="form-control selectpicker" data-live-search="true" id="selectionTextId" name="selectionTextId">
+                                {% for item in texts %}
+                                    <option value="{{ item.id }}">{{ item|bib_item:link }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if selectionTextId is not None %}
+                                <script>$('#selectionTextId').selectpicker('val', {{ selectionTextId }})</script>
+                            {% endif %}
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary" name="action" value="check_text">Проверить текст</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             {% csrf_token %}
-            <button type="submit" class="btn btn-primary" name="action" value="check_text">Проверить текст</button>
         </form>
     </div>
     {% if colormap %}

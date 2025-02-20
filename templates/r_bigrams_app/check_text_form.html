@@ -4,6 +4,7 @@
 {% block breadcrumb %}
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
+            <li class="breadcrumb-item">Лексический спектр N-грамм</li>
             <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_list" %}">Список датасетов</a></li>
             <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_show" content.id %}">{{ content.name }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">Построение лексического спектра текста по словарю</li>
@@ -13,7 +14,7 @@
 
 {% block content %}
     <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
+        {% csrf_token %}
         <div class="form-row">
             <div class="col-8">
                 <div class="form-group row">

@@ -1,5 +1,14 @@
 {% extends 'index.html' %}
 
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Деревья решений</li>
+            <li class="breadcrumb-item active" aria-current="page">Список деревьев</li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block content %}
     <a href="{% url 'r_tree_app/add_list' %}">Добавить дерево</a>
 
