@@ -30,7 +30,7 @@ class BigramsWorkerHandler(object):
                     await client.subscribe("service/bigrams_worker/#")
                     async for message in client.messages:
                         topic = str(message.topic)
-                        logging.error("Got message from topic: " + topic)
+                        logging.debug("Got message from topic: " + topic)
                         if topic == "service/bigrams_worker/build":
                             try:
                                 await self.build_dataset(json.loads(message.payload))
@@ -38,7 +38,7 @@ class BigramsWorkerHandler(object):
                                 logging.error("JSON decode error")
 
             except MqttError as error:
-                print(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
+                logging.error(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
                 await asyncio.sleep(reconnect_interval)
             except KeyboardInterrupt:
                 return
@@ -69,19 +69,7 @@ class BigramsWorkerHandler(object):
         bigrams = {}
         for text in texts:
             content = text.get_content()
-            first_item = None
-            for item in content:
-                if first_item is None or (item.is_new_sentence(first_item) if dataset_data.is_sentence_split else item.is_new_paragraph(first_item)):
-                    first_item = item
-                    continue
-                key = first_item.word + " - " + item.word
-                if key == "И - и":
-                    print(item.text_id)
-                if key in bigrams:
-                    bigrams[key] += 1
-                else:
-                    bigrams[key] = 1
-                first_item = item
+            dataset_data.extract_ngrams(content, bigrams)
 
         # сохраняем датасет
         bigrams = dict(sorted(bigrams.items(), key=lambda x:x[1], reverse=True))
@@ -92,4 +80,4 @@ class BigramsWorkerHandler(object):
         dataset_data.save()
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
-        logging.error(f"project: {params['project_id']}: done")
+        logging.debug(f"project: {params['project_id']}: done")

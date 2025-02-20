@@ -1,0 +1,42 @@
+{% extends 'index.html' %}
+{% load bib_item %}
+
+{% block content %}
+    <h2>Построение лексического спектра текста по словарю "{{ content.name }}"</h2>
+
+    <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+        <div class="form-row">
+            <div class="col-8">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Выберите текст для построения</div>
+                        </div>
+                        <select class="selectpicker col-8" data-live-search="true" id="text_id" name="text_id">
+                            {% for item in texts %}
+                                <option value="{{ item.id }}">{{ item|bib_item:None }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if text_id is not None %}
+                            <script>$('#text_id').selectpicker('val', {{ text_id }})</script>
+                        {% endif %}
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary" name="submit" id="submit" value="create">Построить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if result %}
+            <h3>N-граммы</h3>
+        Формат: "позиция в тексте: значение -> число вхождений (нормализованное значение словаря на 1000 n-грамм)"
+    <ul>
+    {%  for item in result %}
+        <li>{{ item.dict_pos }}: {{ item.ngram }} -> {{ item.value }} ({{ item.dict_value|floatformat:-2 }})</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+{% endblock %}

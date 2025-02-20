@@ -11,6 +11,7 @@ from django.shortcuts import render, redirect
 
 from research.r_bigrams_app.models.tbl_bigram_dataset import TblBigramDataset
 from shower.settings import BROKER_HOST, BROKER_PORT
+from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
 
 
@@ -49,7 +50,7 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
         return render(request, "r_bigrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                        'max_bigrams': max_bigrams,
                                                                        'min_occurrence': min_occurrence,
-                                                                       'text_group': text_group,
+                                                                       'text_group': int(text_group),
                                                                        'is_use_initial': is_use_initial,
                                                                        'is_sentence_split': is_sentence_split})
     # проверка входных данных
@@ -137,5 +138,26 @@ async def send_broker_message(list_id: int):
     pass
 
 
-def check_text(request):
-    return None
+def check_text(request, list_id: int) -> HttpResponse:
+    dataset_data = TblBigramDataset.objects.get(id=list_id)
+    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
+                                                                 (
+                                                                         request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на просмотр датасета биграмм",
+            "return_url": "r_bigrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    texts = TblText.get_texts(request.user, None, True, True).all()
+
+    if request.method == "GET":
+        return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts})
+
+    text_id = request.POST.get("text_id", 0)
+    if text_id == 0:
+        return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст"})
+
+    result = dataset_data.check_text(TblText.objects.get(id=text_id).get_content())
+    print(text_id, result)
+    return render(request, "r_bigrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})
