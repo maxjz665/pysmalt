@@ -1,12 +1,21 @@
 {% extends 'index.html' %}
 
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Лексический спектр N-грамм</li>
+            <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Добавление нового датасета</li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block content %}
-    <h2>Добавление нового датасета биграмм</h2>
     <form method="post" enctype="multipart/form-data">
     <div class="container">
     <div class="row">
     <div class="form-group col-lg-10">
-        <label for="input_name">Название датасета биграмм</label>
+        <label for="input_name">Название датасета</label>
         <input type="text" class="form-control" name="input_name" id="input_name" placeholder="Введите название датасета биграмм" value="{{ input_name }}">
     </div>
     </div>
@@ -29,7 +38,7 @@
             <input type="text" class="form-control" name="max_bigrams" id="max_bigrams" placeholder="Введите число" value="{{ max_bigrams }}">
         </div>
         <div class="form-group col-lg-3">
-            <label for="min_occurrence">Минимальное количество встречаемости биграммы</label>
+            <label for="min_occurrence">Минимальное количество встречаемости N-граммы</label>
             <input type="text" class="form-control" name="min_occurrence" id="min_occurrence" placeholder="Введите число" value="{{ min_occurrence }}">
         </div>
     </div>
@@ -37,14 +46,14 @@
     <div class="row">
         <div class="form-group form-check">
             <input type="checkbox" class="form-check-input" name="is_use_initial" id="is_use_initial" {% if is_use_initial %}checked{% endif %}>
-            <label class="form-check-label" for="is_use_initial">Расчет биграмм по словоформам (нет) или по начальным значениям (да)</label>
+            <label class="form-check-label" for="is_use_initial">Расчет N-грамм по словоформам (нет) или по начальным значениям (да)</label>
         </div>
     </div>
         
     <div class="row">
         <div class="form-group form-check">
             <input type="checkbox" class="form-check-input" name="is_sentence_split" id="is_sentence_split" {% if is_sentence_split %}checked{% endif %}>
-            <label class="form-check-label" for="is_sentence_split">Расчет биграмм по предложениям (да) или по абзацам (нет)</label>
+            <label class="form-check-label" for="is_sentence_split">Расчет N-грамм по предложениям (да) или по абзацам (нет)</label>
         </div>
     </div>
 

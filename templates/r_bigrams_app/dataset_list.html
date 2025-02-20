@@ -1,7 +1,16 @@
 {% extends 'index.html' %}
 
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Лексический спектр N-грамм</li>
+            <li class="breadcrumb-item active" aria-current="page">Список датасетов</li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block content %}
-    <a href="{% url 'r_bigrams_app/dataset_add' %}">Добавить датасет</a>
+    <a class="btn btn-success mb-2" href="{% url 'r_bigrams_app/dataset_add' %}">Добавить датасет</a>
 
     <table class='table table-bordered border-primary'>
     <thead><tr><th>№</th><th>Название</th><th>Список текстов</th><th>Макс. число биграмм</th><th>Мин. встречаемость</th>
