@@ -23,6 +23,7 @@ class TblBigramDataset(BaseModel):
     owner = models.ForeignKey(TblUser, db_column="owner", on_delete=models.SET_NULL,
                               null=True, blank=True, db_comment='Владелец датасета')
     is_public = models.BooleanField(default=False, db_comment='Публичный доступ к датасету')
+    ngram_size = models.IntegerField(db_default=2, db_comment='Размер N-граммы')
     max_ngrams = models.IntegerField(default=100, db_comment='Максимальное число N-грамм в датасете')
     min_occurrence = models.IntegerField(default=1, db_comment='Минимальное количество встречаемости N-граммы')
     text_group = models.ForeignKey(TblTextListDescription, db_column='text_group', on_delete=models.SET_NULL,

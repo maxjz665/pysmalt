@@ -40,6 +40,7 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
     max_ngrams = request.POST.get("max_ngrams", 100)
     min_occurrence = request.POST.get("min_occurrence", 1)
     text_group = request.POST.get("text_group", 0)
+    ngram_size = request.POST.get("ngram_size", 2)
     is_use_initial = request.POST.get("is_use_initial", False)
     is_sentence_split = request.POST.get("is_sentence_split", True)
     lists = TblTextListDescription.objects.filter(Q(public=True) | Q(owner=request.user))
@@ -50,6 +51,7 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
                                                                        'min_occurrence': min_occurrence,
                                                                        'text_group': int(text_group),
                                                                        'is_use_initial': is_use_initial,
+                                                                       'ngram_size': ngram_size,
                                                                        'is_sentence_split': is_sentence_split})
     # проверка входных данных
     error_msg = ""
@@ -69,17 +71,25 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
     except ValueError:
         error_msg = "Минимальное количество встречаемости N-граммы должно быть целым неотрицательным числом"
 
+    try:
+        e_ngram_size = int(ngram_size)
+        if e_ngram_size <= 0:
+            raise ValueError
+    except ValueError:
+        error_msg = "Размер N-граммы должен быть целым положительным числом"
+
     if error_msg:
         return render(request, "r_ngrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                        'max_ngrams': max_ngrams,
                                                                        'min_occurrence': min_occurrence,
                                                                        'text_group': text_group,
                                                                        'is_use_initial': is_use_initial,
+                                                                       'ngram_size': ngram_size,
                                                                        'is_sentence_split': is_sentence_split,
                       "error_message": error_msg})
 
     try:
-        item = TblBigramDataset(name=input_name, max_ngrams=max_ngrams, min_occurrence=min_occurrence, is_use_initial=(is_use_initial == "on"),
+        item = TblBigramDataset(name=input_name, ngram_size=ngram_size, max_ngrams=max_ngrams, min_occurrence=min_occurrence, is_use_initial=(is_use_initial == "on"),
                                 is_sentence_split=(is_sentence_split == "on"), owner=request.user, created_by=request.user.id, updated_by=request.user.id)
         if int(text_group) != 0:
             item.text_group = TblTextListDescription.objects.get(id=text_group)
@@ -90,6 +100,7 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
                                                                        'max_ngrams': max_ngrams,
                                                                        'min_occurrence': min_occurrence,
                                                                        'text_group': text_group,
+                                                                       'ngram_size': ngram_size,
                                                                        'is_use_initial': is_use_initial,
                                                                        'is_sentence_split': is_sentence_split,
                       "error_message": e})
