@@ -1,7 +1,7 @@
 """
 Задача расчета частоты встречаемости N-грамм по группе текстов или по всем текстам
 """
-from collections import namedtuple
+from collections import namedtuple, deque
 
 from django.db import models
 
@@ -63,16 +63,34 @@ class TblBigramDataset(BaseModel):
         if result is None:
             result = {}
 
-        first_item = None
+        ngram_item: deque = deque()  # содержимое N-граммы
+        last_item = None  # последний рассмотренный элемент
         for item in content:
-            if first_item is None or (
-            item.is_new_sentence(first_item) if self.is_sentence_split else item.is_new_paragraph(first_item)):
-                first_item = item
+            if last_item is None or (
+            item.is_new_sentence(last_item) if self.is_sentence_split else item.is_new_paragraph(last_item)):
+                # если новое предложение или первый токен, то сохраняем его
+                ngram_item.clear()
+                ngram_item.appendleft(item)
+                last_item = item
                 continue
-            key = first_item.word.lower() + " - " + item.word.lower()
+
+            if len(ngram_item) == self.ngram_size:
+                # если очередь заданной длины, то удаляем последний и добавляем первый
+                ngram_item.popleft()
+                ngram_item.append(item)
+                last_item = item
+            elif len(ngram_item) < self.ngram_size:
+                # если не добрало до заданной длины, то добавляем в очередь элемент
+                ngram_item.append(item)
+                last_item = item
+                continue
+            else:
+                raise ValueError("Превышение размера стека N-грамм: " + str(self.ngram_size))
+
+            # если дошли до сюда, то у нас есть N-грамма, запоминаем ее
+            key = " - ".join(map(lambda x: x.word, ngram_item))
             if key in result:
                 result[key] += 1
             else:
                 result[key] = 1
-            first_item = item
         return result
