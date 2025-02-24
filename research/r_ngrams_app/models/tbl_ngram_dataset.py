@@ -94,3 +94,25 @@ class TblBigramDataset(BaseModel):
             else:
                 result[key] = 1
         return result
+
+    def ngram_pos(self, ngram_item: str, content: list):
+        """
+        Получение позиций N-грамм в тексте с учетом параметров датасета
+        """
+        ngram_data = ngram_item.split(" - ")
+        ngram_len = len(ngram_data)
+        ret = []
+
+        for idx, item in enumerate(content):
+            if item.word.lower() == ngram_data[0]:
+                print(idx)
+                is_found = True
+                for pos in range(ngram_len):
+                    if content[pos + idx].word.lower() != ngram_data[pos]:
+                        print(pos+idx, content[pos + idx].word.lower(), pos, ngram_data[pos])
+                        is_found = False
+                        break
+                if is_found:
+                    ret.append({"start": idx, "end": ngram_len + idx, "pros": 100, "cons": 0})
+
+        return ret

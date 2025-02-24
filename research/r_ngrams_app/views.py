@@ -153,8 +153,7 @@ async def send_broker_message(list_id: int):
 def check_text(request, list_id: int) -> HttpResponse:
     dataset_data = TblBigramDataset.objects.get(id=list_id)
     if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
-                                                                 (
-                                                                         request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
         return render(request, "not_found.html", context={
             "message": "Нет прав на просмотр датасета N-грамм",
             "return_url": "r_ngrams_app/dataset_list",
@@ -172,3 +171,38 @@ def check_text(request, list_id: int) -> HttpResponse:
 
     result = dataset_data.check_text(TblText.objects.get(id=text_id).get_content())
     return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})
+
+
+def search_ngram_dataset(request):
+    """
+    Поиск N-граммы в текстах датасета
+    """
+    return None
+
+
+def search_ngram_text(request, list_id: int, ngram_item: str, text_id: int) -> HttpResponse:
+    """
+    Поиск N-граммы в конкретном тексте
+    """
+    dataset_data = TblBigramDataset.objects.get(id=list_id)
+    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
+                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на просмотр датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    text = TblText.get_text(request.user, text_id)
+
+    if text is None:
+        return render(request, "not_found.html", context={
+            "message": "Нет доступа к выбранному тексту",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    content = text.get_content()
+    positions = dataset_data.ngram_pos(ngram_item, content)
+
+    return render(request, "r_ngrams_app/show_text.html", context={'dataset': dataset_data, 'content': content, 'paper': text, 'colormap': positions})

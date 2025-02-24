@@ -74,6 +74,20 @@ class TblText(models.Model):
 
         return texts
 
+    @staticmethod
+    def get_text(user = AnonymousUser, text_id: int = None):
+        """
+        Получение текста с проверкой всех прав
+        """
+        texts = TblText.objects.filter(inuse1=1, id=text_id)
+        if user.is_anonymous or not user.is_authenticated or not user.has_level(TblUser.LEVEL_USER):
+            texts = texts.filter(status=2)
+
+        if user.is_anonymous or not user.is_authenticated or not user.has_level(TblUser.LEVEL_EDITOR):
+            texts = texts.filter(category=0)
+
+        return texts.first()
+
     def get_content(self):
         from text_app.models.tbl_word import TblWord
         return TblWord.objects.filter(text_id=self.id).order_by("chapter_index",

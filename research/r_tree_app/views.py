@@ -213,7 +213,7 @@ def check_text(request: HttpRequest, list_id):
 
         # обработка вектора деревом решений
         result = clf.predict_proba([ret_item])
-        print(result)
+        # print(result)
         ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1]})
 
     return render(request, "r_tree_app/check.html", context={"content": list_data, "texts": texts,
