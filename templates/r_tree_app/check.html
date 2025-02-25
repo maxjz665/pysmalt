@@ -27,7 +27,7 @@
                             </div>
                             <select class="form-control selectpicker" data-live-search="true" id="selectionTextId" name="selectionTextId">
                                 {% for item in texts %}
-                                    <option value="{{ item.id }}">{% bib_item item link %}</option>
+                                    <option value="{{ item.id }}">{% bib_item item link item.id %}</option>
                                 {% endfor %}
                             </select>
                             {% if selectionTextId is not None %}

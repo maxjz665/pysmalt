@@ -17,7 +17,7 @@
 
 {% block content %}
 <hr>
-<div>{% bib_item paper "text_app/papers_data" %}</div>
+<div>{% bib_item paper "text_app/papers_data" paper.id %}</div>
 <div>
     {% if paper.url %}
         <a class="btn btn-primary" href="{{ paper.url }}" target="_blank">Смотреть оригинал</a>
