@@ -1,0 +1,70 @@
+{% extends 'index.html' %}
+
+{% load bib_item %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Лексический спектр N-грамм</li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ content.name }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{%  block content %}
+    <h2>Датасет N-грамм "{{ content.name }}"</h2>
+    <div class="container row">
+        <div class="col card">
+            <div class="card-body">
+            <div>Владелец: {{ content.owner.name }}</div>
+            <div>Размер N-граммы: {{ content.ngram_size }}</div>
+            <div>Максимальное число N-грамм в словаре: {{ content.max_ngrams }}</div>
+            <div>Минимальный порог вхождения: {{ content.min_occurrence }}</div>
+            <div>Способ расчета: {% if content.is_use_initial %}по начальным значениям{% else %} по словоформам{% endif %}</div>
+            <div>Способ разделения: {% if content.is_sentence_split %}по предложениям{% else %}по абзацам{% endif %}</div>
+            <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                {% if content.build_at %}
+                    <div class="col">Сборка: {{ content.build_at }}</div>
+                {% else %}
+                    <div class="col">Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
+                    <script>
+                    $(document).ready(function () {
+                        window.setTimeout(function() {
+                            window.location.href = "{% url "r_ngrams_app/dataset_show" content.id %}";
+                        }, 5000);
+                        });
+                        </script>
+                        {% endif %}
+                        <div class="col"><button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать датасет</button></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="col card">
+            <div class="card-body">
+                <a class="btn btn-info" href="{% url 'r_ngrams_app/check_text' content.id %}">Построение лексического спектра текста по словарю</a>
+            </div>
+        </div>
+    </div>
+        
+    <h3>Список текстов</h3>
+    {%  if content.text_group %}
+            <ul>
+                {% for item in content.text_group.items %}
+                    <li>{% bib_item item.text %}</li>
+                {% endfor %}
+            </ul>
+    {% else %}
+    Все тексты
+    {%  endif %}
+    
+    <h3>Словарь N-грамм</h3>
+    <ul>
+    {%  for item in content.content %}
+        <li><a href="{% url 'r_ngrams_app/search_ngram_dataset' content.id item.0 %}">{{ item.0 }}</a> -> {{ item.1.count }} ({{ item.1.text|length }} текстов)</li>
+    {% endfor %}
+    </ul>
+{% endblock %}

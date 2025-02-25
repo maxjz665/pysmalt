@@ -5,8 +5,8 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">Лексический спектр N-грамм</li>
-            <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_list" %}">Список датасетов</a></li>
-            <li class="breadcrumb-item"><a href="{% url "r_bigrams_app/dataset_show" content.id %}">{{ content.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_show" content.id %}">{{ content.name }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">Построение лексического спектра текста по словарю</li>
         </ol>
     </nav>
@@ -24,7 +24,7 @@
                         </div>
                         <select class="selectpicker col-8" data-live-search="true" id="text_id" name="text_id">
                             {% for item in texts %}
-                                <option value="{{ item.id }}">{{ item|bib_item:None }}</option>
+                                <option value="{{ item.id }}">{% bib_item item %}</option>
                             {% endfor %}
                         </select>
                         {% if text_id is not None %}
@@ -44,7 +44,7 @@
         Формат: "позиция в тексте: значение -> число вхождений (нормализованное значение словаря на 1000 n-грамм)"
     <ul>
     {%  for item in result %}
-        <li>{{ item.dict_pos }}: {{ item.ngram }} -> {{ item.value }} ({{ item.dict_value|floatformat:-2 }})</li>
+        <li>{{ item.dict_pos }}: <a href="{% url 'r_ngrams_app/search_ngram_text' content.id item.ngram text_id %}">{{ item.ngram }}</a> -> {{ item.value }} ({{ item.dict_value|floatformat:-2 }})</li>
     {% endfor %}
     </ul>
     {% endif %}

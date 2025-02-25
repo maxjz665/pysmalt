@@ -39,4 +39,14 @@ class Migration(migrations.Migration):
                 'db_table_comment': 'Датасеты биграмм для групп текстов',
             },
         ),
+        migrations.AddField(
+            model_name='tblbigramdataset',
+            name='build_at',
+            field=models.DateTimeField(db_comment='Время последней сборки', default=None, null=True),
+        ),
+        migrations.AddField(
+            model_name='tblbigramdataset',
+            name='build_status',
+            field=models.TextField(db_comment='Статус сборки', max_length=200, null=True),
+        ),
     ]

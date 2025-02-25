@@ -1,0 +1,54 @@
+{% extends 'index.html' %}
+
+{% load bib_item %}
+{% load update_variable %}
+{% load search_color %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Лексический спектр N-грамм</li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_show" dataset.id %}">{{ dataset.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Просмотр N-грамм в тексте</li>
+        </ol>
+    </nav>
+{%  endblock %}
+
+{% block content %}
+<hr>
+<div>{% bib_item paper "text_app/papers_data" paper.id %}</div>
+<div>
+    {% if paper.url %}
+        <a class="btn btn-primary" href="{{ paper.url }}" target="_blank">Смотреть оригинал</a>
+    {% endif %}
+</div>
+    <p>
+    {% with current_chapter=0 %}
+    {% with current_paragraph=0 %}
+    {% with current_sentence=0 %}
+    {% for item in content %}
+        {% if current_chapter != item.chapter_index %}
+            </p><p><span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.chapter_index as current_chapter %}
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_paragraph != item.paragraph_index %}
+            </p><p><span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_sentence != item.sentence_index %}
+            |<span id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'></span>
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% include "text_app/components/word_data.html" with item=item dictword=item.dictword style=colormap|search_color:forloop.counter0 %}
+    {% endfor %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    </p>
+
+    {{ positions }}
+{%  endblock %}

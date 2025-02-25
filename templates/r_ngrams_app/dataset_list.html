@@ -10,16 +10,17 @@
 {% endblock %}
 
 {% block content %}
-    <a class="btn btn-success mb-2" href="{% url 'r_bigrams_app/dataset_add' %}">Добавить датасет</a>
+    <a class="btn btn-success mb-2" href="{% url 'r_ngrams_app/dataset_add' %}">Добавить датасет</a>
 
     <table class='table table-bordered border-primary'>
-    <thead><tr><th>№</th><th>Название</th><th>Список текстов</th><th>Макс. число биграмм</th><th>Мин. встречаемость</th>
+        <thead><tr><th>№</th><th>Название</th><th>Список текстов</th><th>Размер N-граммы</th><th>Макс. число N-грамм</th><th>Мин. встречаемость</th>
     <th>Расчет по начальным значениям</th><th>Расчет по предложениям</th><th>Дата обновления</th></tr></thead>
     <tbody>
     {% for item in items %}
-        <tr><td>{{ item.id }}</td><td><a href="{% url 'r_bigrams_app/dataset_show' item.id %}">{{ item.name }}</a></td>
+        <tr><td>{{ item.id }}</td><td><a href="{% url 'r_ngrams_app/dataset_show' item.id %}">{{ item.name }}</a></td>
             <td>{% if item.text_group %}<a href="{% url 'text_app/text_list_item' item.text_group.id %}">{{ item.text_group.name }}</a>{% else %}Все тексты{% endif %}</td>
-            <td>{{ item.max_bigrams }}</td><td>{{ item.min_occurrence }}</td><td>{% if item.is_use_initial %}Да{% else %}Нет{% endif %}</td><td>{% if item.is_sentence_split %}Да{% else %}Нет{% endif %}</td>
+            <td>{{ item.ngram_size }}</td>
+            <td>{{ item.max_ngrams }}</td><td>{{ item.min_occurrence }}</td><td>{% if item.is_use_initial %}Да{% else %}Нет{% endif %}</td><td>{% if item.is_sentence_split %}Да{% else %}Нет{% endif %}</td>
         <td>{{ item.updated_at|date:'Y-m-d H:i' }}</td>
         </tr>
     {% endfor %}

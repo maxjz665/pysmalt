@@ -8,7 +8,7 @@
     <div>
         <button type="button" class="btn btn-primary" onclick="location.href='{% url "text_app/papers_list" %}'">Назад к списку</button>
     </div>
-    <div style="margin: 5px 20px"><div>{{ text_data|bib_item:"" }}</div>
+    <div style="margin: 5px 20px"><div>{% bib_item text_data %}</div>
         {% if text_data.comment %}[{{ text_data.comment }}]{% endif %}
         </div>
     {% if text_data.url %}

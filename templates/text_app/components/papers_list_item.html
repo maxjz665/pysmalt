@@ -10,7 +10,7 @@
      data-author2='{{ text_data.author2.name }}'
      data-author3='{{ text_data.author3.name }}'>
     <div style='display: flex; align-items: center;'>
-        {{ text_data|bib_item:link }}
+        {% bib_item text_data link text_data.id %}
         {% if text_data.comment %}<div class='comment'>{{ text_data.comment }}</div>{% endif %}
         {% if text_data.category != 1 %}
             {% if text_data.status >= 3 %}

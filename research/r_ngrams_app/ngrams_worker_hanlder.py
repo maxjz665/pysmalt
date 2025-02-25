@@ -11,7 +11,7 @@ from json import JSONDecodeError
 from aiomqtt import MqttError, Client
 from asgiref.sync import sync_to_async
 
-from research.r_bigrams_app.models.tbl_bigram_dataset import TblBigramDataset
+from research.r_ngrams_app.models.tbl_ngram_dataset import TblBigramDataset
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_text import TblText
 
@@ -27,11 +27,11 @@ class BigramsWorkerHandler(object):
             try:
                 async with Client(BROKER_HOST, BROKER_PORT, identifier="tg_bot_" + str(id(self))) as client:
                     logging.debug("TG bot broker connected successfully")
-                    await client.subscribe("service/bigrams_worker/#")
+                    await client.subscribe("service/ngrams_worker/#")
                     async for message in client.messages:
                         topic = str(message.topic)
                         logging.debug("Got message from topic: %s", topic)
-                        if topic == "service/bigrams_worker/build":
+                        if topic == "service/ngrams_worker/build":
                             try:
                                 await self.build_dataset(json.loads(message.payload))
                             except JSONDecodeError:
@@ -46,7 +46,7 @@ class BigramsWorkerHandler(object):
     @sync_to_async
     def build_dataset(self, params):
         """
-        Построение датасета биграмм для заданного проекта
+        Построение датасета N-грамм для заданного проекта
         """
         if "project_id" not in params:
             logging.error("Missing project_id")
@@ -58,7 +58,7 @@ class BigramsWorkerHandler(object):
             logging.error("Invalid project_id")
             return
 
-        dataset_data.build_status = "Расчет биграмм"
+        dataset_data.build_status = "Расчет N-грамм"
         dataset_data.save()
 
         if dataset_data.text_group is None:
@@ -66,17 +66,17 @@ class BigramsWorkerHandler(object):
         else:
             texts = dataset_data.text_group.items
 
-        bigrams = {}
+        ngrams = {}
         for text in texts:
             content = text.get_content()
-            dataset_data.extract_ngrams(content, bigrams)
+            dataset_data.extract_ngrams(text.id, content, ngrams)
 
         # сохраняем датасет
-        bigrams = dict(sorted(bigrams.items(), key=lambda x:x[1], reverse=True))
-        bigrams = list(islice(bigrams.items(), dataset_data.max_bigrams))
+        ngrams = dict(sorted(ngrams.items(), key=lambda x:x[1]["count"], reverse=True))
+        ngrams = list(islice(ngrams.items(), dataset_data.max_ngrams))
         dataset_data.build_status = "Выполнено"
         dataset_data.build_at = datetime.now(timezone.utc)
-        dataset_data.content = bigrams
+        dataset_data.content = ngrams
         dataset_data.save()
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
