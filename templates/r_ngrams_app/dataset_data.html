@@ -54,7 +54,7 @@
     {%  if content.text_group %}
             <ul>
                 {% for item in content.text_group.items %}
-            	    <li>{{ item.text|bib_item:"" }}
+                    <li>{% bib_item item.text %}</li>
                 {% endfor %}
             </ul>
     {% else %}
@@ -64,7 +64,7 @@
     <h3>Словарь N-грамм</h3>
     <ul>
     {%  for item in content.content %}
-        <li><a href="{% url 'r_ngrams_app/search_ngram_dataset' content.id item.0 %}">{{ item.0 }}</a> -> {{ item.1.count }}</li>
+        <li><a href="{% url 'r_ngrams_app/search_ngram_dataset' content.id item.0 %}">{{ item.0 }}</a> -> {{ item.1.count }} ({{ item.1.text|length }} текстов)</li>
     {% endfor %}
     </ul>
 {% endblock %}

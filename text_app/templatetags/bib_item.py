@@ -11,14 +11,13 @@ from django import template
 register = template.Library()
 
 
-@register.filter(name='bib_item', is_safe=True, needs_autoescape=False)
-def bib_item(value: TblText, arg: str):
+@register.simple_tag(name='bib_item')
+def bib_item(value: TblText, url: str = None, *args, **kwargs):
     """
     Формирование библиографического описания
     :return: строка с библиографическим описанием
     """
     text_data = value
-    link = arg
 
     if text_data.idkey is None:
         ret = "[] "
@@ -32,8 +31,8 @@ def bib_item(value: TblText, arg: str):
             ret += ". "
 
     # печать названия.
-    if link is not None and len(link) > 0:
-        ret += f' <a href="{reverse(link, args=[text_data.id])}">{text_data.title}</a>'
+    if url is not None and len(url) > 0:
+        ret += f' <a href="{reverse(url, args=args)}">{text_data.title}</a>'
     else:
         ret += text_data.title
 

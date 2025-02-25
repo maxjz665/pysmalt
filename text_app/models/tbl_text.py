@@ -53,11 +53,12 @@ class TblText(models.Model):
     origin_title = models.TextField()
 
     @staticmethod
-    def get_texts(user = AnonymousUser, exclude_list: set = None, exclude_deleted: bool = False, exclude_not_verified: bool = False):
+    def get_texts(user = AnonymousUser, exclude_list: set = None, include_list: set = None, exclude_deleted: bool = False, exclude_not_verified: bool = False):
         """
         Получение перечня текстов в зависимости от пользователя
         :param user: пользователь
         :param exclude_list: перечень исключенных текстов
+        :param include_list: перечень текстов для поиска
         :param exclude_deleted: исключить удаленные тексты
         :param exclude_not_verified: исключить непроверенные тексты
         :return: список текстов
@@ -71,6 +72,9 @@ class TblText(models.Model):
 
         if exclude_list:
             texts = texts.exclude(id__in=exclude_list)
+
+        if include_list:
+           texts = texts.filter(id__in=include_list)
 
         return texts
 

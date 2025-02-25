@@ -1,0 +1,19 @@
+{% extends "index.html" %}
+{% load bib_item %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Лексический спектр N-грамм</li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ content.name }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    {% for item in texts %}
+        {% bib_item item "r_ngrams_app/search_ngram_text" %}
+    {% endfor %}
+    {{ texts }}
+{% endblock %}

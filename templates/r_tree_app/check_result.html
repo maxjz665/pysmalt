@@ -3,7 +3,7 @@
 {% load search_color %}
 
 <hr>
-<div>{{ paper|bib_item:"text_app/papers_data" }}</div>
+<div>{% bib_item paper "text_app/papers_data" %}</div>
 
 <div>
     {% if paper.url %}

@@ -191,7 +191,7 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
     texts = []
     if request.user.is_authenticated:
         # если пользователь авторизован, то показываем ему список текстов
-        texts = TblText.get_texts(request.user, item.item_ids)
+        texts = TblText.get_texts(request.user, exclude_list=item.item_ids)
 
     return render(request, "text_app/text_list_item.html",
                   context={"content": item, "link": "text_app/papers_data", "texts": texts,

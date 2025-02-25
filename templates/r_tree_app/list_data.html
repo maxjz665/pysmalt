@@ -38,7 +38,7 @@
             <h3>Первая группа</h3>
             <ul>
                 {% for item in first_texts %}
-            	    <li>{{ item.text|bib_item:"" }}
+            	    <li>{% bib_item item.text %}
                 {% endfor %}
             </ul>
         </div>
@@ -46,7 +46,7 @@
             <h3>Вторая группа</h3>
             <ul>
                 {% for item in second_texts %}
-            	    <li>{{ item.text|bib_item:"" }}
+            	    <li>{% bib_item item.text %}
                 {% endfor %}
             </ul>
         </div>

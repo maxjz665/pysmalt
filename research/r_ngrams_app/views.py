@@ -160,7 +160,7 @@ def check_text(request, list_id: int) -> HttpResponse:
             "return_name": "К списку датасетов"
         })
 
-    texts = TblText.get_texts(request.user, None, True, True).all()
+    texts = TblText.get_texts(request.user, exclude_deleted=True, exclude_not_verified=True).all()
 
     if request.method == "GET":
         return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts})
@@ -188,7 +188,8 @@ def search_ngram_dataset(request, list_id: int, ngram_item: str) -> HttpResponse
 
     for item in dataset_data.content:
         if ngram_item == item[0]:
-            return render(request, "r_ngrams_app/dataset_text_list.html", context={"content": item})
+            texts = TblText.get_texts(request.user, include_list = item[1]["text"])
+            return render(request, "r_ngrams_app/dataset_text_list.html", context={"content": item, "texts": texts})
 
     return render(request, "not_found.html", context={
             "message": "N-грамма не найдена в датасете",
