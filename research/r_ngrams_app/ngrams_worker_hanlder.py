@@ -69,10 +69,10 @@ class BigramsWorkerHandler(object):
         ngrams = {}
         for text in texts:
             content = text.get_content()
-            dataset_data.extract_ngrams(content, ngrams)
+            dataset_data.extract_ngrams(text.id, content, ngrams)
 
         # сохраняем датасет
-        ngrams = dict(sorted(ngrams.items(), key=lambda x:x[1], reverse=True))
+        ngrams = dict(sorted(ngrams.items(), key=lambda x:x[1]["count"], reverse=True))
         ngrams = list(islice(ngrams.items(), dataset_data.max_ngrams))
         dataset_data.build_status = "Выполнено"
         dataset_data.build_at = datetime.now(timezone.utc)

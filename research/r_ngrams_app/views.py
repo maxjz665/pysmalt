@@ -169,15 +169,32 @@ def check_text(request, list_id: int) -> HttpResponse:
     if text_id == 0:
         return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст"})
 
-    result = dataset_data.check_text(TblText.objects.get(id=text_id).get_content())
+    result = dataset_data.check_text(text_id, TblText.get_text(request.user, text_id).get_content())
     return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})
 
 
-def search_ngram_dataset(request):
+def search_ngram_dataset(request, list_id: int, ngram_item: str) -> HttpResponse:
     """
     Поиск N-граммы в текстах датасета
     """
-    return None
+    dataset_data = TblBigramDataset.objects.get(id=list_id)
+    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
+                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на просмотр датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    for item in dataset_data.content:
+        if ngram_item == item[0]:
+            return render(request, "r_ngrams_app/dataset_text_list.html", context={"content": item})
+
+    return render(request, "not_found.html", context={
+            "message": "N-грамма не найдена в датасете",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
 
 
 def search_ngram_text(request, list_id: int, ngram_item: str, text_id: int) -> HttpResponse:

@@ -14,24 +14,41 @@
 
 {%  block content %}
     <h2>Датасет N-грамм "{{ content.name }}"</h2>
-    <form method="post">
-        {% csrf_token %}
-        <div class="row">
-            {% if content.build_at %}
-                <div class="col">Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_ngrams_app/check_text' content.id %}">Построение лексического спектра текста по словарю</a></div>
-            {% else %}
-                <div class="col">Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
-                <script>
-                $(document).ready(function () {
-                    window.setTimeout(function() {
-                        window.location.href = "{% url "r_ngrams_app/dataset_show" content.id %}";
-                    }, 5000);
-                });
-                </script>
-            {% endif %}
-        <div class="col"><button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать датасет</button></div>
+    <div class="container row">
+        <div class="col card">
+            <div class="card-body">
+            <div>Владелец: {{ content.owner.name }}</div>
+            <div>Размер N-граммы: {{ content.ngram_size }}</div>
+            <div>Максимальное число N-грамм в словаре: {{ content.max_ngrams }}</div>
+            <div>Минимальный порог вхождения: {{ content.min_occurrence }}</div>
+            <div>Способ расчета: {% if content.is_use_initial %}по начальным значениям{% else %} по словоформам{% endif %}</div>
+            <div>Способ разделения: {% if content.is_sentence_split %}по предложениям{% else %}по абзацам{% endif %}</div>
+            <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                {% if content.build_at %}
+                    <div class="col">Сборка: {{ content.build_at }}</div>
+                {% else %}
+                    <div class="col">Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
+                    <script>
+                    $(document).ready(function () {
+                        window.setTimeout(function() {
+                            window.location.href = "{% url "r_ngrams_app/dataset_show" content.id %}";
+                        }, 5000);
+                        });
+                        </script>
+                        {% endif %}
+                        <div class="col"><button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать датасет</button></div>
+                    </div>
+                </form>
+            </div>
         </div>
-    </form>
+        <div class="col card">
+            <div class="card-body">
+                <a class="btn btn-info" href="{% url 'r_ngrams_app/check_text' content.id %}">Построение лексического спектра текста по словарю</a>
+            </div>
+        </div>
+    </div>
         
     <h3>Список текстов</h3>
     {%  if content.text_group %}
@@ -44,10 +61,10 @@
     Все тексты
     {%  endif %}
     
-    <h3>Биграммы</h3>
+    <h3>Словарь N-грамм</h3>
     <ul>
     {%  for item in content.content %}
-        <li>{{ item.0 }} -> {{ item.1 }}</li>
+        <li><a href="{% url 'r_ngrams_app/search_ngram_dataset' content.id item.0 %}">{{ item.0 }}</a> -> {{ item.1.count }}</li>
     {% endfor %}
     </ul>
 {% endblock %}

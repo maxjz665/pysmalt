@@ -34,7 +34,7 @@ class TblBigramDataset(BaseModel):
     build_at = models.DateTimeField(null=True, default=None, db_comment="Время последней сборки")
     build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)
 
-    def check_text(self, text_data):
+    def check_text(self, text_id: int, text_data):
         """
         Построение лексического спектра для данного текста
         """
@@ -43,20 +43,20 @@ class TblBigramDataset(BaseModel):
         total_ngrams = 0
         for item in self.content:
             dataset[item[0]] = StatData(item[1], len(dataset))
-            total_ngrams += item[1]
+            total_ngrams += item[1]["count"]
         ret = []
         total_ngrams = 1000 / total_ngrams # делаем множитель для нормализации значений по словарю
 
-        ngrams = self.extract_ngrams(text_data)
+        ngrams = self.extract_ngrams(text_id, text_data)
 
         ResultItem = namedtuple("ResultItem", ['ngram', 'value', 'dict_value', 'dict_pos'])
         for item in ngrams:
             if item in dataset.keys():
-                ret.append(ResultItem(item, ngrams[item], dataset[item].value * total_ngrams, dataset[item].pos))
+                ret.append(ResultItem(item, ngrams[item]["count"], dataset[item].value["count"] * total_ngrams, dataset[item].pos))
         ret.sort(key=lambda x: x.dict_pos)
         return ret
 
-    def extract_ngrams(self, content, result=None):
+    def extract_ngrams(self, text_id: int, content, result=None):
         """
         Извлечение лексического спектра из текста
         """
@@ -83,19 +83,21 @@ class TblBigramDataset(BaseModel):
                 # если не добрало до заданной длины, то добавляем в очередь элемент
                 ngram_item.append(item)
                 last_item = item
-                continue
+                if len(ngram_item) < self.ngram_size:  # если все еще мало, то идем на след.слово
+                    continue
             else:
                 raise ValueError("Превышение размера стека N-грамм: " + str(self.ngram_size))
 
             # если дошли до сюда, то у нас есть N-грамма, запоминаем ее
-            key = " - ".join(map(lambda x: x.word, ngram_item))
+            key = " - ".join(map(lambda x: x.word.lower(), ngram_item))
             if key in result:
-                result[key] += 1
+                result[key] = {"count": result[key]["count"] + 1, "text": result[key]["text"] if text_id in result[key]["text"] else result[key]["text"] + list([text_id])}
             else:
-                result[key] = 1
+                result[key] = {"count":1, "text":[text_id]}
         return result
 
-    def ngram_pos(self, ngram_item: str, content: list):
+    @staticmethod
+    def ngram_pos(ngram_item: str, content: list):
         """
         Получение позиций N-грамм в тексте с учетом параметров датасета
         """
@@ -105,11 +107,9 @@ class TblBigramDataset(BaseModel):
 
         for idx, item in enumerate(content):
             if item.word.lower() == ngram_data[0]:
-                print(idx)
                 is_found = True
                 for pos in range(ngram_len):
                     if content[pos + idx].word.lower() != ngram_data[pos]:
-                        print(pos+idx, content[pos + idx].word.lower(), pos, ngram_data[pos])
                         is_found = False
                         break
                 if is_found:
