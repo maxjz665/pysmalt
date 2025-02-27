@@ -79,11 +79,11 @@ class TblTextListDescription(models.Model):
         ret = TblTextListDescription.objects.get(id=group_id)
         if user.is_anonymous or not user.is_authenticated:
             if not ret.public:
-                raise ObjectDoesNotExist
+                raise TblTextListDescription.DoesNotExist
         else:
             if not user.has_level(TblUser.LEVEL_ADMIN):
                 if ret.owner != user:
-                    raise ObjectDoesNotExist
+                    raise TblTextListDescription.DoesNotExist
         return ret
 
 class TblTextListItems(models.Model):

@@ -70,7 +70,7 @@ class TblBigramDataset(BaseModel):
         for item in block_ngrams:
             ret_blocks.append({'start': item['start'], 'end': item['end'], 'ngrams': self._filter_ngrams(dataset, total_ngrams, item['ngrams'])})
 
-        return ret_total, ret_blocks
+        return ret_total, ret_blocks, len(ngrams)
 
     def extract_ngrams(self, text_id: int, content, result=None):
         """
@@ -147,3 +147,48 @@ class TblBigramDataset(BaseModel):
         start_pos = max(0, len(text_data) - block_size)
         result.append({'start': start_pos, 'end': len(text_data), 'ngrams': self.extract_ngrams(text_id, text_data[start_pos:])})
         return result
+
+    def check_group(self, text_id: int, text_content, block_size, group):
+        """
+        Сравнение спектра текста и группы
+        """
+        # получаем спектры исходного текста
+        target_ngrams, target_block_ngrams, target_len = self.check_text(text_id, text_content, block_size)
+
+        # получаем спектры для текстов из группы
+        group_ngrams = []
+        for item in group:
+            text_ngrams, block_ngrams, text_len = self.check_text(item['text_id'], item['content'], block_size)
+            group_ngrams.append({"text_id": item['text_id'], "text_ngrams": text_ngrams, "block_ngrams": block_ngrams, "text_len": text_len})
+
+
+        # выполняем расчет дистанции для каждого текста из группы с исходным текстом
+        min_distance = None
+        sum_distance = 0
+        max_distance = 0
+        for item in group_ngrams:
+            distance = self._calc_distance(target_ngrams, target_len, item['text_ngrams'], item["text_len"])
+            if min_distance is None or distance < min_distance:
+                min_distance = distance
+            sum_distance += distance
+            if distance > max_distance:
+                max_distance = distance
+
+        return {"min": min_distance, "avg": sum_distance / len(group_ngrams), "max": max_distance, "ngrams": target_ngrams}, {"ngrams": target_block_ngrams}
+
+    @staticmethod
+    def _calc_distance(target_ngrams: list, total_target: int, other_ngrams: list, total_other: int):
+        """
+        Расчет манхэттенского расстояния между спектрами
+        """
+        dist_vector = {}
+        for item in target_ngrams:
+            dist_vector[item.dict_pos] = item.value / total_target
+
+        for item in other_ngrams:
+            if item.dict_pos in dist_vector:
+                dist_vector[item.dict_pos] = abs(dist_vector[item.dict_pos] - item.value / total_other)
+            else:
+                dist_vector[item.dict_pos] = item.value / total_other
+
+        return sum(dist_vector.values())

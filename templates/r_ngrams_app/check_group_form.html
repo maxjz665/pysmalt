@@ -56,4 +56,23 @@
         </div>
     </form>
 
+    {% if result %}
+        <h2>Результаты для текста в целом</h2>
+        <ul>
+        <li>Минимальное манхэттенское расстояние: {{ result.min|floatformat:-5 }}</li>
+        <li>Среднее манхэттенское расстояние: {{ result.avg|floatformat:-5 }}</li>
+        <li>Максимальное манхэттенское расстояние: {{ result.max|floatformat:-5 }}</li>
+        </ul>
+            <h3>N-граммы всего текста</h3>
+        Формат: "позиция в тексте: значение -> число вхождений (нормализованное значение словаря на 1000 n-грамм)"
+    <ul>
+    {%  for item in result.ngrams %}
+        <li>{{ item.dict_pos }}: <a href="{% url 'r_ngrams_app/search_ngram_text' content.id item.ngram text_id %}">{{ item.ngram }}</a> -> {{ item.value }} ({{ item.dict_value|floatformat:-2 }})</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if block_result %}
+        {{ block_result }}
+    {% endif %}
 {% endblock %}

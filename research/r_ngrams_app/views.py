@@ -281,8 +281,12 @@ def check_group(request, list_id: int) -> HttpResponse:
                                                                               'text_id': text_id,
                                                                               'group_id': group_id,
                                                                               'block_size': block_size})
+    group_ids = TblTextListDescription.get_item(request.user, group_id).items
+    group = []
+    for item in group_ids:
+        group.append({"text_id": item.text_id, "content": item.get_content()})
 
-    result, block_result = dataset_data.check_text(text_id, TblText.get_text(request.user, text_id).get_content(), int(block_size))
+    result, block_result = dataset_data.check_group(text_id, TblText.get_text(request.user, text_id).get_content(), int(block_size), group)
     return render(request, "r_ngrams_app/check_group_form.html", context={"content": dataset_data, 'text_id': text_id,
                                                                           'group_id': group_id, 'text_lists': text_lists,
                                                                           'block_size': block_size, 'texts': texts, "result": result,
