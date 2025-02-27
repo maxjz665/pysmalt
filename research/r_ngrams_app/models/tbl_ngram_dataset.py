@@ -174,7 +174,26 @@ class TblBigramDataset(BaseModel):
             if distance > max_distance:
                 max_distance = distance
 
-        return {"min": min_distance, "avg": sum_distance / len(group_ngrams), "max": max_distance, "ngrams": target_ngrams}, {"ngrams": target_block_ngrams}
+
+        # расчет дистанции для блока текста
+        ret_block_ngrams = []
+        for target_block in target_block_ngrams:
+            min_block = None
+            sum_block = 0
+            max_block = 0
+            block_count = 0
+
+            for item in group_ngrams:
+                block_count += len(item['block_ngrams'])
+                for item_block in item['block_ngrams']:
+                    distance = self._calc_distance(target_block["ngrams"], block_size, item_block["ngrams"], block_size)
+                    if min_block is None or distance < min_block:
+                        min_block = distance
+                    sum_block += distance
+                    max_block = max(max_block, distance)
+            ret_block_ngrams.append({"start": target_block["start"], "end": target_block["end"], "min": min_block, "avg": sum_block / block_count, "max": max_block})
+
+        return {"min": min_distance, "avg": sum_distance / len(group_ngrams), "max": max_distance, "ngrams": target_ngrams}, {"ngrams": target_block_ngrams, "result": ret_block_ngrams}
 
     @staticmethod
     def _calc_distance(target_ngrams: list, total_target: int, other_ngrams: list, total_other: int):

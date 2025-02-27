@@ -73,6 +73,14 @@
     {% endif %}
 
     {% if block_result %}
-        {{ block_result }}
+        <h2>Результаты по блокам текста</h2>
+        <table class="table table-bordered">
+            <thead><tr><th scope="col">Начало</th><th>Конец</th><th>Min</th><th>Avg</th><th>Max</th></tr></thead>
+            <tbody>
+            {%  for item in block_result.result %}
+                <tr><td>{{ item.start }}</td><td>{{ item.end }}</td><td>{{ item.min|floatformat:-5 }}</td><td>{{ item.avg|floatformat:-5 }}</td><td>{{ item.max|floatformat:-5 }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
     {% endif %}
 {% endblock %}
