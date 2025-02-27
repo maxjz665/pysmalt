@@ -18,7 +18,7 @@
         <div class="form-row">
             <div class="col-8">
                 <div class="form-group row">
-                    <div class="input-group col">
+                    <div class="input-group col-7">
                         <div class="input-group-prepend">
                             <div class="input-group-text">Выберите текст для построения:</div>
                         </div>
@@ -30,22 +30,53 @@
                         {% if text_id is not None %}
                             <script>$('#text_id').selectpicker('val', {{ text_id }})</script>
                         {% endif %}
-                        <div class="input-group-append">
+                    </div>
+                <div class="col-3 input-group">
+                    <div class="input-group-text">Размер блока:</div>
+                    <input type="number" name="block_size" id="block_size" min="1" value="{{ block_size }}"/>
+                </div>
+                        <div class="col">
                             <button type="submit" class="btn btn-primary" name="submit" id="submit" value="create">Построить</button>
                         </div>
-                    </div>
                 </div>
             </div>
         </div>
     </form>
 
     {% if result %}
-            <h3>N-граммы</h3>
+            <h3>N-граммы всего текста</h3>
         Формат: "позиция в тексте: значение -> число вхождений (нормализованное значение словаря на 1000 n-грамм)"
     <ul>
     {%  for item in result %}
         <li>{{ item.dict_pos }}: <a href="{% url 'r_ngrams_app/search_ngram_text' content.id item.ngram text_id %}">{{ item.ngram }}</a> -> {{ item.value }} ({{ item.dict_value|floatformat:-2 }})</li>
     {% endfor %}
     </ul>
+    {% endif %}
+    {% if block_result %}
+        <h3>N-граммы по блокам текста</h3>
+        <table class="table table-bordered">
+        <thead><tr><th scope="col">Начало</th><th scope="col">Конец</th>
+        {% for item in result %}
+        	<th scope="col">{{ item.dict_pos }}</th>
+        {% endfor %}
+        </tr></thead>
+        <tbody>
+        {% for item in block_result %}
+            <tr>
+            <td>{{ item.start }}</td>
+            <td>{{ item.end }}</td>
+            {% for col_item in result %}
+                <td>
+                {% for val_item in item.ngrams %}
+                    {% if val_item.dict_pos == col_item.dict_pos %}
+                        {{ val_item.value }}
+                    {% endif %}
+                {% endfor %}
+                </td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+        </table>
     {% endif %}
 {% endblock %}

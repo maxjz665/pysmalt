@@ -166,11 +166,22 @@ def check_text(request, list_id: int) -> HttpResponse:
         return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts})
 
     text_id = request.POST.get("text_id", 0)
-    if text_id == 0:
-        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст"})
+    block_size = request.POST.get("block_size", 0)
 
-    result = dataset_data.check_text(text_id, TblText.get_text(request.user, text_id).get_content())
-    return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})
+    if text_id == 0 or not text_id.isdigit():
+        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст",
+                                                                             "block_size": block_size})
+
+    if block_size == 0 or not block_size.isdigit():
+        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts,
+                                                                             "error_message": "Размер блока должен быть целым числом больше нуля",
+                                                                             'text_id': text_id,
+                                                                             'block_size': block_size})
+
+    result, block_result = dataset_data.check_text(text_id, TblText.get_text(request.user, text_id).get_content(), int(block_size))
+    return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id,
+                                                                             'block_size': block_size, 'texts': texts, "result": result,
+                                                                         "block_result": block_result})
 
 
 def search_ngram_dataset(request, list_id: int, ngram_item: str) -> HttpResponse:

@@ -34,27 +34,43 @@ class TblBigramDataset(BaseModel):
     build_at = models.DateTimeField(null=True, default=None, db_comment="Время последней сборки")
     build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)
 
-    def check_text(self, text_id: int, text_data):
+    @staticmethod
+    def _filter_ngrams(dataset: dict, total_ngrams: float, ngrams: dict):
+        """
+        Выборка N-грамм из словаря
+        """
+        ResultItem = namedtuple("ResultItem", ['ngram', 'value', 'dict_value', 'dict_pos'])
+
+        ret = []
+        for item in ngrams:
+            if item in dataset.keys():
+                ret.append(ResultItem(item, ngrams[item]["count"], dataset[item].value["count"] * total_ngrams, dataset[item].pos))
+        ret.sort(key=lambda x: x.dict_pos)
+        return ret
+
+
+    def check_text(self, text_id: int, text_data: set, block_size: int):
         """
         Построение лексического спектра для данного текста
         """
         dataset = {}
         StatData = namedtuple('StatData', ['value', 'pos'])
         total_ngrams = 0
-        for item in self.content:
+        for item in self.content:  # подгатавливаем словарь для работы с текстом
             dataset[item[0]] = StatData(item[1], len(dataset))
             total_ngrams += item[1]["count"]
-        ret = []
         total_ngrams = 1000 / total_ngrams # делаем множитель для нормализации значений по словарю
 
-        ngrams = self.extract_ngrams(text_id, text_data)
+        ngrams = self.extract_ngrams(text_id, text_data)  # получаем распределение N-грамм по всему тексту
+        block_ngrams = self.extract_block_ngrams(text_id, text_data, block_size)  # расчет N-грамм по блокам текста
 
-        ResultItem = namedtuple("ResultItem", ['ngram', 'value', 'dict_value', 'dict_pos'])
-        for item in ngrams:
-            if item in dataset.keys():
-                ret.append(ResultItem(item, ngrams[item]["count"], dataset[item].value["count"] * total_ngrams, dataset[item].pos))
-        ret.sort(key=lambda x: x.dict_pos)
-        return ret
+        ret_total = self._filter_ngrams(dataset, total_ngrams, ngrams)
+
+        ret_blocks = []
+        for item in block_ngrams:
+            ret_blocks.append({'start': item['start'], 'end': item['end'], 'ngrams': self._filter_ngrams(dataset, total_ngrams, item['ngrams'])})
+
+        return ret_total, ret_blocks
 
     def extract_ngrams(self, text_id: int, content, result=None):
         """
@@ -116,3 +132,17 @@ class TblBigramDataset(BaseModel):
                     ret.append({"start": idx, "end": ngram_len + idx, "pros": 100, "cons": 0})
 
         return ret
+
+    def extract_block_ngrams(self, text_id, text_data, block_size):
+        """
+        Расчет N-грамм по блокам текста
+        """
+        result = []
+
+        total_full_blocks = len(text_data) * 2 // block_size - 1
+        for i in range(total_full_blocks):
+            start_pos = i * block_size // 2
+            result.append({'start': start_pos, "end": start_pos + block_size, "ngrams": self.extract_ngrams(text_id, text_data[start_pos:start_pos + block_size])})
+
+        result.append({'start': len(text_data) - block_size, 'end': len(text_data), 'ngrams': self.extract_ngrams(text_id, text_data[len(text_data) - block_size:])})
+        return result
