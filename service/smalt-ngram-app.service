@@ -1,0 +1,15 @@
+[Unit]
+Description=SMALT N-gram generator
+After=network.target remote-fs.target nss-lookup.target mysql.service
+StartLimitIntervalSec=1d
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/var/www/pysmalt/service/smalt-ngram-app.sh
+Restart=on-failure
+RestartSec=5s
+User=kulakov
+
+[Install]
+WantedBy=multi-user.target
