@@ -43,7 +43,7 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
     ngram_size = request.POST.get("ngram_size", 2)
     is_use_initial = request.POST.get("is_use_initial", False)
     is_sentence_split = request.POST.get("is_sentence_split", True)
-    lists = TblTextListDescription.objects.filter(Q(public=True) | Q(owner=request.user))
+    lists = TblTextListDescription.get_items(request.user).order_by("name").all()
 
     if request.method == "GET":
         return render(request, "r_ngrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
@@ -92,7 +92,7 @@ def dataset_add_list(request: HttpRequest) -> HttpResponse:
         item = TblBigramDataset(name=input_name, ngram_size=ngram_size, max_ngrams=max_ngrams, min_occurrence=min_occurrence, is_use_initial=(is_use_initial == "on"),
                                 is_sentence_split=(is_sentence_split == "on"), owner=request.user, created_by=request.user.id, updated_by=request.user.id)
         if int(text_group) != 0:
-            item.text_group = TblTextListDescription.objects.get(id=text_group)
+            item.text_group = TblTextListDescription.get_item(request.user, text_group)
         item.save()
         return redirect("r_ngrams_app/dataset_list")
     except Exception as e:
@@ -166,11 +166,22 @@ def check_text(request, list_id: int) -> HttpResponse:
         return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts})
 
     text_id = request.POST.get("text_id", 0)
-    if text_id == 0:
-        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст"})
+    block_size = request.POST.get("block_size", 0)
 
-    result = dataset_data.check_text(text_id, TblText.get_text(request.user, text_id).get_content())
-    return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id, 'texts': texts, "result": result})
+    if text_id == 0 or not text_id.isdigit():
+        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts, "error_message": "Выберите текст",
+                                                                             "block_size": block_size})
+
+    if block_size == 0 or not block_size.isdigit():
+        return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'texts': texts,
+                                                                             "error_message": "Размер блока должен быть целым числом больше нуля",
+                                                                             'text_id': text_id,
+                                                                             'block_size': block_size})
+
+    result, block_result = dataset_data.check_text(text_id, TblText.get_text(request.user, text_id).get_content(), int(block_size))
+    return render(request, "r_ngrams_app/check_text_form.html", context={"content": dataset_data, 'text_id': text_id,
+                                                                             'block_size': block_size, 'texts': texts, "result": result,
+                                                                         "block_result": block_result})
 
 
 def search_ngram_dataset(request, list_id: int, ngram_item: str) -> HttpResponse:
@@ -225,3 +236,58 @@ def search_ngram_text(request, list_id: int, ngram_item: str, text_id: int) -> H
     positions = dataset_data.ngram_pos(ngram_item, content)
 
     return render(request, "r_ngrams_app/show_text.html", context={'dataset': dataset_data, 'content': content, 'paper': text, 'colormap': positions})
+
+
+def check_group(request, list_id: int) -> HttpResponse:
+    """
+    Сравнение спектра текста и группы
+    """
+    dataset_data = TblBigramDataset.objects.get(id=list_id)
+    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
+                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на просмотр датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    texts = TblText.get_texts(request.user, exclude_deleted=True, exclude_not_verified=True).all()
+    text_lists = TblTextListDescription.get_items(request.user).order_by("name").all()
+
+    if request.method == "GET":
+        return render(request, "r_ngrams_app/check_group_form.html", context={"content": dataset_data,
+                                                                              'texts': texts,
+                                                                              'text_lists': text_lists})
+
+    text_id = request.POST.get("text_id", 0)
+    group_id = request.POST.get("group_id", 0)
+    block_size = request.POST.get("block_size", 0)
+
+    error_msg = None
+
+    if text_id == 0 or not text_id.isdigit():
+        error_msg = "Выберите текст из списка"
+
+    if group_id == 0 or not group_id.isdigit():
+        error_msg = "Выберите группу текстов из списка"
+
+    if block_size == 0 or not block_size.isdigit():
+        error_msg = "Размер блока должен быть целым числом больше нуля"
+
+    if error_msg is not None:
+        return render(request, "r_ngrams_app/check_group_form.html", context={"content": dataset_data, 'texts': texts,
+                                                                              'text_lists': text_lists,
+                                                                              "error_message": error_msg,
+                                                                              'text_id': text_id,
+                                                                              'group_id': group_id,
+                                                                              'block_size': block_size})
+    group_ids = TblTextListDescription.get_item(request.user, group_id).items
+    group = []
+    for item in group_ids:
+        group.append({"text_id": item.text_id, "content": item.get_content()})
+
+    result, block_result = dataset_data.check_group(text_id, TblText.get_text(request.user, text_id).get_content(), int(block_size), group)
+    return render(request, "r_ngrams_app/check_group_form.html", context={"content": dataset_data, 'text_id': text_id,
+                                                                          'group_id': group_id, 'text_lists': text_lists,
+                                                                          'block_size': block_size, 'texts': texts, "result": result,
+                                                                          "block_result": block_result})

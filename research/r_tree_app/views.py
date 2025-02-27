@@ -43,7 +43,7 @@ def add_list(request: HttpRequest) -> HttpResponse:
     first_list = request.POST.get("first_list", 0)
     second_list = request.POST.get("second_list", 0)
     block_size = request.POST.get("block_size", 200)
-    lists = TblTextListDescription.objects.filter(Q(public=True) | Q(owner=request.user))
+    lists = TblTextListDescription.get_items(request.user).order_by("name").all()
 
     if request.method == "GET":
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
@@ -74,8 +74,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
-                                  first_list=TblTextListDescription.objects.get(id=first_list),
-                                  second_list=TblTextListDescription.objects.get(id=second_list),
+                                  first_list=TblTextListDescription.get_item(request.user, first_list),
+                                  second_list=TblTextListDescription.get_item(request.user, second_list),
                                   created_by=request.user.id, updated_by=request.user.id)
         item.save()
         return redirect("r_tree_app/tree_list")

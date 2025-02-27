@@ -1,6 +1,8 @@
 """
 Модель описания списка текстов
 """
+from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 from text_app.models.tbl_text import TblText
@@ -56,6 +58,33 @@ class TblTextListDescription(models.Model):
             raise ValueError(f"Текст {text_id} в списке {self.id} не найден")
         item.delete()
 
+    @classmethod
+    def get_items(cls, user = AnonymousUser, exclude_deleted: bool = True):
+        text_lists = TblTextListDescription.objects
+
+        if exclude_deleted:
+            text_lists = text_lists.filter(is_deleted=False)
+        if not user.is_authenticated:
+            text_lists = text_lists.filter(public=True)
+        else:
+            if not user.has_level(TblUser.LEVEL_ADMIN):
+                text_lists = text_lists.filter(owner=user)
+        return text_lists
+
+    @classmethod
+    def get_item(cls, user = AnonymousUser, group_id: int = None):
+        """
+        Получение одного элемента по Id с проверкой прав
+        """
+        ret = TblTextListDescription.objects.get(id=group_id)
+        if user.is_anonymous or not user.is_authenticated:
+            if not ret.public:
+                raise TblTextListDescription.DoesNotExist
+        else:
+            if not user.has_level(TblUser.LEVEL_ADMIN):
+                if ret.owner != user:
+                    raise TblTextListDescription.DoesNotExist
+        return ret
 
 class TblTextListItems(models.Model):
     """

@@ -45,7 +45,8 @@
         </div>
         <div class="col card">
             <div class="card-body">
-                <a class="btn btn-info" href="{% url 'r_ngrams_app/check_text' content.id %}">Построение лексического спектра текста по словарю</a>
+                <a class="btn btn-info mb-2" href="{% url 'r_ngrams_app/check_text' content.id %}">Построение лексического спектра текста по словарю</a>
+                <a class="btn btn-info mb-2" href="{% url 'r_ngrams_app/check_group' content.id %}">Сравнение спектра текста и группы</a>
             </div>
         </div>
     </div>
