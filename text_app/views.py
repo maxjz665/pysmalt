@@ -1,6 +1,7 @@
 """
 Контроллер обработки запросов на работу с текстами
 """
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
@@ -31,7 +32,7 @@ def list_papers(request: HttpRequest):
     view = request.GET.get("view", "list")
 
     texts = TblText.get_texts(request.user)
-    text_lists = TblTextListDescription.objects.filter(is_deleted=False)
+    text_lists = TblTextListDescription.get_items(request.user).order_by("name")
     if not (request.user.is_authenticated and request.user.has_level(TblUser.LEVEL_MANAGER)):
         # если пользователь не менеджер, то скрываем удаленные тексты
         texts = texts.filter(~Q(category=1))
@@ -117,7 +118,7 @@ def get_text_lists(request: HttpRequest):
     Отображение списков текстов
     :return: списки текстов
     """
-    content = TblTextListDescription.objects.filter(is_deleted=False).all()
+    content = TblTextListDescription.get_items(request.user).order_by("name").all()
 
     return render(request, "text_app/text_lists.html", context={"content": content})
 
@@ -129,14 +130,14 @@ def text_list_item(request: HttpRequest, list_id: int) -> HttpResponse:
     :param list_id: номер списка текстов
     :return: содержимое списка текстов
     """
-    item = TblTextListDescription.objects.filter(id=list_id).first()
-    error_message = None
-    success_message = None
-
-    if item is None:
+    try:
+        item = TblTextListDescription.get_item(request.user, list_id)
+    except ObjectDoesNotExist:
         return render(request, "not_found.html", context={"message": "Список не найден",
                                                           "return_url": "text_app/text_lists",
                                                           "return_name": "К спискам текстов"})
+    error_message = None
+    success_message = None
 
     if request.GET.get("action") is not None:
         action = request.GET.get("action")
@@ -235,7 +236,7 @@ def text_list_create(request: HttpRequest):
 
 
 def text_list_edit(request: HttpRequest, list_id: int) -> HttpResponse:
-    item = TblTextListDescription.objects.filter(id=list_id).first()
+    item = TblTextListDescription.get_item(request.user, list_id)
 
     if not request.user.is_authenticated or (
             not request.user.has_level(TblUser.LEVEL_ADMIN) and request.user.id != item.owner.id):
@@ -254,9 +255,9 @@ def text_list_edit(request: HttpRequest, list_id: int) -> HttpResponse:
 
 
 def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
-    item = TblTextListDescription.objects.filter(id=list_id).first()
-
-    if item is None:
+    try:
+        item = TblTextListDescription.get_item(request.user, list_id)
+    except ObjectDoesNotExist:
         return render(request, "not_found.html", context={"message": "Список не найден",
                                                           "return_url": "text_app/text_lists",
                                                           "return_name": "К спискам текстов"})
