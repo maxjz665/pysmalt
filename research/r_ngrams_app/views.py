@@ -284,6 +284,6 @@ def check_group(request, list_id: int) -> HttpResponse:
 
     result, block_result = dataset_data.check_text(text_id, TblText.get_text(request.user, text_id).get_content(), int(block_size))
     return render(request, "r_ngrams_app/check_group_form.html", context={"content": dataset_data, 'text_id': text_id,
-                                                                             'block_size': block_size, 'texts': texts, "result": result,
-                                                                         "block_result": block_result})
-
+                                                                          'group_id': group_id, 'text_lists': text_lists,
+                                                                          'block_size': block_size, 'texts': texts, "result": result,
+                                                                          "block_result": block_result})

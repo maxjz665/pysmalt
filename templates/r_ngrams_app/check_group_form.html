@@ -1,0 +1,59 @@
+{% extends "index.html" %}
+{% load bib_item %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Лексический спектр N-грамм</li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_list" %}">Список датасетов</a></li>
+            <li class="breadcrumb-item"><a href="{% url "r_ngrams_app/dataset_show" content.id %}">{{ content.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Сравнение спектра текста и группы</li>
+        </ol>
+    </nav>
+{%  endblock %}
+
+{% block content %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="col-8">
+                <div class="form-group row">
+                    <div class="input-group col-7 mb-2">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Выберите текст:</div>
+                        </div>
+                        <select class="selectpicker col-8" data-live-search="true" id="text_id" name="text_id">
+                            {% for item in texts %}
+                                <option value="{{ item.id }}">{% bib_item item %}</option>
+                            {% endfor %}
+                        </select>
+                        {% if text_id is not None %}
+                            <script>$('#text_id').selectpicker('val', {{ text_id }})</script>
+                        {% endif %}
+                    </div>
+                    <div class="col-3 input-group mb-2">
+                        <div class="input-group-text">Размер блока:</div>
+                        <input type="number" name="block_size" id="block_size" min="1" value="{{ block_size }}"/>
+                    </div>
+                    <div class="input-group col-7 mb-2">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Выберите группу:</div>
+                        </div>
+                        <select class="selectpicker col-8" data-live-search="true" id="group_id" name="group_id">
+                            {% for item in text_lists %}
+                                <option value="{{ item.id }}">{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if group_id is not None %}
+                            <script>$('#group_id').selectpicker('val', {{ group_id }})</script>
+                        {% endif %}
+                    </div>
+                    <div class="col mb-2">
+                        <button type="submit" class="btn btn-primary" name="submit" id="submit" value="create">Построить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+{% endblock %}

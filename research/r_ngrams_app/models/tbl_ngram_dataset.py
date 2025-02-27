@@ -144,5 +144,6 @@ class TblBigramDataset(BaseModel):
             start_pos = i * block_size // 2
             result.append({'start': start_pos, "end": start_pos + block_size, "ngrams": self.extract_ngrams(text_id, text_data[start_pos:start_pos + block_size])})
 
-        result.append({'start': len(text_data) - block_size, 'end': len(text_data), 'ngrams': self.extract_ngrams(text_id, text_data[len(text_data) - block_size:])})
+        start_pos = max(0, len(text_data) - block_size)
+        result.append({'start': start_pos, 'end': len(text_data), 'ngrams': self.extract_ngrams(text_id, text_data[start_pos:])})
         return result
