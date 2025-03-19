@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'text_app',
     'user_app',
     'research.r_tree_app',
-    'research.r_ngrams_app'
+    'research.r_ngrams_app',
+    'research.text_generator',
 ]
 
 AUTH_USER_MODEL = 'user_app.TblUser'
