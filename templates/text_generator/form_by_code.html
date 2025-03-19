@@ -1,0 +1,36 @@
+{% extends "index.html" %}
+
+{% block content %}
+<h2 style="margin: 5pt;">Генератор текстов</h2>
+<p style="margin: 5pt;">Данная форма позволяет создать новый текст на базе существующего.</p>
+
+<div class="btn-group" role="group" aria-label="Вариант генерации">
+    <a type="button" class="btn btn-secondary {% if mode == 'byPars' %}active{% endif %}" href="?mode=byPars">По параметрам</a>
+    <a type="button" class="btn btn-secondary {% if mode == 'byCode' %}active{% endif %}" href="?mode=byCode">По коду</a>
+</div>
+
+{% if messages %}
+    <div class="alert alert-danger">
+        {% for message in messages %}
+            {{ message }}
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card" style="margin: 5pt;">
+        <div class='form-group'>
+            <label for="code" style="margin: 5pt;">Код для генерации:</label>
+            <textarea id="code" class="form-control" name="code" placeholder="A10S2E10B22S5E13" rows="4"></textarea>
+        </div>
+        <div class='form-row'>
+            <div class="col">
+                <button class="btn btn-danger" type="submit" name="action" value="generate_text_by_code">Создать текст</button>
+                <button class="btn btn-primary" type="reset">Сбросить</button>
+                <a href="/help" class="btn btn-info">Справка</a>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

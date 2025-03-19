@@ -1,0 +1,140 @@
+{% extends "index.html" %}
+
+{% block content %}
+<h2 style="margin: 5pt;">Генератор текстов</h2>
+<p style="margin: 5pt;">Данная форма позволяет создать новый текст на базе существующего.</p>
+
+<div class="btn-group" role="group" aria-label="Вариант генерации">
+    <a type="button" class="btn btn-secondary {% if mode == 'byPars' %}active{% endif %}" href="?mode=byPars">По параметрам</a>
+    <a type="button" class="btn btn-secondary {% if mode == 'byCode' %}active{% endif %}" href="?mode=byCode">По коду</a>
+</div>
+
+{% if messages %}
+    <div class="alert alert-danger">
+        {% for message in messages %}
+            {{ message }}
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card" style="margin: 5pt;">
+        <div class='form-row' style="margin: 5pt;"> Используемые списки текстов </div>
+        <div class='form-row'>
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Список "Основной текст":</div>
+                        </div>
+                        <select class="form-control" id="base_textlist" name="base_textlist">
+                            {% for textlist in text_lists %}
+                            <option value="{{ textlist.id }}">{{ textlist.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Список "Вставляемый текст":</div>
+                        </div>
+                        <select class="form-control" id="other_textlist" name="other_textlist">
+                            {% for textlist in text_lists %}
+                            <option value="{{ textlist.id }}">{{ textlist.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" style="margin-bottom: 15px">
+                <div class="input-group col">
+                    <div class="custom-control custom-checkbox" style="margin-top: 6px;">
+                        <input type="checkbox" class="custom-control-input" id="random_texts" name="random_texts" checked>
+                        <label class="custom-control-label" for="random_texts">Случайные тексты</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Скрытый блок для выбора текстов -->
+        <div class='form-row' id="hiddenRow" style="display: none;">
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Основной текст:</div>
+                        </div>
+                        <select class="form-control" id="base_text" name="base_text">
+                            <!-- Заполняется через JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Вставляемый текст:</div>
+                        </div>
+                        <select class="form-control" id="other_text" name="other_text">
+                            <!-- Заполняется через JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class='form-row' style="margin: 5pt;"> Настройки генератора </div>
+        <div class='form-row'>
+            <div class="col-md-2">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Число кодов:</div>
+                        </div>
+                        <input type="number" class="form-control" id="code_count" name="code_count" min="1" max="20" value="1" step="1">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Доля вставок:</div>
+                        </div>
+                        <input type="number" class="form-control" id="percent_of_inserts" name="percent_of_inserts" min="0.01" max="0.95" value="0.20" step="0.01">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Размер заменяемого фрагмента:</div>
+                        </div>
+                        <input type="number" class="form-control" id="fragment_size" name="fragment_size" min="5" value="10" step="1">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5" style="margin-bottom: 15px">
+                <div class="form-check">
+                    <div class="custom-control custom-checkbox" style="margin-top: 6px;">
+                        <input type="checkbox" class="custom-control-input" id="bind_borders" name="bind_borders">
+                        <label class="custom-control-label" for="bind_borders">Делать привязку к границам предложений</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class='form-row'>
+            <div class="col">
+                <button class="btn btn-primary" type="submit" name="action" value="generate_key">Создать код</button>
+                <button class="btn btn-danger" type="submit" name="action" value="generate_text">Создать текст</button>
+                <button class="btn btn-primary" type="reset">Сбросить</button>
+                <a href="/help" class="btn btn-info">Справка</a>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
