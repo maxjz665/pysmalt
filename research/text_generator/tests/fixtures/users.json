@@ -1,0 +1,13 @@
+[
+    {
+        "model": "user_app.TblUser",
+        "pk": 1,
+        "fields": {
+            "name": 123,
+            "login": 345,
+            "password": "678",
+            "level": 3,
+            "researcher": 0
+        }
+    }
+]

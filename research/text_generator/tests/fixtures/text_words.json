@@ -1,0 +1,416 @@
+[
+    {
+        "model": "text_app.TblWord",
+        "pk": 0,
+        "fields": {
+            "text_id": 329,
+            "word_length": 2,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 1,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "А",
+            "dictword_id": 218994,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 1,
+        "fields": {
+            "text_id": 329,
+            "word_length": 12,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 2,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "мужику",
+            "dictword_id": 218995,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 2,
+        "fields": {
+            "text_id": 329,
+            "word_length": 4,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 3,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "из",
+            "dictword_id": 218996,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 3,
+        "fields": {
+            "text_id": 329,
+            "word_length": 20,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 4,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "ближайшего",
+            "dictword_id": 218997,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 4,
+        "fields": {
+            "text_id": 329,
+            "word_length": 8,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 5,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "села",
+            "dictword_id": 218998,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 5,
+        "fields": {
+            "text_id": 329,
+            "word_length": 18,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 6,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "искавшему",
+            "dictword_id": 218999,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 6,
+        "fields": {
+            "text_id": 329,
+            "word_length": 18,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 7,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "пропавшую",
+            "dictword_id": 219000,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 7,
+        "fields": {
+            "text_id": 329,
+            "word_length": 2,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 8,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "в",
+            "dictword_id": 219001,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 8,
+        "fields": {
+            "text_id": 329,
+            "word_length": 8,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 9,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "лесу",
+            "dictword_id": 219002,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 9,
+        "fields": {
+            "text_id": 329,
+            "word_length": 12,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 10,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "лошадь",
+            "dictword_id": 219003,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 10,
+        "fields": {
+            "text_id": 329,
+            "word_length": 18,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 11,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "отшельник",
+            "dictword_id": 219004,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 11,
+        "fields": {
+            "text_id": 329,
+            "word_length": 10,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 12,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "помог",
+            "dictword_id": 219005,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 12,
+        "fields": {
+            "text_id": 329,
+            "word_length": 4,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 13,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "ее",
+            "dictword_id": 219006,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 13,
+        "fields": {
+            "text_id": 329,
+            "word_length": 10,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 14,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "найти",
+            "dictword_id": 219007,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 14,
+        "fields": {
+            "text_id": 329,
+            "word_length": 2,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 1,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "И",
+            "dictword_id": 219008,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 15,
+        "fields": {
+            "text_id": 329,
+            "word_length": 10,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 2,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "гладя",
+            "dictword_id": 219009,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 16,
+        "fields": {
+            "text_id": 329,
+            "word_length": 4,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 3,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "ее",
+            "dictword_id": 219006,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 17,
+        "fields": {
+            "text_id": 329,
+            "word_length": 10,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 4,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "гриву",
+            "dictword_id": 219010,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 18,
+        "fields": {
+            "text_id": 329,
+            "word_length": 24,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 5,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "напоминавшую",
+            "dictword_id": 219011,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 19,
+        "fields": {
+            "text_id": 329,
+            "word_length": 10,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 6,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "сухой",
+            "dictword_id": 219012,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 20,
+        "fields": {
+            "text_id": 329,
+            "word_length": 14,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 7,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "водопад",
+            "dictword_id": 219013,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 21,
+        "fields": {
+            "text_id": 329,
+            "word_length": 12,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 2,
+            "word_index": 8,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "чихнул",
+            "dictword_id": 219014,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    },
+    {
+        "model": "text_app.TblWord",
+        "pk": 22,
+        "fields": {
+            "text_id": 330,
+            "word_length": 2,
+            "chapter_index": 1,
+            "paragraph_index": 1,
+            "sentence_index": 1,
+            "word_index": 1,
+            "chdate": "2022-12-01 00:00:00",
+            "word": "В",
+            "dictword_id": 219001,
+            "dictword2_id": null,
+            "wordorder": 0,
+            "wordno": 0
+        }
+    }
+  ]
