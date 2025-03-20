@@ -1,28 +1,28 @@
+import logging
 import random
-import re
-from django.shortcuts import render
-from django.http import HttpRequest, HttpResponse
+
 from django.contrib import messages
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import render
+
 from text_app.models.tbl_textlist import TblTextListDescription
 from .utils import generate_text_code, parse_code, generate_text_by_code
-import nltk
 
-# Загружаем необходимые данные для NLTK (для работы с предложениями)
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
+logger = logging.getLogger(__name__)
+
 
 def text_generator_view(request: HttpRequest) -> HttpResponse:
     """
     Представление для генерации текстов.
     Поддерживает два режима: "По параметрам" и "По коду".
     """
+    logger.debug("Запуск text_generator_view")
     mode = request.GET.get('mode', 'byPars')
     text_lists = TblTextListDescription.get_items(user=request.user, exclude_deleted=True).order_by("name").all()
 
     if mode == 'byPars':
         if request.method == "GET":
+            logger.debug(f"GET-запрос, mode={mode}")
             # Отображаем форму для генерации по параметрам
             return render(request, "text_generator/form.html", context={
                 "text_lists": text_lists,
@@ -33,6 +33,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             })
 
         # Обработка POST-запроса для режима "По параметрам"
+        logger.debug(f"POST-запрос, mode={mode}")
         action = request.POST.get('action')
         base_textlist_id = request.POST.get("base_textlist", None)
         other_textlist_id = request.POST.get("other_textlist", None)
@@ -44,6 +45,8 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
         bind_borders = request.POST.get("bind_borders", "off") == "on"
         code_count = request.POST.get("code_count", 1)
 
+        logger.debug(f"ID списка базового текста: {base_textlist_id}, ID списка вставляемого текста: {other_textlist_id}")
+
         # Валидация данных
         err_msg = ""
         try:
@@ -54,6 +57,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             else:
                 base_textlist = TblTextListDescription.get_item(request.user, int(base_textlist_id))
                 other_textlist = TblTextListDescription.get_item(request.user, int(other_textlist_id))
+                logger.debug(f"Список базового текста: {base_textlist}, Список вставляемого текста: {other_textlist}")
 
             percent_of_inserts = float(percent_of_inserts)
             if not 0.01 <= percent_of_inserts <= 0.95:
@@ -89,9 +93,10 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
         codes = []
         try:
             for _ in range(code_count):
-                # Получаем связанные тексты через TblTextListItems
+                # Получаем элементы текстов из списков
                 base_text_items = base_textlist.items
                 other_text_items = other_textlist.items
+                logger.debug(f"Количество элементов базового текста: {len(base_text_items)}, Количество элементов вставляемого текста: {len(other_text_items)}")
 
                 if not base_text_items or not other_text_items:
                     raise ValueError("Один из списков текстов пуст")
@@ -104,11 +109,28 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                     base_text_item = next(item for item in base_text_items if str(item.text.id) == base_text_id)
                     other_text_item = next(item for item in other_text_items if str(item.text.id) == other_text_id)
 
-                # Получаем содержимое текстов
-                base_content = base_text_item.get_content()
-                other_content = other_text_item.get_content()
+                # Получаем содержимое текстов путем объединения слов
+                base_words_queryset = base_text_item.text.get_content()
+                other_words_queryset = other_text_item.text.get_content()
 
-                # Разбиваем тексты на слова
+                logger.debug(f"ID базового текста: {base_text_item.text.id}")
+                logger.debug(f"ID вставляемого текста: {other_text_item.text.id}")
+                logger.debug(f"Количество слов в базовом тексте: {base_words_queryset.count() if base_words_queryset else 0}")
+                logger.debug(f"Количество слов во вставляемом тексте: {other_words_queryset.count() if other_words_queryset else 0}")
+
+                if not base_words_queryset.exists() or not other_words_queryset.exists():
+                    raise ValueError("Один из текстов не содержит слов")
+
+                base_content = ' '.join(word.word for word in base_words_queryset)
+                other_content = ' '.join(word.word for word in other_words_queryset)
+
+                if not base_content or not other_content:
+                    raise ValueError("Не удалось получить содержимое одного из текстов")
+
+                logger.debug(f"Длина базового текста: {len(base_content)}")
+                logger.debug(f"Длина вставляемого текста: {len(other_content)}")
+
+                # Разбиваем на слова для подсчета длины
                 base_words = base_content.split()
                 other_words = other_content.split()
 
@@ -124,9 +146,10 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                     fragment_size=fragment_size,
                     percent_of_inserts=percent_of_inserts,
                     bind_borders=bind_borders,
-                    base_text=base_content if bind_borders else None,
-                    other_text=other_content if bind_borders else None
+                    base_text=base_content,
+                    other_text=other_content
                 )
+                logger.debug(f"Сгенерированный код: {code}")
 
                 if action == "generate_text":
                     # Генерируем текст
@@ -152,6 +175,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             })
 
         except Exception as e:
+            logger.exception("Ошибка при генерации текста")
             messages.error(request, f"Ошибка при генерации: {str(e)}")
             return render(request, "text_generator/form.html", context={
                 "text_lists": text_lists,
@@ -164,12 +188,14 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
 
     elif mode == 'byCode':
         if request.method == "GET":
+            logger.debug(f"GET-запрос, mode={mode}")
             # Отображаем форму для генерации по коду
             return render(request, "text_generator/form_by_code.html", context={
                 "mode": mode,
             })
 
         # Обработка POST-запроса для режима "По коду"
+        logger.debug(f"POST-запрос, mode={mode}")
         code = request.POST.get("code", "").strip()
         if not code:
             messages.error(request, "Введите код для генерации")
@@ -190,8 +216,11 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             if not base_text_item or not other_text_item:
                 raise ValueError("Один из текстов не найден")
 
-            base_content = base_text_item.get_content()
-            other_content = other_text_item.get_content()
+            base_words_queryset = base_text_item.text.get_content()
+            other_words_queryset = other_text_item.text.get_content()
+
+            base_content = ' '.join(word.word for word in base_words_queryset)
+            other_content = ' '.join(word.word for word in other_words_queryset)
 
             # Генерируем текст
             generated_text = generate_text_by_code(code, base_content, other_content)
@@ -208,6 +237,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             })
 
         except Exception as e:
+            logger.exception("Ошибка при генерации текста")
             messages.error(request, f"Ошибка при генерации: {str(e)}")
             return render(request, "text_generator/form_by_code.html", context={
                 "mode": mode,

@@ -1,6 +1,11 @@
 import random
 import re
 import nltk
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 def adjust_to_sentence_borders(text, start, end):
     """
@@ -23,43 +28,88 @@ def adjust_to_sentence_borders(text, start, end):
         char_pos += len(sentence) + 1  # +1 для пробела или знака препинания
         sentence_starts.append(char_pos)
 
-    # Корректируем start
+    # Корректируем начальную позицию (start)
     start_char = word_positions[start] if start < len(word_positions) else word_positions[-1]
     new_start = start
     for i, pos in enumerate(sentence_starts):
         if pos > start_char:
-            new_start = next((idx for idx, w_pos in enumerate(word_positions) if w_pos >= sentence_starts[i-1]), start)
+            new_start = next((idx for idx, w_pos in enumerate(word_positions) if w_pos >= sentence_starts[i - 1]),
+                             start)
             break
 
-    # Корректируем end
+    # Корректируем конечную позицию (end)
     end_char = word_positions[end] if end < len(word_positions) else word_positions[-1]
     new_end = end
     for i, pos in enumerate(sentence_starts):
         if pos > end_char:
-            new_end = next((idx for idx, w_pos in enumerate(word_positions) if w_pos >= sentence_starts[i-1]), end) - 1
+            new_end = next((idx for idx, w_pos in enumerate(word_positions) if w_pos >= sentence_starts[i - 1]),
+                           end) - 1
             break
 
     return new_start, new_end
 
-def generate_text_code(base_id, other_id, base_length, other_length, fragment_size, percent_of_inserts, bind_borders=False, base_text=None, other_text=None):
+
+def generate_text_code(base_id, other_id, base_length, other_length, fragment_size, percent_of_inserts,
+                       bind_borders=False, base_text=None, other_text=None):
     """
     Генерирует код для вставки текста.
     """
-    # Вычисляем количество вставок
-    ins_count_base = round(base_length * percent_of_inserts / fragment_size)
+    logger.debug(
+        f"Входные параметры: base_id={base_id}, other_id={other_id}, base_length={base_length}, other_length={other_length}")
+    logger.debug(f"Тип базового текста: {type(base_text)}")
+    logger.debug(f"Тип вставляемого текста: {type(other_text)}")
+
+    # Конвертируем тексты в строки, если они являются объектами
+    if hasattr(base_text, 'text'):
+        logger.debug("У базового текста есть атрибут text")
+        base_text_content = base_text.text.get_content()
+    elif hasattr(base_text, 'get_content'):
+        logger.debug("У базового текста есть метод get_content")
+        base_text_content = base_text.get_content()
+    else:
+        logger.debug("Базовый текст в сыром виде")
+        base_text_content = base_text
+
+    # Аналогично для вставляемого текста
+    if hasattr(other_text, 'text'):
+        logger.debug("У вставляемого текста есть атрибут text")
+        other_text_content = other_text.text.get_content()
+    elif hasattr(other_text, 'get_content'):
+        logger.debug("У вставляемого текста есть метод get_content")
+        other_text_content = other_text.get_content()
+    else:
+        logger.debug("Вставляемый текст в сыром виде")
+        other_text_content = other_text
+
+    logger.debug(f"Тип содержимого базового текста: {type(base_text_content)}")
+    logger.debug(f"Тип содержимого вставляемого текста: {type(other_text_content)}")
+
+    # Вычисляем количество вставок для базового текста
+    ins_count_base = max(1, round(base_length * percent_of_inserts / fragment_size))
+    logger.debug(f"Начальное количество вставок для базового текста: {ins_count_base}")
+
+    # Корректируем количество вставок, если их слишком много
     while ins_count_base * fragment_size > base_length:
         ins_count_base -= 1
+    logger.debug(f"Скорректированное количество вставок для базового текста: {ins_count_base}")
 
+    # Вычисляем максимальный шаг для базового текста
     max_base_step_size = (
         (base_length - (ins_count_base * fragment_size)) // ins_count_base
         if ins_count_base else 0
     )
+    logger.debug(f"Максимальный шаг для базового текста: {max_base_step_size}")
 
-    ins_count_other = min(ins_count_base, other_text_length // fragment_size)
+    # Вычисляем количество вставок для второго текста
+    ins_count_other = min(ins_count_base, other_length // fragment_size)
+    logger.debug(f"Количество вставок для второго текста: {ins_count_other}")
+
+    # Вычисляем максимальный шаг для второго текста
     max_other_step_size = (
         (other_length - (ins_count_other * fragment_size)) // ins_count_other
         if ins_count_other else 0
     )
+    logger.debug(f"Максимальный шаг для второго текста: {max_other_step_size}")
 
     start_base_pos = 0
     start_other_pos = 0
@@ -68,47 +118,66 @@ def generate_text_code(base_id, other_id, base_length, other_length, fragment_si
     count_o = 0
 
     while count_b < ins_count_base:
+        logger.debug(f"Итерация цикла: {count_b}")
+        logger.debug(f"Начальная позиция в базовом тексте: {start_base_pos}, длина базового текста: {base_length}")
+
+        # Вычисляем позиции для базового текста
         if base_length > fragment_size:
-            start_base_pos = random.randint(start_base_pos, start_base_pos + max_base_step_size)
+            if max_base_step_size > 0:
+                start_base_pos = random.randint(start_base_pos, start_base_pos + max_base_step_size)
+            logger.debug(f"Новая начальная позиция в базовом тексте: {start_base_pos}")
+
             if start_base_pos >= base_length:
+                logger.debug("Прерываем цикл - начальная позиция превышает длину базового текста")
                 break
-            end_base_pos = start_base_pos + fragment_size
-            if end_base_pos > base_length:
-                end_base_pos = base_length
+
+            end_base_pos = min(start_base_pos + fragment_size, base_length)
+            logger.debug(f"Конечная позиция в базовом тексте: {end_base_pos}")
         else:
             end_base_pos = base_length
+            logger.debug("Используем полную длину базового текста")
 
+        # Вычисляем позиции для второго текста
         if count_o >= ins_count_other:
             count_o = 0
             start_other_pos = 0
 
         if other_length > fragment_size:
-            start_other_pos = random.randint(start_other_pos, start_other_pos + max_other_step_size)
+            if max_other_step_size > 0:
+                start_other_pos = random.randint(start_other_pos, start_other_pos + max_other_step_size)
             if start_other_pos >= other_length:
-                start_other_pos = random.randint(0, other_length - fragment_size)
-            end_other_pos = start_other_pos + fragment_size
-            if end_other_pos > other_length:
-                end_other_pos = other_length
+                start_other_pos = random.randint(0, max(0, other_length - fragment_size))
+            end_other_pos = min(start_other_pos + fragment_size, other_length)
         else:
             end_other_pos = other_length
 
-        # Привязка к границам предложений
-        if bind_borders and base_text and other_text:
-            start_base_pos, end_base_pos = adjust_to_sentence_borders(base_text, start_base_pos, end_base_pos - 1)
-            start_other_pos, end_other_pos = adjust_to_sentence_borders(other_text, start_other_pos, end_other_pos - 1)
+        logger.debug(
+            f"До корректировки границ: начальная позиция базового текста={start_base_pos}, конечная позиция базового текста={end_base_pos}, начальная позиция второго текста={start_other_pos}, конечная позиция второго текста={end_other_pos}")
+
+        # Корректируем позиции по границам предложений, если это указано
+        if bind_borders and base_text_content and other_text_content:
+            start_base_pos, end_base_pos = adjust_to_sentence_borders(base_text_content, start_base_pos,
+                                                                      end_base_pos - 1)
+            start_other_pos, end_other_pos = adjust_to_sentence_borders(other_text_content, start_other_pos,
+                                                                        end_other_pos - 1)
             end_base_pos += 1
             end_other_pos += 1
+            logger.debug(
+                f"После корректировки границ: начальная позиция базового текста={start_base_pos}, конечная позиция базового текста={end_base_pos}, начальная позиция второго текста={start_other_pos}, конечная позиция второго текста={end_other_pos}")
 
-        watermark += (
-            f"A{base_id}S{start_base_pos}E{end_base_pos-1}"
-            f"B{other_id}S{start_other_pos}E{end_other_pos-1}"
-        )
+        # Формируем фрагмент кода
+        fragment = f"A{base_id}S{start_base_pos}E{end_base_pos - 1}B{other_id}S{start_other_pos}E{end_other_pos - 1}"
+        logger.debug(f"Добавляем фрагмент: {fragment}")
+        watermark += fragment
+
         count_b += 1
         count_o += 1
         start_base_pos = end_base_pos
         start_other_pos = end_other_pos
 
+    logger.debug(f"Итоговый код: {watermark}")
     return watermark
+
 
 def parse_code(code):
     """
@@ -120,19 +189,49 @@ def parse_code(code):
     result = {"id1": fragments[0][1], "id2": fragments[1][1], "intervals": {"A": [], "B": []}}
     for i in range(0, len(fragments), 2):
         result["intervals"]["A"].append({"S": int(fragments[i][2]), "E": int(fragments[i][3])})
-        result["intervals"]["B"].append({"S": int(fragments[i+1][2]), "E": int(fragments[i+1][3])})
+        result["intervals"]["B"].append({"S": int(fragments[i + 1][2]), "E": int(fragments[i + 1][3])})
     return result
+
 
 def generate_text_by_code(code, base_text, other_text):
     """
     Генерирует текст на основе кода.
     """
+    logger.debug(f"Входные параметры: code={code}")
+    logger.debug(f"Тип базового текста: {type(base_text)}")
+    logger.debug(f"Тип вставляемого текста: {type(other_text)}")
+
     parsed = parse_code(code)
     if not parsed:
         return "Неверный код"
 
-    base_words = base_text.split()
-    other_words = other_text.split()
+    # Конвертируем тексты в строки, если они являются объектами
+    if hasattr(base_text, 'text'):
+        logger.debug("У базового текста есть атрибут text")
+        base_text_content = base_text.text.get_content()
+    elif hasattr(base_text, 'get_content'):
+        logger.debug("У базового текста есть метод get_content")
+        base_text_content = base_text.get_content()
+    else:
+        logger.debug("Базовый текст в сыром виде")
+        base_text_content = base_text
+
+    if hasattr(other_text, 'text'):
+        logger.debug("У вставляемого текста есть атрибут text")
+        other_text_content = other_text.text.get_content()
+    elif hasattr(other_text, 'get_content'):
+        logger.debug("У вставляемого текста есть метод get_content")
+        other_text_content = other_text.get_content()
+    else:
+        logger.debug("Вставляемый текст в сыром виде")
+        other_text_content = other_text
+
+    logger.debug(f"Тип содержимого базового текста: {type(base_text_content)}")
+    logger.debug(f"Тип содержимого вставляемого текста: {type(other_text_content)}")
+
+    # Разбиваем тексты на слова
+    base_words = base_text_content.split()
+    other_words = other_text_content.split()
     result = []
     base_pos = 0
 
