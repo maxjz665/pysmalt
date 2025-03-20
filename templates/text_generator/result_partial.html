@@ -1,0 +1,18 @@
+{% for item in codes %}
+<div class="card card-body mb-4 w-100">
+    <p>Исходный текст: <a href="{% url 'text_app/papers_data' item.base_text_item.text.id %}">
+        {{ item.base_text_item.text.title }}</a></p>
+    <p>Вставляемый текст: <a href="{% url 'text_app/papers_data' item.other_text_item.text.id %}">
+        {{ item.other_text_item.text.title }}</a></p>
+
+    <div class="card card-body w-100">
+        <div style="display: flex; justify-content: space-between;">
+            <h4 style="float: left;">Текст</h4>
+        </div>
+        <p style="word-break: break-all; font-weight: 500;">Код: "{{ item.code }}"</p>
+        {% if item.generated_text %}
+            <pre style="white-space: pre-wrap; word-wrap: break-word; max-width: 100%;">{{ item.generated_text }}</pre>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}

@@ -1,29 +1,35 @@
-{% extends 'index.html' %}
-
-{% block breadcrumb %}
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'text_generator_form' %}">Генератор текстов</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Результат</li>
-        </ol>
-    </nav>
-{% endblock %}
-
 {% block content %}
-    <h2>Результат генерации</h2>
-    <div class="container">
-        {% for item in codes %}
-            <div class="mb-4">
-                <p><strong>Код:</strong> {{ item.code }}</p>
-                <p><strong>Базовый текст:</strong> {{ item.base_text_item.text.title }}</p>
-                <p><strong>Вставляемый текст:</strong> {{ item.other_text_item.text.title }}</p>
-                {% if item.generated_text %}
-                    <p><strong>Сгенерированный текст:</strong></p>
-                    <pre>{{ item.generated_text }}</pre>
-                {% endif %}
+<div class="container-fluid px-4">
+    {% for item in codes %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col">
+                        <p class="mb-1">Исходный текст: <a href="{% url 'text_app/papers_data' item.base_text_item.text.id %}">
+                            {{ item.base_text_item.text.title }}</a></p>
+                        <p class="mb-0">Вставляемый текст: <a href="{% url 'text_app/papers_data' item.other_text_item.text.id %}">
+                            {{ item.other_text_item.text.title }}</a></p>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p class="mb-0" style="word-break: break-word; font-weight: 500;">Код: "{{ item.code }}"</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h4 class="mb-0">Текст</h4>
+                        </div>
+                        {% if item.generated_text %}
+                            <pre style="white-space: pre-wrap; word-break: break-word; background-color: #f8f9fa; padding: 1rem; border-radius: 0.25rem; margin: 0;">{{ item.generated_text }}</pre>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <hr>
-        {% endfor %}
-        <a href="{% url 'text_generator_form' %}?mode={{ mode }}" class="btn btn-secondary">Вернуться к форме</a>
-    </div>
+        </div>
+    {% endfor %}
+</div>
 {% endblock %}
