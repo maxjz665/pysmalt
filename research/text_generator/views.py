@@ -230,7 +230,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
         except Exception as e:
             return HttpResponse(f"<div class='alert alert-danger'>Ошибка: {str(e)}</div>")
 
-    # Regular page load
+################# МОД ПО ПАРАМЕТРАМ #################
     if mode == 'byPars':
         if request.method == "GET":
             logger.debug(f"GET-запрос, mode={mode}")
@@ -390,6 +390,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                 "bind_borders": bind_borders,
             })
 
+################# МОД ПО КОДУ #################
     elif mode == 'byCode':
         if request.method == "GET":
             logger.debug(f"GET-запрос, mode={mode}")
