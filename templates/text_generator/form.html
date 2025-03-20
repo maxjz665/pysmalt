@@ -132,7 +132,7 @@
                 <button class="btn btn-primary" type="button" onclick="generateCode('generate_key')">Создать код</button>
                 <button class="btn btn-danger" type="button" onclick="generateCode('generate_text')">Создать текст</button>
                 <button class="btn btn-primary" type="reset" onclick="resetForm()">Сбросить</button>
-                <a href="/help" class="btn btn-info">Справка</a>
+                <a href="{% url 'text_generator_help' %}" class="btn btn-info">Справка</a>
             </div>
         </div>
     </div>

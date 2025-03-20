@@ -452,3 +452,7 @@ def get_texts_for_list(request):
     text_list = TblTextListDescription.get_item(request.user, int(list_id))
     texts = [{'id': item.text.id, 'title': item.text.title} for item in text_list.items]
     return JsonResponse({'texts': texts})
+
+def help_view(request):
+    """Отображение справки по генератору текстов"""
+    return render(request, "text_generator/help.html")
