@@ -146,10 +146,10 @@
 {% block script %}
 <script>
 function resetForm() {
-    // Сбрасываем форму
     document.getElementById('generator-form').reset();
-    // Очищаем блок с результатами
     document.getElementById('generation-results').innerHTML = '';
+    const hiddenRow = document.getElementById('hiddenRow');
+    hiddenRow.style.display = 'none';
 }
 
 function generateCode(action) {
@@ -180,5 +180,49 @@ function generateCode(action) {
             `<div class="alert alert-danger">Ошибка при генерации: ${error}</div>`;
     });
 }
+
+// Функция загрузки текстов при выборе списка
+function loadTexts(listId, targetId) {
+    fetch(`{% url "text_generator_texts" %}?list_id=${listId}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById(targetId);
+            select.innerHTML = data.texts.map(text => 
+                `<option value="${text.id}">${text.title}</option>`
+            ).join('');
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const randomTexts = document.getElementById('random_texts');
+    const hiddenRow = document.getElementById('hiddenRow');
+    const baseTextlist = document.getElementById('base_textlist');
+    const otherTextlist = document.getElementById('other_textlist');
+
+    // Обработчик изменения галочки "Случайные тексты"
+    randomTexts.addEventListener('change', function() {
+        if (this.checked) {
+            hiddenRow.style.display = 'none';
+        } else {
+            hiddenRow.style.display = 'flex';
+            // Загружаем тексты для обоих списков
+            loadTexts(baseTextlist.value, 'base_text');
+            loadTexts(otherTextlist.value, 'other_text');
+        }
+    });
+
+    // Обработчики изменения списков текстов
+    baseTextlist.addEventListener('change', function() {
+        if (!randomTexts.checked) {
+            loadTexts(this.value, 'base_text');
+        }
+    });
+
+    otherTextlist.addEventListener('change', function() {
+        if (!randomTexts.checked) {
+            loadTexts(this.value, 'other_text');
+        }
+    });
+});
 </script>
 {% endblock %}
