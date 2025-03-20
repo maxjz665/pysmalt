@@ -184,6 +184,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                 # Обработка POST-запроса для режима "По коду"
                 logger.debug(f"POST-запрос, mode={mode}")
                 code = request.POST.get("code", "").strip()
+                action = request.POST.get('action')  # Add this line to get the action parameter
                 if not code:
                     messages.error(request, "Введите код для генерации")
                     return render(request, "text_generator/form_by_code.html", context={
@@ -212,15 +213,15 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                     # Генерируем текст
                     generated_text = generate_text_by_code(code, base_content, other_content)
 
-                    return render(request, "text_generator/result_partial.html", {
+                    return render(request, "text_generator/result.html", context={
                         "codes": [{
                             'code': code,
-                            'generated_text': generated_text,
+                            'generated_text': generated_text if action == "generate_text" else None,  # Only include generated_text for text generation
                             'base_text_item': base_text_item,
                             'other_text_item': other_text_item,
                         }],
                         "mode": mode,
-                        "action": "generate_text_by_code",
+                        "action": action,  # Use the action from request.POST
                     })
 
                 except Exception as e:
@@ -402,6 +403,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
         # Обработка POST-запроса для режима "По коду"
         logger.debug(f"POST-запрос, mode={mode}")
         code = request.POST.get("code", "").strip()
+        action = request.POST.get('action')
         if not code:
             messages.error(request, "Введите код для генерации")
             return render(request, "text_generator/form_by_code.html", context={
@@ -433,12 +435,12 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             return render(request, "text_generator/result.html", context={
                 "codes": [{
                     'code': code,
-                    'generated_text': generated_text,
+                    'generated_text': generated_text if action == "generate_text" else None,  # Only include generated_text for text generation
                     'base_text_item': base_text_item,
                     'other_text_item': other_text_item,
                 }],
                 "mode": mode,
-                "action": "generate_text_by_code",
+                "action": action,  # Use the action from request.POST
             })
 
         except Exception as e:

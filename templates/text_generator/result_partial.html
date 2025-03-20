@@ -5,14 +5,24 @@
     <p>Вставляемый текст: <a href="{% url 'text_app/papers_data' item.other_text_item.text.id %}">
         {{ item.other_text_item.text.title }}</a></p>
 
-    <div class="card card-body w-100">
-        <div style="display: flex; justify-content: space-between;">
-            <h4 style="float: left;">Текст</h4>
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-3">
+                <h4 class="mb-0">Код</h4>
+            </div>
+            <p class="mb-0" style="word-break: break-word; font-weight: 500;">"{{ item.code }}"</p>
         </div>
-        <p style="word-break: break-all; font-weight: 500;">Код: "{{ item.code }}"</p>
-        {% if item.generated_text %}
-            <pre style="white-space: pre-wrap; word-wrap: break-word; max-width: 100%;">{{ item.generated_text }}</pre>
-        {% endif %}
     </div>
+
+    {% if item.generated_text %}
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <h4 class="mb-0">Текст</h4>
+                </div>
+                <pre style="white-space: pre-wrap; word-break: break-word; background-color: #f8f9fa; padding: 1rem; border-radius: 0.25rem; margin: 0;">{{ item.generated_text }}</pre>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endfor %}

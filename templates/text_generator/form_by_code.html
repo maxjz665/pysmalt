@@ -17,7 +17,7 @@
     </div>
 {% endif %}
 
-<form method="post">
+<form method="post" id="generator-form">
     {% csrf_token %}
     <div class="card" style="margin: 5pt;">
         <div class='form-group'>
@@ -26,11 +26,51 @@
         </div>
         <div class='form-row'>
             <div class="col">
-                <button class="btn btn-danger" type="submit" name="action" value="generate_text_by_code">Создать текст</button>
-                <button class="btn btn-primary" type="reset">Сбросить</button>
-                <a href="/help" class="btn btn-info">Справка</a>
+                <button class="btn btn-danger" type="button" onclick="generateCode('generate_text')">Создать текст</button>
+                <button class="btn btn-primary" type="reset" onclick="resetForm()">Сбросить</button>
+                <a href="{% url 'text_generator_help' %}" class="btn btn-info">Справка</a>
             </div>
         </div>
     </div>
 </form>
+
+<div id="generation-results"></div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+function resetForm() {
+    document.getElementById('generator-form').reset();
+    document.getElementById('generation-results').innerHTML = '';
+}
+
+function generateCode(action) {
+    const form = document.getElementById('generator-form');
+    const formData = new FormData(form);
+    formData.append('action', action);
+
+    // Показываем спиннер
+    document.getElementById("generation-results").innerHTML = 
+        `<div class="spinner-border m-5" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>`;
+
+    // Отправляем AJAX запрос
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        document.getElementById("generation-results").innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+</script>
 {% endblock %}
