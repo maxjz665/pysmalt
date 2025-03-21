@@ -193,58 +193,57 @@ def parse_code(code):
     return result
 
 
-def generate_text_by_code(code, base_text, other_text):
+def generate_text_by_code(code, base_words, other_words):
     """
-    Генерирует текст на основе кода.
+    Генерирует текст, используя код и последовательности слов
     """
-    logger.debug(f"Входные параметры: code={code}")
-    logger.debug(f"Тип базового текста: {type(base_text)}")
-    logger.debug(f"Тип вставляемого текста: {type(other_text)}")
-
     parsed = parse_code(code)
     if not parsed:
-        return "Неверный код"
-
-    # Конвертируем тексты в строки, если они являются объектами
-    if hasattr(base_text, 'text'):
-        logger.debug("У базового текста есть атрибут text")
-        base_text_content = base_text.text.get_content()
-    elif hasattr(base_text, 'get_content'):
-        logger.debug("У базового текста есть метод get_content")
-        base_text_content = base_text.get_content()
-    else:
-        logger.debug("Базовый текст в сыром виде")
-        base_text_content = base_text
-
-    if hasattr(other_text, 'text'):
-        logger.debug("У вставляемого текста есть атрибут text")
-        other_text_content = other_text.text.get_content()
-    elif hasattr(other_text, 'get_content'):
-        logger.debug("У вставляемого текста есть метод get_content")
-        other_text_content = other_text.get_content()
-    else:
-        logger.debug("Вставляемый текст в сыром виде")
-        other_text_content = other_text
-
-    logger.debug(f"Тип содержимого базового текста: {type(base_text_content)}")
-    logger.debug(f"Тип содержимого вставляемого текста: {type(other_text_content)}")
-
-    # Разбиваем тексты на слова
-    base_words = base_text_content.split()
-    other_words = other_text_content.split()
+        return None
+        
     result = []
     base_pos = 0
-
+    prev_paragraph = base_words[0].paragraph_index if base_words else 0
+    
+    # Обрабатываем каждый интервал
     for i in range(len(parsed["intervals"]["A"])):
-        # Добавляем фрагмент основного текста
+        # Добавляем фрагмент базового текста
         start = parsed["intervals"]["A"][i]["S"]
-        result.extend(base_words[base_pos:start])
+        for word in base_words[base_pos:start]:
+            # Проверяем изменение абзаца
+            start_paragraph = word.paragraph_index > prev_paragraph
+            if start_paragraph:
+                prev_paragraph = word.paragraph_index
+            result.append({
+                'word': word.word,
+                'start_paragraph': start_paragraph,
+                'highlight': False
+            })
+            
         # Добавляем фрагмент вставляемого текста
         other_start = parsed["intervals"]["B"][i]["S"]
         other_end = parsed["intervals"]["B"][i]["E"] + 1
-        result.extend(other_words[other_start:other_end])
+        
+        for word in other_words[other_start:other_end]:
+            # Для вставляемого текста не отслеживаем абзацы
+            result.append({
+                'word': word.word,
+                'start_paragraph': False,
+                'highlight': True
+            })
+            
         base_pos = parsed["intervals"]["A"][i]["E"] + 1
 
-    # Добавляем остаток основного текста
-    result.extend(base_words[base_pos:])
-    return " ".join(result)
+    # Добавляем оставшуюся часть базового текста
+    for word in base_words[base_pos:]:
+        # Продолжаем отслеживать абзацы только для базового текста
+        start_paragraph = word.paragraph_index > prev_paragraph 
+        if start_paragraph:
+            prev_paragraph = word.paragraph_index
+        result.append({
+            'word': word.word,
+            'start_paragraph': start_paragraph,
+            'highlight': False
+        })
+
+    return result

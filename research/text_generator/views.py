@@ -116,8 +116,8 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                         if not base_words_queryset.exists() or not other_words_queryset.exists():
                             raise ValueError("Один из текстов не содержит слов")
 
-                        base_content = ' '.join(word.word for word in base_words_queryset)
-                        other_content = ' '.join(word.word for word in other_words_queryset)
+                        base_content = list(base_words_queryset)
+                        other_content = list(other_words_queryset)
 
                         if not base_content or not other_content:
                             raise ValueError("Не удалось получить содержимое одного из текстов")
@@ -125,12 +125,8 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                         logger.debug(f"Длина базового текста: {len(base_content)}")
                         logger.debug(f"Длина вставляемого текста: {len(other_content)}")
 
-                        # Разбиваем на слова для подсчета длины
-                        base_words = base_content.split()
-                        other_words = other_content.split()
-
-                        base_text_length = len(base_words)
-                        other_text_length = len(other_words)
+                        base_text_length = len(base_content)
+                        other_text_length = len(other_content)
 
                         # Генерируем код
                         code = generate_text_code(
@@ -207,8 +203,8 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                     base_words_queryset = base_text_item.text.get_content()
                     other_words_queryset = other_text_item.text.get_content()
 
-                    base_content = ' '.join(word.word for word in base_words_queryset)
-                    other_content = ' '.join(word.word for word in other_words_queryset)
+                    base_content = list(base_words_queryset)
+                    other_content = list(other_words_queryset)
 
                     # Генерируем текст
                     generated_text = generate_text_by_code(code, base_content, other_content)
@@ -326,8 +322,8 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                 if not base_words_queryset.exists() or not other_words_queryset.exists():
                     raise ValueError("Один из текстов не содержит слов")
 
-                base_content = ' '.join(word.word for word in base_words_queryset)
-                other_content = ' '.join(word.word for word in other_words_queryset)
+                base_content = list(base_words_queryset)
+                other_content = list(other_words_queryset)
 
                 if not base_content or not other_content:
                     raise ValueError("Не удалось получить содержимое одного из текстов")
@@ -335,12 +331,8 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                 logger.debug(f"Длина базового текста: {len(base_content)}")
                 logger.debug(f"Длина вставляемого текста: {len(other_content)}")
 
-                # Разбиваем на слова для подсчета длины
-                base_words = base_content.split()
-                other_words = base_content.split()
-
-                base_text_length = len(base_words)
-                other_text_length = len(other_words)
+                base_text_length = len(base_content)
+                other_text_length = len(other_content)
 
                 # Генерируем код
                 code = generate_text_code(
@@ -426,8 +418,8 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             base_words_queryset = base_text_item.text.get_content()
             other_words_queryset = other_text_item.text.get_content()
 
-            base_content = ' '.join(word.word for word in base_words_queryset)
-            other_content = ' '.join(word.word for word in other_words_queryset)
+            base_content = list(base_words_queryset)
+            other_content = list(other_words_queryset)
 
             # Генерируем текст
             generated_text = generate_text_by_code(code, base_content, other_content)
