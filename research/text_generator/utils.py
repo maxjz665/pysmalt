@@ -232,28 +232,43 @@ def generate_text_by_code(code, base_words, other_words):
     result = []
     base_pos = 0
     prev_paragraph = base_words[0].paragraph_index if base_words else 0
+    prev_sentence = base_words[0].sentence_index if base_words else 0
     
     # Обрабатываем каждый интервал
     for i in range(len(parsed["intervals"]["A"])):
         # Добавляем фрагмент базового текста
         start = parsed["intervals"]["A"][i]["S"]
         for word in base_words[base_pos:start]:
-            # Проверяем изменение абзаца
+            # Проверяем изменение абзаца и предложения
             start_paragraph = word.paragraph_index > prev_paragraph
+            start_sentence = word.sentence_index > prev_sentence
+            
             if start_paragraph:
                 prev_paragraph = word.paragraph_index
+                result.append({
+                    'word': '|',
+                    'start_paragraph': True,
+                    'highlight': False
+                })
+            elif start_sentence:
+                prev_sentence = word.sentence_index
+                result.append({
+                    'word': '|',
+                    'start_paragraph': False,
+                    'highlight': False
+                })
+                
             result.append({
                 'word': word.word,
-                'start_paragraph': start_paragraph,
+                'start_paragraph': False,
                 'highlight': False
             })
             
-        # Добавляем фрагмент вставляемого текста
+        # Добавляем фрагмент вставляемого текста  
         other_start = parsed["intervals"]["B"][i]["S"]
         other_end = parsed["intervals"]["B"][i]["E"] + 1
         
         for word in other_words[other_start:other_end]:
-            # Для вставляемого текста не отслеживаем абзацы
             result.append({
                 'word': word.word,
                 'start_paragraph': False,
@@ -264,13 +279,27 @@ def generate_text_by_code(code, base_words, other_words):
 
     # Добавляем оставшуюся часть базового текста
     for word in base_words[base_pos:]:
-        # Продолжаем отслеживать абзацы только для базового текста
-        start_paragraph = word.paragraph_index > prev_paragraph 
+        start_paragraph = word.paragraph_index > prev_paragraph
+        start_sentence = word.sentence_index > prev_sentence
+        
         if start_paragraph:
             prev_paragraph = word.paragraph_index
+            result.append({
+                'word': '|',
+                'start_paragraph': True,
+                'highlight': False
+            })
+        elif start_sentence:
+            prev_sentence = word.sentence_index
+            result.append({
+                'word': '|',
+                'start_paragraph': False, 
+                'highlight': False
+            })
+            
         result.append({
             'word': word.word,
-            'start_paragraph': start_paragraph,
+            'start_paragraph': False,
             'highlight': False
         })
 
