@@ -1,8 +1,11 @@
 import logging
 import random
 import re
+from typing import Optional
 
 import nltk
+
+from research.text_generator.dataclasses import *
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -50,37 +53,42 @@ def adjust_to_sentence_borders(text, start, end):
     return new_start, new_end
 
 
-def generate_text_code(base_id, other_id, base_length, other_length, fragment_size, percent_of_inserts,
-                       bind_borders=False, base_text=None, other_text=None):
+def generate_text_code(
+    base_text: TextContent,
+    other_text: TextContent,
+    fragment_size: int,
+    percent_of_inserts: float,
+    bind_borders: bool = False
+) -> str:
     """
     Генерирует код для вставки текста.
+    
+    Args:
+        base_text: Базовый текст
+        other_text: Вставляемый текст
+        fragment_size: Размер фрагмента для вставки
+        percent_of_inserts: Доля вставок (0.0-1.0)
+        bind_borders: Привязывать ли границы к предложениям
+        
+    Returns:
+        str: Сгенерированный код вставок
     """
+    # Используем атрибуты из TextContent
+    base_id = base_text.id 
+    other_id = other_text.id
+    base_length = base_text.length
+    other_length = other_text.length
+    
     logger.debug(
         f"Входные параметры: base_id={base_id}, other_id={other_id}, base_length={base_length}, other_length={other_length}")
     logger.debug(f"Тип базового текста: {type(base_text)}")
     logger.debug(f"Тип вставляемого текста: {type(other_text)}")
 
-    # Конвертируем тексты в строки, если они являются объектами
-    if hasattr(base_text, 'text'):
-        logger.debug("У базового текста есть атрибут text")
-        base_text_content = base_text.text.get_content()
-    elif hasattr(base_text, 'get_content'):
-        logger.debug("У базового текста есть метод get_content")
-        base_text_content = base_text.get_content()
-    else:
-        logger.debug("Базовый текст в сыром виде")
-        base_text_content = base_text
+    logger.debug("Базовый текст в сыром виде")
+    base_text_content = base_text
 
-    # Аналогично для вставляемого текста
-    if hasattr(other_text, 'text'):
-        logger.debug("У вставляемого текста есть атрибут text")
-        other_text_content = other_text.text.get_content()
-    elif hasattr(other_text, 'get_content'):
-        logger.debug("У вставляемого текста есть метод get_content")
-        other_text_content = other_text.get_content()
-    else:
-        logger.debug("Вставляемый текст в сыром виде")
-        other_text_content = other_text
+    logger.debug("Вставляемый текст в сыром виде")
+    other_text_content = other_text
 
     logger.debug(f"Тип содержимого базового текста: {type(base_text_content)}")
     logger.debug(f"Тип содержимого вставляемого текста: {type(other_text_content)}")
@@ -180,17 +188,36 @@ def generate_text_code(base_id, other_id, base_length, other_length, fragment_si
     return watermark
 
 
-def parse_code(code):
+def parse_code(code: str) -> Optional[ParsedCode]:
     """
     Парсит код и возвращает словарь с ID текстов и интервалами.
+    
+    Args:
+        code: Строка кода в формате "A{id}S{start}E{end}B{id}S{start}E{end}"
+        
+    Returns:
+        Optional[ParsedCode]: Разобранный код или None при ошибке
     """
     if not re.match(r"^(A\d+S\d+E\d+B\d+S\d+E\d+)+$", code):
         return None
+        
     fragments = re.findall(r"([AB])(\d+)S(\d+)E(\d+)", code)
-    result = {"id1": fragments[0][1], "id2": fragments[1][1], "intervals": {"A": [], "B": []}}
+    result: ParsedCode = {
+        "id1": int(fragments[0][1]),
+        "id2": int(fragments[1][1]),
+        "intervals": {"A": [], "B": []}
+    }
+    
     for i in range(0, len(fragments), 2):
-        result["intervals"]["A"].append({"S": int(fragments[i][2]), "E": int(fragments[i][3])})
-        result["intervals"]["B"].append({"S": int(fragments[i + 1][2]), "E": int(fragments[i + 1][3])})
+        result["intervals"]["A"].append({
+            "S": int(fragments[i][2]), 
+            "E": int(fragments[i][3])
+        })
+        result["intervals"]["B"].append({
+            "S": int(fragments[i + 1][2]), 
+            "E": int(fragments[i + 1][3])
+        })
+        
     return result
 
 

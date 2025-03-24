@@ -8,6 +8,7 @@ from django.shortcuts import render
 from research.text_generator.utils import generate_text_code, generate_text_by_code
 from research.text_generator.views.text_generator_code_view import text_generator_code_view
 from text_app.models.tbl_textlist import TblTextListDescription
+from research.text_generator.dataclasses import *
 
 logger = logging.getLogger(__name__)
 
@@ -38,15 +39,15 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
     # Обработка POST-запроса
     logger.debug(f"POST-запрос, mode={mode}")
     action = request.POST.get('action')
-    base_textlist_id = request.POST.get("base_textlist", None)
-    other_textlist_id = request.POST.get("other_textlist", None)
+    base_textlist_id = request.POST.get("base_textlist")
+    other_textlist_id = request.POST.get("other_textlist")
     random_texts = request.POST.get("random_texts", "off") == "on"
-    base_text_id = request.POST.get("base_text", None)
-    other_text_id = request.POST.get("other_text", None)
-    percent_of_inserts = request.POST.get("percent_of_inserts", 0.20)
-    fragment_size = request.POST.get("fragment_size", 10)
+    base_text_id = request.POST.get("base_text")
+    other_text_id = request.POST.get("other_text")
+    percent_of_inserts = float(request.POST.get("percent_of_inserts", 0.20))
+    fragment_size = int(request.POST.get("fragment_size", 10))
     bind_borders = request.POST.get("bind_borders", "off") == "on"
-    code_count = request.POST.get("code_count", 1)
+    code_count = int(request.POST.get("code_count", 1))
 
     logger.debug(f"ID списка базового текста: {base_textlist_id}, ID списка вставляемого текста: {other_textlist_id}")
 
@@ -102,47 +103,60 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                 base_text_item = next(item for item in base_text_items if str(item.text.id) == base_text_id)
                 other_text_item = next(item for item in other_text_items if str(item.text.id) == other_text_id)
 
-            # Получаем содержимое текстов путем объединения слов
-            base_words_queryset = base_text_item.text.get_content()
-            other_words_queryset = other_text_item.text.get_content()
+            # Создаем объекты TextContent
+            base_words = [TextWord(
+                word=word.word,
+                paragraph_index=word.paragraph_index,
+                sentence_index=word.sentence_index,
+                word_index=word.word_index
+            ) for word in base_text_item.text.get_content()]
+
+            other_words = [TextWord(
+                word=word.word,
+                paragraph_index=word.paragraph_index,
+                sentence_index=word.sentence_index,
+                word_index=word.word_index
+            ) for word in other_text_item.text.get_content()]
+
+            base_content = TextContent(
+                id=base_text_item.text.id,
+                words=base_words,
+                length=len(base_words)
+            )
+
+            other_content = TextContent(
+                id=other_text_item.text.id,
+                words=other_words,
+                length=len(other_words)
+            )
 
             logger.debug(f"ID базового текста: {base_text_item.text.id}")
             logger.debug(f"ID вставляемого текста: {other_text_item.text.id}")
-            logger.debug(f"Количество слов в базовом тексте: {base_words_queryset.count() if base_words_queryset else 0}")
-            logger.debug(f"Количество слов во вставляемом тексте: {other_words_queryset.count() if other_words_queryset else 0}")
+            logger.debug(f"Количество слов в базовом тексте: {len(base_words)}")
+            logger.debug(f"Количество слов во вставляемом тексте: {len(other_words)}")
 
-            if not base_words_queryset.exists() or not other_words_queryset.exists():
-                raise ValueError("Один из текстов не содержит слов")
-
-            base_content = list(base_words_queryset)
-            other_content = list(other_words_queryset)
-
-            if not base_content or not other_content:
+            if not base_words or not other_words:
                 raise ValueError("Не удалось получить содержимое одного из текстов")
 
-            logger.debug(f"Длина базового текста: {len(base_content)}")
-            logger.debug(f"Длина вставляемого текста: {len(other_content)}")
+            logger.debug(f"Длина базового текста: {len(base_words)}")
+            logger.debug(f"Длина вставляемого текста: {len(other_words)}")
 
-            base_text_length = len(base_content)
-            other_text_length = len(other_content)
+            base_text_length = len(base_words)
+            other_text_length = len(other_words)
 
             # Генерируем код
             code = generate_text_code(
-                base_id=base_text_item.text.id,
-                other_id=other_text_item.text.id,
-                base_length=base_text_length,
-                other_length=other_text_length,
-                fragment_size=fragment_size,
-                percent_of_inserts=percent_of_inserts,
-                bind_borders=bind_borders,
-                base_text=base_content,
-                other_text=other_content
+                base_content,
+                other_content,
+                fragment_size,
+                percent_of_inserts,
+                bind_borders
             )
             logger.debug(f"Сгенерированный код: {code}")
 
             if action == "generate_text":
                 # Генерируем текст
-                generated_text = generate_text_by_code(code, base_content, other_content)
+                generated_text = generate_text_by_code(code, base_words, other_words)
                 codes.append({
                     'code': code,
                     'generated_text': generated_text,

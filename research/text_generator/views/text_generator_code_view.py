@@ -1,28 +1,23 @@
 import logging
-
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
+from research.text_generator.dataclasses import TextWord
+from research.text_generator.utils import parse_code, generate_text_by_code
 from text_app.models.tbl_textlist import TblTextListDescription
-from ..utils import parse_code, generate_text_by_code
 
 logger = logging.getLogger(__name__)
 
 def text_generator_code_view(request: HttpRequest) -> HttpResponse:
-    """
-    Представление для генерации текстов по коду.
-    """
+    """Представление для генерации текстов по коду."""
     mode = 'byCode'
     
     if request.method == "GET":
-        logger.debug(f"GET-запрос, mode={mode}")
         return render(request, "text_generator/form_by_code.html", context={
             "mode": mode,
         })
 
-    # Обработка POST-запроса для режима "По коду"
-    logger.debug(f"POST-запрос, mode={mode}")
     code = request.POST.get("code", "").strip()
     action = request.POST.get('action')
     
@@ -33,26 +28,33 @@ def text_generator_code_view(request: HttpRequest) -> HttpResponse:
         })
 
     try:
-        # Парсим код
         parsed = parse_code(code)
         if not parsed:
             raise ValueError("Неверный формат кода")
 
-        # Получаем тексты по ID
         base_text_item = TblTextListDescription.get_text_by_id(request.user, parsed["id1"])
         other_text_item = TblTextListDescription.get_text_by_id(request.user, parsed["id2"])
 
         if not base_text_item or not other_text_item:
             raise ValueError("Один из текстов не найден")
 
-        base_words_queryset = base_text_item.text.get_content()
-        other_words_queryset = other_text_item.text.get_content()
+        # Создаем объекты TextWord
+        base_words = [TextWord(
+            word=word.word,
+            paragraph_index=word.paragraph_index,
+            sentence_index=word.sentence_index,
+            word_index=word.word_index
+        ) for word in base_text_item.text.get_content()]
 
-        base_content = list(base_words_queryset)
-        other_content = list(other_words_queryset)
+        other_words = [TextWord(
+            word=word.word,
+            paragraph_index=word.paragraph_index,
+            sentence_index=word.sentence_index,
+            word_index=word.word_index
+        ) for word in other_text_item.text.get_content()]
 
         # Генерируем текст
-        generated_text = generate_text_by_code(code, base_content, other_content)
+        generated_text = generate_text_by_code(code, base_words, other_words)
 
         return render(request, "text_generator/result.html", context={
             "codes": [{
