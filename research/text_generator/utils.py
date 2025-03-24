@@ -1,7 +1,8 @@
+import logging
 import random
 import re
+
 import nltk
-import logging
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
