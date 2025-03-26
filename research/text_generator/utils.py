@@ -102,6 +102,14 @@ def generate_text_code(
     )
     logger.debug(f"Максимальный шаг для базового текста: {max_base_step_size}")
 
+    # Проверяем особый случай с малым шагом
+    lim_shift_base = False
+    shifts_base = []
+    if max_base_step_size < 1:
+        lim_shift_base = True
+        max_count_base_sh = base_length - (ins_count_base * fragment_size)
+        shifts_base = get_array_of_shifts(ins_count_base, max_count_base_sh)
+
     # Вычисляем количество вставок для второго текста
     ins_count_other = min(ins_count_base, other_length // fragment_size)
     logger.debug(f"Количество вставок для второго текста: {ins_count_other}")
@@ -125,8 +133,12 @@ def generate_text_code(
 
         # Вычисляем позиции для базового текста
         if base_length > fragment_size:
-            if max_base_step_size > 0:
-                start_base_pos = random.randint(start_base_pos, start_base_pos + max_base_step_size)
+            if lim_shift_base:
+                # Если шаг мал, используем массив сдвигов
+                start_base_pos = start_base_pos + 1 if shifts_base[count_b] else start_base_pos
+            else:
+                # Иначе используем rintExt для более равномерного распределения
+                start_base_pos = rint_ext(start_base_pos, start_base_pos + max_base_step_size, percent_of_inserts)
             logger.debug(f"Новая начальная позиция в базовом тексте: {start_base_pos}")
 
             if start_base_pos >= base_length:
@@ -156,6 +168,7 @@ def generate_text_code(
         logger.debug(
             f"До корректировки границ: начальная позиция базового текста={start_base_pos}, конечная позиция базового текста={end_base_pos}, начальная позиция второго текста={start_other_pos}, конечная позиция второго текста={end_other_pos}")
 
+
         ### ОПЦИЯ ПРИВЯЗКИ К ГРАНИЦАМ ПРЕДЛОЖЕНИЯМ.
         # Корректируем позиции по границам предложений, если это указано
         if bind_borders and base_text_content and other_text_content:
@@ -180,6 +193,36 @@ def generate_text_code(
 
     logger.debug(f"Итоговый код: {watermark}")
     return watermark
+
+
+def get_array_of_shifts(ins_count: int, shifts_count: int) -> list[bool]:
+    """
+    Создает массив логических сдвигов для случая с малым шагом между вставками.
+    
+    Функция генерирует массив булевых значений, где True означает необходимость сдвига на 1 позицию,
+    а False - отсутствие сдвига. Количество True значений равно shifts_count.
+    
+    Args:
+        ins_count: Общее количество вставок
+        shifts_count: Желаемое количество сдвигов (должно быть меньше или равно ins_count)
+        
+    Returns:
+        list[bool]: Массив булевых значений длины ins_count, где True означает необходимость сдвига.
+                   Возвращает пустой список, если параметры некорректны.
+    """
+    if shifts_count > ins_count or ins_count < 1 or shifts_count < 0:
+        return []
+        
+    result = [True] * ins_count
+    k = ins_count - shifts_count
+    
+    while k > 0:
+        rnd = random.randint(0, ins_count - 1)
+        if result[rnd]:
+            result[rnd] = False
+            k -= 1
+            
+    return result
 
 
 def parse_code(code: str) -> Optional[ParsedCode]:
@@ -298,3 +341,27 @@ def generate_text_by_code(code, base_words, other_words):
         })
 
     return result
+
+
+def rint_ext(start: int, end: int, percent_of_inserts: float) -> int:
+    """
+    Генерирует случайное целое число из интервала с вероятностным смещением к концу интервала.
+    
+    Функция использует процент вставок для определения степени смещения: чем больше процент,  
+    тем чаще будут генерироваться числа ближе к концу интервала. Это обеспечивает более
+    равномерное распределение вставок по тексту.
+    
+    Args:
+        start: Начало интервала (включительно)
+        end: Конец интервала (включительно)
+        percent_of_inserts: Доля вставок (0.0-1.0), влияет на степень смещения к концу интервала
+        
+    Returns:
+        int: Случайное число из интервала [start, end] с вероятностным смещением
+    """
+    res = random.randint(start, end)
+    i = 0.0
+    while i <= percent_of_inserts:
+        res = random.randint(start, res)
+        i += random.uniform(0, 0.1)
+    return end - res + start
