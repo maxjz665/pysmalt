@@ -3,53 +3,46 @@ import random
 import re
 from typing import Optional
 
-import nltk
-
 from research.text_generator.dataclasses import *
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-def adjust_to_sentence_borders(text, start, end):
+def adjust_to_sentence_borders(text: TextContent, start: int, end: int) -> tuple[int, int]:
     """
     Корректирует позиции start и end, чтобы они попадали на границы предложений.
+    
+    Args:
+        text: Объект TextContent с текстом и его разметкой
+        start: Начальная позиция
+        end: Конечная позиция
+        
+    Returns:
+        tuple[int, int]: Кортеж с новыми позициями (new_start, new_end)
     """
-    sentences = nltk.sent_tokenize(text)
-    words = text.split()
-    word_positions = []
-    current_pos = 0
-
-    # Создаем список позиций слов
-    for word in words:
-        word_positions.append(current_pos)
-        current_pos += len(word) + 1  # +1 для пробела
-
-    # Находим ближайшие границы предложений
-    char_pos = 0
-    sentence_starts = [0]
-    for sentence in sentences:
-        char_pos += len(sentence) + 1  # +1 для пробела или знака препинания
-        sentence_starts.append(char_pos)
-
-    # Корректируем начальную позицию (start)
-    start_char = word_positions[start] if start < len(word_positions) else word_positions[-1]
+    # Получаем список слов и их индексы предложений
+    words = text.words
+    sentence_indices = [word.sentence_index for word in words]
+    
+    # Находим индекс предложения для начальной и конечной позиции
+    start_sentence = sentence_indices[start] if start < len(sentence_indices) else sentence_indices[-1]
+    end_sentence = sentence_indices[end] if end < len(sentence_indices) else sentence_indices[-1]
+    
+    # Корректируем начальную позицию
     new_start = start
-    for i, pos in enumerate(sentence_starts):
-        if pos > start_char:
-            new_start = next((idx for idx, w_pos in enumerate(word_positions) if w_pos >= sentence_starts[i - 1]),
-                             start)
+    for i in range(start, -1, -1):
+        if i == 0 or sentence_indices[i] != start_sentence:
+            new_start = i if i == 0 else i + 1
             break
-
-    # Корректируем конечную позицию (end)
-    end_char = word_positions[end] if end < len(word_positions) else word_positions[-1]
+            
+    # Корректируем конечную позицию
     new_end = end
-    for i, pos in enumerate(sentence_starts):
-        if pos > end_char:
-            new_end = next((idx for idx, w_pos in enumerate(word_positions) if w_pos >= sentence_starts[i - 1]),
-                           end) - 1
+    for i in range(end, len(words)):
+        if i == len(words) - 1 or sentence_indices[i + 1] != end_sentence:
+            new_end = i
             break
-
+            
     return new_start, new_end
 
 
@@ -163,6 +156,7 @@ def generate_text_code(
         logger.debug(
             f"До корректировки границ: начальная позиция базового текста={start_base_pos}, конечная позиция базового текста={end_base_pos}, начальная позиция второго текста={start_other_pos}, конечная позиция второго текста={end_other_pos}")
 
+        ### ОПЦИЯ ПРИВЯЗКИ К ГРАНИЦАМ ПРЕДЛОЖЕНИЯМ.
         # Корректируем позиции по границам предложений, если это указано
         if bind_borders and base_text_content and other_text_content:
             start_base_pos, end_base_pos = adjust_to_sentence_borders(base_text_content, start_base_pos,
