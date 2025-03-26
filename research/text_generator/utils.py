@@ -271,46 +271,48 @@ def generate_text_by_code(code, base_words, other_words):
     prev_paragraph = base_words[0].paragraph_index if base_words else 0
     prev_sentence = base_words[0].sentence_index if base_words else 0
     
+    # Для вставляемого текста тоже отслеживаем предыдущие индексы
+    other_prev_paragraph = other_words[0].paragraph_index if other_words else 0
+    other_prev_sentence = other_words[0].sentence_index if other_words else 0
+    
     # Обрабатываем каждый интервал
     for i in range(len(parsed["intervals"]["A"])):
         # Добавляем фрагмент базового текста
         start = parsed["intervals"]["A"][i]["S"]
+        # Текущая реализация
         for word in base_words[base_pos:start]:
-            # Проверяем изменение абзаца и предложения
+            # Существующая логика для базового текста
             start_paragraph = word.paragraph_index > prev_paragraph
             start_sentence = word.sentence_index > prev_sentence
             
             if start_paragraph:
                 prev_paragraph = word.paragraph_index
-                result.append({
-                    'word': '|',
-                    'start_paragraph': True,
-                    'highlight': False
-                })
+                result.append({'word': '|', 'start_paragraph': True, 'highlight': False})
             elif start_sentence:
-                prev_sentence = word.sentence_index
-                result.append({
-                    'word': '|',
-                    'start_paragraph': False,
-                    'highlight': False
-                })
+                prev_sentence = word.sentence_index  
+                result.append({'word': '|', 'start_paragraph': False, 'highlight': False})
                 
-            result.append({
-                'word': word.word,
-                'start_paragraph': False,
-                'highlight': False
-            })
+            result.append({'word': word.word, 'start_paragraph': False, 'highlight': False})
+
             
         # Добавляем фрагмент вставляемого текста  
         other_start = parsed["intervals"]["B"][i]["S"]
         other_end = parsed["intervals"]["B"][i]["E"] + 1
         
         for word in other_words[other_start:other_end]:
-            result.append({
-                'word': word.word,
-                'start_paragraph': False,
-                'highlight': True
-            })
+            # Добавляем проверку разделителей для вставляемого текста
+            start_paragraph = word.paragraph_index > other_prev_paragraph  
+            start_sentence = word.sentence_index > other_prev_sentence
+
+            if start_paragraph:
+                other_prev_paragraph = word.paragraph_index
+                result.append({'word': '|', 'start_paragraph': True, 'highlight': True})
+            elif start_sentence:
+                other_prev_sentence = word.sentence_index
+                result.append({'word': '|', 'start_paragraph': False, 'highlight': True})
+                
+            result.append({'word': word.word, 'start_paragraph': False, 'highlight': True})
+            
             
         base_pos = parsed["intervals"]["A"][i]["E"] + 1
 
