@@ -1,6 +1,11 @@
 {% block content %}
 <div class="container-fluid px-4">
-    <h2 style="margin: 5pt;">Результат генерации</h2>
+    <div class="d-flex justify-content-between align-items-center" style="margin: 5pt;">
+        <h2 class="mb-0">Результат генерации</h2>
+        {% if codes|length > 1 %}
+            <button class="btn btn-outline-secondary" onclick="copyAllCodesToClipboard()">Копировать все коды</button>
+        {% endif %}
+    </div>
     
     {% for item in codes %}
         <div class="card mb-4">
@@ -16,7 +21,11 @@
 
                 <div class="card mb-3">
                     <div class="card-body">
-                        <p class="mb-0" style="word-break: break-word; font-weight: 500;">Код: "{{ item.code }}"</p>
+                        <div class="d-flex justify-content-between mb-3">
+                            <h4 class="mb-0">Код</h4>
+                            <button class="btn btn-secondary" onclick="copyCode('code-{{ forloop.counter }}')">Копировать код</button>
+                        </div>
+                        <p id="code-{{ forloop.counter }}" class="mb-0" style="word-break: break-word; font-weight: 500;">{{ item.code }}</p>
                     </div>
                 </div>
 

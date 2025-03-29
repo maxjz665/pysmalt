@@ -152,6 +152,46 @@ function resetForm() {
     hiddenRow.style.display = 'none';
 }
 
+function copyCode(elementId) {
+    const codeElement = document.getElementById(elementId);
+    if (!codeElement) {
+        alert('Элемент с ID ' + elementId + ' не найден');
+        return;
+    }
+
+    const textToCopy = codeElement.textContent;
+    const textArea = document.createElement('textarea');
+    textArea.value = textToCopy;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        const button = document.querySelector(`button[onclick="copyCode('${elementId}')"]`);
+        const originalText = button.textContent;
+        button.textContent = 'Скопировано!';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 2000);
+    } catch (err) {
+        console.error('Ошибка при копировании:', err);
+        alert('Не удалось скопировать код');
+    } finally {
+        document.body.removeChild(textArea);
+    }
+}
+
+function copyAllCodesToClipboard() {
+    const codeElements = document.querySelectorAll('[id^="code-"]');
+    const allCodes = Array.from(codeElements).map(el => el.textContent).join('\n'); // Используем \n для переноса строки
+    const textArea = document.createElement('textarea');
+    textArea.value = allCodes;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    alert('Все коды скопированы');
+}
+
 function generateCode(action) {
     const form = document.getElementById('generator-form');
     const formData = new FormData(form);
