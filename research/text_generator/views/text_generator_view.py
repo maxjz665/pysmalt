@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
-from research.text_generator.utils import generate_text_code, generate_text_by_code
+from research.text_generator.utils import generate_text_code, generate_text_by_code, get_random_texts
 from research.text_generator.views.text_generator_code_view import text_generator_code_view
 from text_app.models.tbl_textlist import TblTextListDescription
 from research.text_generator.dataclasses import *
@@ -97,8 +97,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
 
             # Выбираем тексты
             if random_texts:
-                base_text_item = random.choice(base_text_items)
-                other_text_item = random.choice(other_text_items)
+                base_text_item, other_text_item = get_random_texts(base_textlist.id, other_textlist.id, base_text_items, other_text_items)
             else:
                 base_text_item = next(item for item in base_text_items if str(item.text.id) == base_text_id)
                 other_text_item = next(item for item in other_text_items if str(item.text.id) == other_text_id)

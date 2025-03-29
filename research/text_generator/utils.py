@@ -1,7 +1,7 @@
 import logging
 import random
 import re
-from typing import Optional
+from typing import Optional, List
 
 from research.text_generator.dataclasses import *
 
@@ -367,3 +367,22 @@ def rint_ext(start: int, end: int, percent_of_inserts: float) -> int:
         res = random.randint(start, res)
         i += random.uniform(0, 0.1)
     return end - res + start
+
+
+def get_random_texts(base_list_id: int, other_list_id: int, base_list_items: List, other_list_items: List):
+    """
+    Возвращает случайных текстов из указанных списков.
+    Если списки одинаковые, гарантирует что тексты разные.
+    """
+
+    # Выбираем случайный текст из базового списка
+    base_text_item = random.choice(base_list_items)
+    
+    if base_list_id == other_list_id:
+        # Если списки одинаковые, исключаем выбранный текст
+        available_texts = [t for t in other_list_items if t != base_text_item]
+        other_text_item = random.choice(available_texts)
+    else:
+        other_text_item = random.choice(other_list_items)
+        
+    return base_text_item, other_text_item
