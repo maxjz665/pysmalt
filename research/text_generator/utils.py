@@ -9,6 +9,7 @@ from text_app.models.tbl_text import TblText
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+random.seed(42)
 
 def adjust_to_sentence_borders(text: TextContent, start: int, end: int) -> tuple[int, int]:
     """

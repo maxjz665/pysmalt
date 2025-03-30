@@ -437,19 +437,16 @@ class TextGeneratorTest(TestCase):
         other_text = TextContent.from_tbl_text(self.texts[330])
 
         code = generate_text_code(
-            base_text,  
+            base_text,
             other_text,
             fragment_size=8,
-            percent_of_inserts=0.15, 
+            percent_of_inserts=0.1,
             bind_borders=True
         )
 
         result = parse_code(code)
-        # Проверяем что количество интервалов находится в допустимом диапазоне
-        self.assertIn(len(result["intervals"]["A"]), [3, 4])
-        self.assertIn(len(result["intervals"]["B"]), [3, 4])
-        # Проверяем что количества интервалов A и B совпадают
-        self.assertEqual(len(result["intervals"]["A"]), len(result["intervals"]["B"]))
+        self.assertEqual(len(result["intervals"]["A"]), 3)
+        self.assertEqual(len(result["intervals"]["B"]), 3)
 
     def test_get_texts_code_correct_1more2_2rep_borders(self):
         """Тест Б33: Проверка генерации кода со вставками с повторами с привязкой к границам"""
@@ -533,11 +530,8 @@ class TextGeneratorTest(TestCase):
         )
 
         result = parse_code(code)
-        # Проверяем что количество интервалов находится в допустимом диапазоне
-        self.assertIn(len(result["intervals"]["A"]), [20, 21])
-        self.assertIn(len(result["intervals"]["B"]), [20, 21])
-        # Проверяем что количества интервалов A и B совпадают
-        self.assertEqual(len(result["intervals"]["A"]), len(result["intervals"]["B"]))
+        self.assertEqual(len(result["intervals"]["A"]), 20)
+        self.assertEqual(len(result["intervals"]["B"]), 20)
 
     def test_get_texts_code_correct_2more1_borders(self):
         """Тест Б38: Проверка генерации кода со вторым текстом больше первого с границами"""
@@ -587,8 +581,5 @@ class TextGeneratorTest(TestCase):
         )
 
         result = parse_code(code)
-        # Проверяем что количество интервалов находится в допустимом диапазоне
-        self.assertIn(len(result["intervals"]["A"]), [2, 3])
-        self.assertIn(len(result["intervals"]["B"]), [2, 3])
-        # Проверяем что количества интервалов A и B совпадают
-        self.assertEqual(len(result["intervals"]["A"]), len(result["intervals"]["B"]))
+        self.assertEqual(len(result["intervals"]["A"]), 2)
+        self.assertEqual(len(result["intervals"]["B"]), 2)
