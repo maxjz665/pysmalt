@@ -103,31 +103,11 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                 other_text_item = next(item for item in other_text_items if str(item.text.id) == other_text_id)
 
             # Создаем объекты TextContent
-            base_words = [TextWord(
-                word=word.word,
-                paragraph_index=word.paragraph_index,
-                sentence_index=word.sentence_index,
-                word_index=word.word_index
-            ) for word in base_text_item.text.get_content()]
+            base_content = TextContent.from_tbl_text(base_text_item.text)
+            other_content = TextContent.from_tbl_text(other_text_item.text)
 
-            other_words = [TextWord(
-                word=word.word,
-                paragraph_index=word.paragraph_index,
-                sentence_index=word.sentence_index,
-                word_index=word.word_index
-            ) for word in other_text_item.text.get_content()]
-
-            base_content = TextContent(
-                id=base_text_item.text.id,
-                words=base_words,
-                length=len(base_words)
-            )
-
-            other_content = TextContent(
-                id=other_text_item.text.id,
-                words=other_words,
-                length=len(other_words)
-            )
+            base_words = base_content.words
+            other_words = other_content.words
 
             logger.debug(f"ID базового текста: {base_text_item.text.id}")
             logger.debug(f"ID вставляемого текста: {other_text_item.text.id}")

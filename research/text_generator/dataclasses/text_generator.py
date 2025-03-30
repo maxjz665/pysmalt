@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import List, TypedDict, Dict
 
+from text_app.models.tbl_text import TblText
+
 
 @dataclass
 class TextWord:
@@ -16,6 +18,23 @@ class TextContent:
     id: int
     words: List[TextWord]
     length: int
+
+    @classmethod
+    def from_tbl_text(cls, text: TblText) -> 'TextContent':
+        """Создает TextContent из объекта TblText"""
+        words = [
+            TextWord(
+                word=w.word,
+                paragraph_index=w.paragraph_index,
+                sentence_index=w.sentence_index,
+                word_index=w.word_index
+            ) for w in text.get_content()
+        ]
+        return cls(
+            id=text.id,
+            words=words,
+            length=len(words)
+        )
 
 @dataclass
 class CodeInterval(TypedDict):

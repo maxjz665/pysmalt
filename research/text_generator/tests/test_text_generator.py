@@ -2,8 +2,9 @@ import pytest
 from django.test import TestCase
 from pathlib import Path
 import json
-from research.text_generator.utils import rint_ext, get_random_texts, parse_code, get_length_text, get_array_of_shifts
-from research.text_generator.dataclasses import ParsedCode, CodeInterval
+from research.text_generator.utils import rint_ext, get_random_texts, parse_code, get_length_text, get_array_of_shifts, \
+    generate_text_code
+from research.text_generator.dataclasses import ParsedCode, CodeInterval, TextContent
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListItems, TblTextListDescription
 from text_app.models.tbl_author import TblAuthor
@@ -234,7 +235,7 @@ class TextGeneratorTest(TestCase):
         self.assertIsNone(parse_code("A325S112E111B326S102E201"))
 
     def test_parse_code_incorrect_4(self):
-        """Тест Б15: Проверка парсинга кода """
+        """Тест Б15: Проверка парсинга кода с неверными границами фрагментов"""
         self.assertIsNone(parse_code("A329S1E25B330S5E10"))
 
     def test_array_of_shifts_correct_1(self):
@@ -265,3 +266,152 @@ class TextGeneratorTest(TestCase):
         """Тест Б20: Проверка генерации массива сдвигов с некорректным количеством вставок"""
         shifts = get_array_of_shifts(5, 7)
         self.assertFalse(shifts)  # Пустой массив
+
+    def test_array_of_shifts_in_count_zero(self):
+        """Тест Б21: Проверка генерации массива сдвигов с нулевым количеством элементов"""
+        shifts = get_array_of_shifts(0, 7)
+        self.assertFalse(shifts)  # Пустой массив
+
+    def test_get_texts_code_correct_1more2_2nonrep(self):
+        """Тест Б22: Проверка генерации кода со вставками без повторов (1й текст > 2го)"""
+        base_text = TextContent.from_tbl_text(self.texts[331])
+        other_text = TextContent.from_tbl_text(self.texts[330])
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=8,
+            percent_of_inserts=0.15
+        )
+        # ... rest of test unchanged
+
+    def test_get_texts_code_correct_1more2_2rep(self):
+        """Тест Б23: Проверка генерации кода со вставками с повторами (1й текст > 2го)"""
+        base_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        other_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=15,
+            percent_of_inserts=0.35
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 6)
+        self.assertEqual(len(result["intervals"]["B"]), 6)
+        
+        for interval in result["intervals"]["A"]:
+            self.assertEqual(interval["E"] - interval["S"] + 1, 15)
+
+    def test_get_texts_code_correct_1more2_maxfrsize(self):
+        """Тест Б24: Проверка генерации кода с максимальным размером фрагмента (1й текст > 2го)"""
+        base_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        other_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=47,
+            percent_of_inserts=0.6
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 3)
+        self.assertEqual(len(result["intervals"]["B"]), 3)
+
+    def test_get_texts_code_correct_1more2_maxfrsize_maxpoins(self):
+        """Тест Б25: Проверка генерации кода с макс. размером фрагмента и макс. процентом вставок"""
+        base_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        other_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=47,
+            percent_of_inserts=0.95
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 5)
+        self.assertEqual(len(result["intervals"]["B"]), 5)
+
+    def test_get_texts_code_correct_1more2_minfrsize(self):
+        """Тест Б26: Проверка генерации кода с минимальным размером фрагмента"""
+        base_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        other_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=5,
+            percent_of_inserts=0.6
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 28)
+        self.assertEqual(len(result["intervals"]["B"]), 28)
+
+    def test_get_texts_code_correct_1more2_minfrsize_maxpoins(self):
+        """Тест Б27: Проверка генерации кода с мин. размером фрагмента и макс. процентом вставок"""
+        base_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        other_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=5,
+            percent_of_inserts=0.95
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 45)
+        self.assertEqual(len(result["intervals"]["B"]), 45)
+
+    def test_get_texts_code_correct_2more1(self):
+        """Тест Б28: Проверка генерации кода когда 2й текст > 1го""" 
+        base_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        other_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=10,
+            percent_of_inserts=0.4
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 2)
+        self.assertEqual(len(result["intervals"]["B"]), 2)
+
+    def test_get_texts_code_correct_2more1_maxfrsize_maxpoins(self):
+        """Тест Б29: Проверка кода с макс. фрагментом и макс. процентом (2й текст > 1го)"""
+        base_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        other_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=45,
+            percent_of_inserts=0.95
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 1)
+        self.assertEqual(len(result["intervals"]["B"]), 1)
+
+    def test_get_texts_code_correct_2more1_minfrsize(self):
+        """Тест Б30: Проверка генерации кода с мин. размером фрагмента (2й текст > 1го)"""
+        base_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        other_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+        
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=5,
+            percent_of_inserts=0.34
+        )
+        
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 3) 
+        self.assertEqual(len(result["intervals"]["B"]), 3)
