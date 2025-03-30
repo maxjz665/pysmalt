@@ -229,32 +229,62 @@ def get_array_of_shifts(ins_count: int, shifts_count: int) -> list[bool]:
 def parse_code(code: str) -> Optional[ParsedCode]:
     """
     Парсит код и возвращает словарь с ID текстов и интервалами.
-    
-    Args:
-        code: Строка кода в формате "A{id}S{start}E{end}B{id}S{start}E{end}"
-        
-    Returns:
-        Optional[ParsedCode]: Разобранный код или None при ошибке
     """
     if not re.match(r"^(A\d+S\d+E\d+B\d+S\d+E\d+)+$", code):
         return None
         
     fragments = re.findall(r"([AB])(\d+)S(\d+)E(\d+)", code)
+    if not fragments:
+        return None
+        
+    # Проверяем что все A и B чередуются
+    for i in range(0, len(fragments), 2):
+        if i + 1 >= len(fragments) or fragments[i][0] != 'A' or fragments[i+1][0] != 'B':
+            return None
+    
+    # Проверяем совпадение ID
+    base_id = fragments[0][1]
+    other_id = fragments[1][1]
+    
+    for i in range(0, len(fragments), 2):
+        # Проверяем base id
+        if fragments[i][1] != base_id:
+            return None
+        # Проверяем other id    
+        if fragments[i+1][1] != other_id:
+            return None
+            
+        # Проверяем длины фрагментов и что конец > начала
+        start_base = int(fragments[i][2])
+        end_base = int(fragments[i][3])
+        start_other = int(fragments[i+1][2]) 
+        end_other = int(fragments[i+1][3])
+        
+        # Проверяем что конец > начала
+        if end_base <= start_base or end_other <= start_other:
+            return None
+            
+        # Проверяем что длины равны
+        base_len = end_base - start_base + 1
+        other_len = end_other - start_other + 1
+        if base_len != other_len:
+            return None
+    
     result: ParsedCode = {
-        "id1": int(fragments[0][1]),
-        "id2": int(fragments[1][1]),
+        "id1": int(base_id),
+        "id2": int(other_id), 
         "intervals": {"A": [], "B": []}
     }
     
     for i in range(0, len(fragments), 2):
-        result["intervals"]["A"].append({
-            "S": int(fragments[i][2]), 
-            "E": int(fragments[i][3])
-        })
-        result["intervals"]["B"].append({
-            "S": int(fragments[i + 1][2]), 
-            "E": int(fragments[i + 1][3])
-        })
+        result["intervals"]["A"].append(CodeInterval(
+            S=int(fragments[i][2]),
+            E=int(fragments[i][3])
+        ))
+        result["intervals"]["B"].append(CodeInterval(
+            S=int(fragments[i+1][2]),
+            E=int(fragments[i+1][3])
+        ))
         
     return result
 
