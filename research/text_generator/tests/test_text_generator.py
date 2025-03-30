@@ -2,7 +2,7 @@ import pytest
 from django.test import TestCase
 from pathlib import Path
 import json
-from research.text_generator.utils import rint_ext, get_random_texts, parse_code, get_length_text
+from research.text_generator.utils import rint_ext, get_random_texts, parse_code, get_length_text, get_array_of_shifts
 from research.text_generator.dataclasses import ParsedCode, CodeInterval
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListItems, TblTextListDescription
@@ -215,3 +215,53 @@ class TextGeneratorTest(TestCase):
     def test_parse_code_empty(self):
         """Тест Б10: Проверка парсинга пустого кода"""
         self.assertIsNone(parse_code(""))
+
+    def test_parse_code_incorrect(self):
+        """Тест Б11: Проверка парсинга некорректного кода"""
+        self.assertIsNone(parse_code("12Aghf"))
+
+    def test_parse_code_incorrect_1(self):
+        """Тест Б12: Проверка парсинга неполного кода"""
+        self.assertIsNone(parse_code("A325S112E211"))
+
+    def test_parse_code_incorrect_2(self):
+        """Тест Б13: Проверка парсинга кода с неверным ID"""
+        code = "A325S112E211B326S102E201A111S222E321B326S212E311A325S332E431B326S322E421"
+        self.assertIsNone(parse_code(code))
+
+    def test_parse_code_incorrect_3(self):
+        """Тест Б14: Проверка парсинга кода с неверными границами"""
+        self.assertIsNone(parse_code("A325S112E111B326S102E201"))
+
+    def test_parse_code_incorrect_4(self):
+        """Тест Б15: Проверка парсинга кода """
+        self.assertIsNone(parse_code("A329S1E25B330S5E10"))
+
+    def test_array_of_shifts_correct_1(self):
+        """Тест Б16: Проверка генерации массива сдвигов - случай 1"""
+        shifts = get_array_of_shifts(7, 5)
+        self.assertTrue(shifts)  # Массив не пустой
+        self.assertNotEqual(all(shifts), True)  # Не все элементы True
+        self.assertEqual(sum(1 for x in shifts if x), 5)  # Сумма True равна 5
+
+    def test_array_of_shifts_correct_2(self):
+        """Тест Б17: Проверка генерации массива сдвигов - случай 2"""
+        shifts = get_array_of_shifts(7, 7)
+        self.assertTrue(shifts)  # Массив не пустой
+        self.assertEqual(sum(1 for x in shifts if x), 7)  # Сумма True равна 7
+
+    def test_array_of_shifts_sh_count_zero(self):
+        """Тест Б18: Проверка генерации массива сдвигов с нулевым количеством сдвигов"""
+        shifts = get_array_of_shifts(7, 0)
+        self.assertTrue(shifts)  # Массив не пустой
+        self.assertEqual(sum(1 for x in shifts if x), 0)  # Нет True элементов
+
+    def test_array_of_shifts_sh_count_less_zero(self):
+        """Тест Б19: Проверка генерации массива сдвигов с отрицательным количеством"""
+        shifts = get_array_of_shifts(7, -2)
+        self.assertFalse(shifts)  # Пустой массив
+
+    def test_array_of_shifts_in_count_less(self):
+        """Тест Б20: Проверка генерации массива сдвигов с некорректным количеством вставок"""
+        shifts = get_array_of_shifts(5, 7)
+        self.assertFalse(shifts)  # Пустой массив
