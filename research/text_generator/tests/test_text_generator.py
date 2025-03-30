@@ -3,8 +3,8 @@ from django.test import TestCase
 from pathlib import Path
 import json
 from research.text_generator.utils import rint_ext, get_random_texts, parse_code, get_length_text, get_array_of_shifts, \
-    generate_text_code
-from research.text_generator.dataclasses import ParsedCode, CodeInterval, TextContent
+    generate_text_code, check_params
+from research.text_generator.dataclasses import *
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListItems, TblTextListDescription
 from text_app.models.tbl_author import TblAuthor
@@ -583,3 +583,126 @@ class TextGeneratorTest(TestCase):
         result = parse_code(code)
         self.assertEqual(len(result["intervals"]["A"]), 2)
         self.assertEqual(len(result["intervals"]["B"]), 2)
+
+    def test_get_texts_code_correct_2more1_minfrsize_maxpoins_borders(self):
+        """Тест Б41: Проверка кода с мин. фрагментом и макс. процентом вставок (2й текст > 1го) с границами"""
+        base_text = TextContent.from_tbl_text(self.texts[330])  # длина 47 слов
+        other_text = TextContent.from_tbl_text(self.texts[331])  # длина 236 слов
+
+        code = generate_text_code(
+            base_text,
+            other_text,
+            fragment_size=5, 
+            percent_of_inserts=0.95,
+            bind_borders=True
+        )
+
+        result = parse_code(code)
+        self.assertEqual(len(result["intervals"]["A"]), 6)
+        self.assertEqual(len(result["intervals"]["B"]), 6)
+
+    def test_check_params_correct(self):
+        """Тест Б42: Проверка корректных параметров"""
+        success, _ = check_params(100, 200, 0.2, 5)
+        self.assertTrue(success)
+
+    def test_check_params_percent_less(self):
+        """Тест Б43: Проверка слишком низкого процента вставок"""
+        success, _ = check_params(100, 200, 0.2, 40)
+        self.assertFalse(success)
+
+    def test_check_params_fragment_size_max(self):
+        """Тест Б44: Проверка максимального размера фрагмента"""
+        success, _ = check_params(100, 200, 0.2, 100)
+        self.assertFalse(success)
+    
+    def test_check_params_fragment_size_more_than_text(self):
+        """Тест Б45: Проверка размера фрагмента больше размера текста"""
+        success, _ = check_params(100, 200, 0.2, 300)
+        self.assertFalse(success)
+
+    def test_validate_form_correct(self):
+        """Тест Б46: Проверка корректных входных данных"""
+        params = GeneratorParams(
+            base_textlist_id='1',
+            other_textlist_id='2',
+            random_texts=False,
+            base_text_id='1',
+            other_text_id='2',
+            code_count=1,
+            percent_of_inserts=0.3,
+            fragment_size=20
+        )
+        success, _ = params.validate()
+        self.assertTrue(success)
+
+    def test_validate_form_empty_text_id(self):
+        """Тест Б47: Проверка пустого ID списка текстов"""
+        params = GeneratorParams(
+            base_textlist_id='',  # Пустой ID базового списка
+            other_textlist_id='2',
+            random_texts=False,
+            base_text_id='1',
+            other_text_id='2',
+            code_count=1,
+            percent_of_inserts=0.3,
+            fragment_size=20
+        )
+        success, _ = params.validate()
+        self.assertFalse(success)
+
+    def test_validate_form_empty_fragment_id(self):
+        """Тест Б48: Проверка пустого ID выбранного текста"""
+        params = GeneratorParams(
+            base_textlist_id='1',
+            other_textlist_id='2',
+            random_texts=False,
+            base_text_id='',  # Пустой ID текста
+            other_text_id='2',
+            code_count=1,
+            percent_of_inserts=0.3,
+            fragment_size=20
+        )
+        success, _ = params.validate()
+        self.assertFalse(success)
+
+    def test_validate_form_incorrect_code_count(self):
+        """Тест Б49: Проверка некорректного количества кодов"""
+        params = GeneratorParams(
+            base_textlist_id='1',
+            other_textlist_id='2',
+            random_texts=False,
+            base_text_id='1',
+            other_text_id='2',
+            code_count=-1,  # некорректное кол-во
+            percent_of_inserts=0.3,
+            fragment_size=20
+        )
+        success, _ = params.validate()
+        self.assertFalse(success)
+
+    def test_validate_form_incorrect_percent(self):
+        """Тест Б50: Проверка некорректного процента вставок"""
+        # Проверка пустого значения
+        params1 = GeneratorParams(
+            base_textlist_id='1',
+            other_textlist_id='2',
+            random_texts=False,
+            base_text_id='1',
+            other_text_id='2',
+            code_count=1,
+            percent_of_inserts=-1,  # некорректный процент
+            fragment_size=20
+        )
+        success1, _ = params1.validate()
+        self.assertFalse(success1)
+
+        # Проверка отрицательного значения
+        params1.percent_of_inserts=-0.2
+        success2, _ = params1.validate()
+        self.assertFalse(success2)
+
+        # Проверка значения больше 1
+        params1.percent_of_inserts=1.2
+        success3, _ = params1.validate()
+        self.assertFalse(success3)
