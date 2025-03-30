@@ -3,7 +3,7 @@ from django.test import TestCase
 from pathlib import Path
 import json
 from research.text_generator.utils import rint_ext, get_random_texts, parse_code, get_length_text, get_array_of_shifts, \
-    generate_text_code, check_params
+    generate_text_code, check_params, generate_text_by_code
 from research.text_generator.dataclasses import *
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListItems, TblTextListDescription
@@ -706,3 +706,101 @@ class TextGeneratorTest(TestCase):
         params1.percent_of_inserts=1.2
         success3, _ = params1.validate()
         self.assertFalse(success3)
+
+    def test_validate_form_incorrect_fs(self):
+        """Тест Б51: Проверка некорректного размера фрагмента"""
+        params = GeneratorParams(
+            base_textlist_id='1',
+            other_textlist_id='2',
+            random_texts=False,
+            base_text_id='1',
+            other_text_id='2',
+            code_count=1,
+            percent_of_inserts=0.2,
+            fragment_size=0  # некорректный размер
+        )
+        success, _ = params.validate()
+        self.assertFalse(success)
+
+    def test_process_text_correct_1ins(self):
+        """Тест Б52: Проверка обработки текста с одной вставкой"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        intervals = {
+            "A": [CodeInterval(S=5, E=10)],
+            "B": [CodeInterval(S=15, E=20)]
+        }
+
+        # Генерируем текст
+        result = generate_text_by_code(
+            f"A{base_text.id}S5E10B{base_text.id}S15E20",
+            base_text.words,
+            base_text.words
+        )
+
+        # Проверяем что слова совпадают
+        words = [item['word'] for item in result if not item['word'] == '|']
+        for i in range(5, 11):
+            self.assertEqual(words[i], words[i + 10])
+
+    def test_process_text_correct_3ins(self):
+        """Тест Б53: Проверка обработки текста с тремя вставками"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        intervals = {
+            "A": [
+                CodeInterval(S=1, E=3),
+                CodeInterval(S=7, E=9),
+                CodeInterval(S=13, E=15)
+            ],
+            "B": [
+                CodeInterval(S=4, E=6),
+                CodeInterval(S=10, E=12),
+                CodeInterval(S=16, E=18)
+            ]
+        }
+
+        # Формируем код
+        # fragment = f"A{base_id}S{start_base_pos}E{end_base_pos - 1}B{other_id}S{start_other_pos}E{end_other_pos - 1}"
+
+        code = "".join([
+            f"A{base_text.id}S{a["S"]}E{a["E"]}B{base_text.id}S{b["S"]}E{b["E"]}"
+            for a, b in zip(intervals["A"], intervals["B"])
+        ])
+
+
+        # Генерируем текст
+        result = generate_text_by_code(code, base_text.words, base_text.words)
+
+        # Проверяем что слова совпадают
+        words = [item['word'] for item in result if not item['word'] == '|']
+        for interval in intervals["A"]:
+            for i in range(interval["S"], interval["E"] + 1):
+                self.assertEqual(words[i], words[i + 3])
+
+    def test_process_text_correct_3ins_borders(self):
+        """Тест Б54: Проверка обработки текста с тремя вставками с границами"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        intervals = {
+            "A": [
+                CodeInterval(S=1, E=5),
+                CodeInterval(S=7, E=8),
+                CodeInterval(S=9, E=15)
+            ],
+            "B": [
+                CodeInterval(S=4, E=6),
+                CodeInterval(S=10, E=13),
+                CodeInterval(S=16, E=20)
+            ]
+        }
+
+        # Формируем код с учетом границ
+        code = "".join([
+            f"A{base_text.id}S{a["S"]}E{a["E"]}B{base_text.id}S{b["S"]}E{b["E"]}"
+            for a, b in zip(intervals["A"], intervals["B"])
+        ])
+
+        # Генерируем текст
+        result = generate_text_by_code(code, base_text.words, base_text.words)
+
+        # Проверяем количество слов
+        words = [item['word'] for item in result if not item['word'] == '|']
+        self.assertEqual(len(words), 20)
