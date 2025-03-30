@@ -90,7 +90,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             # Получаем элементы текстов из списков
             base_text_items = base_textlist.items
             other_text_items = other_textlist.items
-            logger.debug(f"Количество элементов базового текста: {len(base_text_items)}, Количество элементов вставляемого текста: {len(other_text_items)}")
+            logger.debug(f"Количество элементов базового списка текстов: {len(base_text_items)}, Количество элементов вставляемого списка текстов: {len(other_text_items)}")
 
             if not base_text_items or not other_text_items:
                 raise ValueError("Один из списков текстов пуст")

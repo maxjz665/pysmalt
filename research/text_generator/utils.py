@@ -4,6 +4,7 @@ import re
 from typing import Optional, List
 
 from research.text_generator.dataclasses import *
+from text_app.models.tbl_text import TblText
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -386,3 +387,15 @@ def get_random_texts(base_list_id: int, other_list_id: int, base_list_items: Lis
         other_text_item = random.choice(other_list_items)
         
     return base_text_item, other_text_item
+
+
+def get_length_text(text: TblText) -> int | None:
+    """
+    Возвращает длину текста в словах.
+    """
+    if not text:
+        return None
+    
+    # Получаем содержимое текста
+    words = text.get_content()
+    return len(words) if words else None
