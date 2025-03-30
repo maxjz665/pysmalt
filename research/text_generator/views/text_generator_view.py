@@ -1,5 +1,4 @@
 import logging
-import random
 
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
@@ -38,55 +37,37 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
 
     # Обработка POST-запроса
     logger.debug(f"POST-запрос, mode={mode}")
-    action = request.POST.get('action')
-    base_textlist_id = request.POST.get("base_textlist")
-    other_textlist_id = request.POST.get("other_textlist")
-    random_texts = request.POST.get("random_texts", "off") == "on"
-    base_text_id = request.POST.get("base_text")
-    other_text_id = request.POST.get("other_text")
-    percent_of_inserts = float(request.POST.get("percent_of_inserts", 0.20))
-    fragment_size = int(request.POST.get("fragment_size", 10))
-    bind_borders = request.POST.get("bind_borders", "off") == "on"
-    code_count = int(request.POST.get("code_count", 1))
 
-    logger.debug(f"ID списка базового текста: {base_textlist_id}, ID списка вставляемого текста: {other_textlist_id}")
+    params = GeneratorParams(
+        base_textlist_id = request.POST.get("base_textlist"),
+        other_textlist_id = request.POST.get("other_textlist"),
+        random_texts = request.POST.get("random_texts", "off") == "on",
+        base_text_id = request.POST.get("base_text"),
+        other_text_id = request.POST.get("other_text"),
+        percent_of_inserts = float(request.POST.get("percent_of_inserts", 0.20)),
+        fragment_size = int(request.POST.get("fragment_size", 10)),
+        bind_borders = request.POST.get("bind_borders", "off") == "on",
+        code_count = int(request.POST.get("code_count", 1)),
+    )
+
+    action = request.POST.get('action')
+
+    logger.debug(f"ID списка базового текста: {params.base_textlist_id}, ID списка вставляемого текста: {params.other_textlist_id}")
 
     # Валидация данных
-    err_msg = ""
-    try:
-        if not base_textlist_id or not other_textlist_id:
-            err_msg = "Выберите оба списка текстов"
-        else:
-            base_textlist = TblTextListDescription.get_item(request.user, int(base_textlist_id))
-            other_textlist = TblTextListDescription.get_item(request.user, int(other_textlist_id))
-            logger.debug(f"Список базового текста: {base_textlist}, Список вставляемого текста: {other_textlist}")
+    valid, err_msg = params.validate()
 
-        percent_of_inserts = float(percent_of_inserts)
-        if not 0.01 <= percent_of_inserts <= 0.95:
-            err_msg = "Процент вставок должен быть между 0.01 и 0.95"
-
-        fragment_size = int(fragment_size)
-        if fragment_size < 5:
-            err_msg = "Размер фрагмента должен быть не менее 5"
-
-        code_count = int(code_count)
-        if not 1 <= code_count <= 20:
-            err_msg = "Количество кодов должно быть между 1 и 20"
-
-        if not random_texts:
-            if not base_text_id or not other_text_id:
-                err_msg = "Выберите оба текста"
-
-    except ValueError as e:
-        err_msg = "Некорректные значения параметров"
-
-    if err_msg:
+    if not valid:
         return HttpResponse(f"<div class='alert alert-danger'>{err_msg}</div>")
+
+    base_textlist = TblTextListDescription.get_item(request.user, int(params.base_textlist_id))
+    other_textlist = TblTextListDescription.get_item(request.user, int(params.other_textlist_id))
+    logger.debug(f"Список базового текста: {base_textlist}, Список вставляемого текста: {other_textlist}")
 
     # Логика генерации
     codes = []
     try:
-        for _ in range(code_count):
+        for _ in range(params.code_count):
             # Получаем элементы текстов из списков
             base_text_items = base_textlist.items
             other_text_items = other_textlist.items
@@ -96,11 +77,11 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
                 raise ValueError("Один из списков текстов пуст")
 
             # Выбираем тексты
-            if random_texts:
+            if params.random_texts:
                 base_text_item, other_text_item = get_random_texts(base_textlist.id, other_textlist.id, base_text_items, other_text_items)
             else:
-                base_text_item = next(item for item in base_text_items if str(item.text.id) == base_text_id)
-                other_text_item = next(item for item in other_text_items if str(item.text.id) == other_text_id)
+                base_text_item = next(item for item in base_text_items if str(item.text.id) == params.base_text_id)
+                other_text_item = next(item for item in other_text_items if str(item.text.id) == params.other_text_id)
 
             # Создаем объекты TextContent
             base_content = TextContent.from_tbl_text(base_text_item.text)
@@ -123,14 +104,15 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
             base_text_length = len(base_words)
             other_text_length = len(other_words)
 
-            # Генерируем код
+            ##### Генерируем код
             code = generate_text_code(
                 base_content,
                 other_content,
-                fragment_size,
-                percent_of_inserts,
-                bind_borders
+                params.fragment_size,
+                params.percent_of_inserts,
+                params.bind_borders
             )
+
             logger.debug(f"Сгенерированный код: {code}")
 
             if action == "generate_text":
@@ -158,12 +140,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
 
     except Exception as e:
         logger.exception("Ошибка при генерации текста")
-        messages.error(request, f"Ошибка при генерации: {str(e)}")
-        return render(request, "text_generator/form.html", context={
-            "text_lists": text_lists,
-            "mode": mode,
-            "percent_of_inserts": percent_of_inserts,
-            "fragment_size": fragment_size,
-            "code_count": code_count,
-            "bind_borders": bind_borders,
-        })
+        return HttpResponse(
+            f"<div class='alert alert-danger'>{str(e)}</div>",
+            status=400
+        )

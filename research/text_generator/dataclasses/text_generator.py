@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, TypedDict, Dict
+from typing import List, TypedDict, Dict, Optional, Tuple
 
 from text_app.models.tbl_text import TblText
 
@@ -48,3 +48,53 @@ class ParsedCode(TypedDict):
     id1: int
     id2: int
     intervals: Dict[str, List[CodeInterval]]
+
+@dataclass
+class GeneratorParams:
+    """Параметры генерации текста"""
+    base_textlist_id: str  # ID списка базовых текстов
+    other_textlist_id: str  # ID списка вставляемых текстов
+    random_texts: bool = True  # Использовать случайные тексты
+    base_text_id: Optional[str] = None  # ID базового текста
+    other_text_id: Optional[str] = None  # ID вставляемого текста
+    code_count: int = 1  # Количество генерируемых кодов
+    percent_of_inserts: float = 0.2  # Доля вставок (0.01-0.95)
+    fragment_size: int = 10  # Размер фрагмента (≥5)
+    bind_borders: bool = False  # Привязка к границам предложений
+
+    def validate(self) -> Tuple[bool, str]:
+        """
+        Проверяет корректность параметров.
+        
+        Returns:
+            tuple[bool, str]: (успех проверки, сообщение об ошибке)
+        """
+
+        # Проверяем указан ли список базовых текстов
+        if not self.base_textlist_id:
+            return False, "Необходимо выбрать список основных текстов"
+
+        # Проверяем указан ли список вставляемых текстов    
+        if not self.other_textlist_id:
+            return False, "Необходимо выбрать список вставляемых текстов"
+
+        # Если не случайные тексты, проверяем указаны ли они
+        if not self.random_texts:
+            if not self.base_text_id:
+                return False, "Необходимо выбрать основной текст"
+            if not self.other_text_id:
+                return False, "Необходимо выбрать вставляемый текст"
+
+        # Проверяем число кодов
+        if not 1 <= self.code_count <= 20:
+            return False, "Количество кодов должно быть между 1 и 20"
+            
+        # Проверяем процент вставок
+        if not (0.01 <= self.percent_of_inserts <= 0.95):
+            return False, "Укажите долю вставок в диапазоне 0.01 - 0.95"
+
+        # Проверяем размер фрагмента
+        if self.fragment_size < 5:
+            return False, "Минимальный размер заменяемого фрагмента 5"
+
+        return True, ""

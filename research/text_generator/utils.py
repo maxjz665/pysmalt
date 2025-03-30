@@ -68,6 +68,18 @@ def generate_text_code(
     Returns:
         str: Сгенерированный код вставок
     """
+    
+    # Проверяем параметры
+    valid, error_msg = check_params(
+        base_text.length,
+        other_text.length,
+        percent_of_inserts,
+        fragment_size
+    )
+    if not valid:
+        logger.error(f"Ошибка параметров check_params:{error_msg}")
+        raise ValueError(error_msg)
+
     # Используем атрибуты из TextContent
     base_id = base_text.id 
     other_id = other_text.id
@@ -430,3 +442,74 @@ def get_length_text(text: TblText) -> int | None:
     # Получаем содержимое текста
     words = text.get_content()
     return len(words) if words else None
+
+
+def check_params(base_text_length: int, other_text_length: int, percent_of_inserts: float, fragment_size: int) -> tuple[bool, str]:
+    """Проверяет корректность параметров генерации текста."""
+    
+    # Проверяем корректность процента вставок
+    if not (0.01 <= percent_of_inserts <= 0.95):
+        return False, "Укажите долю вставок в диапазоне 0.01 - 0.95"
+
+    # Проверяем минимальный размер фрагмента
+    if fragment_size < 5:
+        return False, "Минимальный размер заменяемого фрагмента 5"
+
+    # Проверяем что фрагмент не больше текста для вставки
+    if fragment_size > other_text_length:
+        return False, f"Размер фрагмента не должен превышать размер вставляемого текста ({other_text_length})"
+
+    # Проверяем что фрагмент не больше 95% базового текста
+    max_size = round(base_text_length * 0.95)
+    if fragment_size > max_size:
+        return False, f"Максимальная доля вставок 0.95, размер фрагмента не должен превышать {max_size}"
+
+    # Проверяем соотношение размера фрагмента и процента вставок только для малых фрагментов 
+    if fragment_size < base_text_length * 0.5:  # Для больших фрагментов не проверяем
+        if base_text_length * percent_of_inserts < fragment_size:
+            perc = round(fragment_size / base_text_length, 2)
+            return False, f"Указанная доля вставок меньше фактической. Укажите >= {perc + 0.01}"
+
+    return True, ""
+
+
+def validate_form(params: dict) -> tuple[bool, str]:
+    """
+    Проверяет корректность параметров формы генерации текста.
+    
+    Args:
+        params: Словарь с параметрами формы
+        
+    Returns:
+        tuple[bool, str]: (успех проверки, сообщение об ошибке)
+    """
+    # Проверяем указан ли список базовых текстов
+    if not params.get('base_text_list'):
+        return False, "Необходимо выбрать группу основных текстов"
+
+    # Проверяем указан ли список вставляемых текстов    
+    if not params.get('other_text_list'):
+        return False, "Необходимо выбрать группу вставляемых текстов"
+
+    # Если не случайные тексты, проверяем указаны ли они
+    if not params.get('random_texts'):
+        if not params.get('base_text'):
+            return False, "Необходимо выбрать основной текст"
+        if not params.get('other_text'): 
+            return False, "Необходимо выбрать вставляемый текст"
+
+    # Проверяем число кодов
+    if not params.get('code_count') or int(params.get('code_count', 0)) < 1:
+        return False, "Число кодов должно быть >= 1"
+
+    # Проверяем процент вставок
+    percent = params.get('percent_of_inserts')
+    if not percent or not (0.01 <= float(percent) <= 0.95):
+        return False, "Укажите долю вставок в диапазоне 0.01 - 0.95"
+
+    # Проверяем размер фрагмента
+    fragment_size = params.get('fragment_size') 
+    if not fragment_size or int(fragment_size) < 5:
+        return False, "Минимальный размер заменяемого фрагмента 5"
+
+    return True, ""
