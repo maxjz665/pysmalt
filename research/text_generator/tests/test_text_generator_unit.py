@@ -1344,3 +1344,213 @@ class TextGeneratorTest(TestCase):
 
         self.assertEqual(21, new_start)
         self.assertEqual(27, new_end)
+
+    def test_get_new_position_s0_8(self):
+        """Тест Б81: Проверка коррекции S0 случай 8"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-11, R=0)
+        e_lr = WordShifts(L=-5, R=12)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=20,
+            end_pos=25,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(21, new_start)
+        self.assertEqual(27, new_end)
+
+    def test_get_new_position_0s_1(self):
+        """Тест Б82: Проверка коррекции 0S случай 1"""
+        base_text = TextContent.from_tbl_text(self.texts[329]) 
+        s_lr = WordShifts(L=0, R=5)
+        e_lr = WordShifts(L=-5, R=5)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=25,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(10, new_start)
+        self.assertEqual(20, new_end)
+
+    def test_get_new_position_0s_2(self):
+        """Тест Б83: Проверка коррекции 0S случай 2"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=0, R=5)
+        e_lr = WordShifts(L=-12, R=5)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(16, new_start)
+        self.assertEqual(36, new_end)
+
+    def test_get_new_position_0s_3(self):
+        """Тест Б84: Проверка коррекции 0S случай 3"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=0, R=5)
+        e_lr = WordShifts(L=-4, R=5)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=20,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(10, new_start)
+        self.assertEqual(16, new_end)
+
+    def test_get_new_position_0s_4(self):
+        """Тест Б85: Проверка коррекции 0S случай 4"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=0, R=4)
+        e_lr = WordShifts(L=-15, R=5)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(15, new_start)
+        self.assertEqual(36, new_end)
+
+    def test_get_new_position_0s_5(self):
+        """Тест Б86: Проверка коррекции 0S случай 5"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=0, R=9)
+        e_lr = WordShifts(L=-5, R=4)
+
+        base_text.length = 100
+
+        # Корректируем границы 
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=15,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(10, new_start)
+        self.assertEqual(20, new_end)
+
+    def test_get_new_position_0s_6(self):
+        """Тест Б87: Проверка коррекции 0S случай 6"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=0, R=16)
+        e_lr = WordShifts(L=-5, R=11)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=15,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(10, new_start)
+        self.assertEqual(16, new_end)
+
+    def test_get_new_position_e0_1(self):
+        """Тест Б88: Проверка коррекции E0 случай 1"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-3, R=4)
+        e_lr = WordShifts(L=-5, R=0)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=15,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(20, new_start)
+        self.assertEqual(31, new_end)
+
+    def test_get_new_position_e0_2(self):
+        """Тест Б89: Проверка коррекции E0 случай 2"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-11, R=4)
+        e_lr = WordShifts(L=-5, R=0)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=15,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(20, new_start)
+        self.assertEqual(31, new_end)
+
+    def test_get_new_position_e0_3(self):
+        """Тест Б90: Проверка коррекции E0 случай 3"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-11, R=4)
+        e_lr = WordShifts(L=-5, R=0)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=20,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(25, new_start)
+        self.assertEqual(31, new_end)
