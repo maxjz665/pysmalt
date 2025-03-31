@@ -11,41 +11,141 @@ logger = logging.getLogger(__name__)
 
 random.seed(42)
 
-def adjust_to_sentence_borders(text: TextContent, start: int, end: int) -> tuple[int, int]:
+
+def get_shifts_for_word(words: List[TextWord], pos: int) -> WordShifts:
     """
-    Корректирует позиции start и end, чтобы они попадали на границы предложений.
-    
-    Args:
-        text: Объект TextContent с текстом и его разметкой
-        start: Начальная позиция
-        end: Конечная позиция
-        
-    Returns:
-        tuple[int, int]: Кортеж с новыми позициями (new_start, new_end)
+    Возвращает возможные сдвиги влево и вправо для позиции.
     """
-    # Получаем список слов и их индексы предложений
-    words = text.words
-    sentence_indices = [word.sentence_index for word in words]
+    # Проверяем границы
+    if pos >= len(words) or pos < 0:
+        return WordShifts(L=0, R=0)
+
+    pos_sentence = words[pos].sentence_index
+    pos_paragraph = words[pos].paragraph_index
+    pos_chapter = words[pos].chapter_index
     
-    # Находим индекс предложения для начальной и конечной позиции
-    start_sentence = sentence_indices[start] if start < len(sentence_indices) else sentence_indices[-1]
-    end_sentence = sentence_indices[end] if end < len(sentence_indices) else sentence_indices[-1]
+    # Ищем левую границу
+    count = pos
+    while (count >= 0 and 
+           words[count].sentence_index == pos_sentence and
+           words[count].paragraph_index == pos_paragraph and 
+           words[count].chapter_index == pos_chapter):
+        count -= 1
+    left = count - pos + 1
     
-    # Корректируем начальную позицию
-    new_start = start
-    for i in range(start, -1, -1):
-        if i == 0 or sentence_indices[i] != start_sentence:
-            new_start = i if i == 0 else i + 1
-            break
-            
-    # Корректируем конечную позицию
-    new_end = end
-    for i in range(end, len(words)):
-        if i == len(words) - 1 or sentence_indices[i + 1] != end_sentence:
-            new_end = i
-            break
-            
-    return new_start, new_end
+    # Ищем правую границу
+    count = pos  
+    while (count < len(words) and
+           words[count].sentence_index == pos_sentence and
+           words[count].paragraph_index == pos_paragraph and
+           words[count].chapter_index == pos_chapter):
+        count += 1
+    right = count - pos - 1
+    
+    return WordShifts(L=left, R=right)
+
+
+def get_new_fragment_positions(text: TextContent, start_pos: int, end_pos: int, s_lr: WordShifts, e_lr: WordShifts, last_end_pos: int = -1) -> tuple[int, int]:
+    """Корректирует позиции чтобы они попадали на границы предложений."""
+    BORDER_SHIFT_MAX = 10  
+    MIN_FRAGMENT_SIZE = 5
+    text_size = text.length
+
+    # Определяем сдвиги для начальной позиции
+    if abs(s_lr.L) == abs(s_lr.R):
+        min_sh_s = {'side': 'R', 'val': s_lr.R}  # R для начала
+        max_sh_s = {'side': 'L', 'val': s_lr.L}  # L для конца
+    else:
+        if abs(s_lr.L) < abs(s_lr.R):
+            min_sh_s = {'side': 'L', 'val': s_lr.L} 
+            max_sh_s = {'side': 'R', 'val': s_lr.R}
+        else:
+            min_sh_s = {'side': 'R', 'val': s_lr.R}
+            max_sh_s = {'side': 'L', 'val': s_lr.L}
+
+    # Определяем сдвиги для конечной позиции  
+    if abs(e_lr.L) == abs(e_lr.R):
+        min_sh_e = {'side': 'L', 'val': e_lr.L}  # L для конца
+        max_sh_e = {'side': 'R', 'val': e_lr.R}  # R для начала  
+    else:
+        if abs(e_lr.L) < abs(e_lr.R):
+            min_sh_e = {'side': 'L', 'val': e_lr.L}
+            max_sh_e = {'side': 'R', 'val': e_lr.R} 
+        else:
+            min_sh_e = {'side': 'R', 'val': e_lr.R}
+            max_sh_e = {'side': 'L', 'val': e_lr.L}
+
+    # Формируем массивы допустимых сдвигов
+    s_items = []
+    e_items = []
+    
+    if abs(min_sh_s['val']) <= BORDER_SHIFT_MAX:
+        s_items.append(min_sh_s)
+    if abs(max_sh_s['val']) <= BORDER_SHIFT_MAX:
+        s_items.append(max_sh_s)
+    if abs(min_sh_e['val']) <= BORDER_SHIFT_MAX:
+        e_items.append(min_sh_e)  
+    if abs(max_sh_e['val']) <= BORDER_SHIFT_MAX:
+        e_items.append(max_sh_e)
+
+    # Ищем варианты позиций
+    results = []
+    ext_results = []
+
+    if s_items and e_items:
+        for s_item in s_items:
+            for e_item in e_items:
+                new_start = start_pos + s_item['val']
+                new_end = end_pos + e_item['val']
+                
+                if s_item['side'] == 'R':
+                    new_start += 1
+                if e_item['side'] == 'L':
+                    new_end -= 1
+                    
+                if (new_end - new_start >= MIN_FRAGMENT_SIZE and 
+                    new_start > last_end_pos and 
+                    new_end < text_size):
+                    results.append((new_start, new_end + 1))
+                else:
+                    # Пробуем альтернативы при невалидных основных вариантах
+                    if abs(s_item['val']) > abs(e_item['val']):
+                        new_start = start_pos + e_item['val'] 
+                        new_end = end_pos + e_item['val']
+                        if e_item['side'] == 'L':
+                            new_end -= 1
+                            new_start -= 1
+                        if (new_start > last_end_pos and 
+                            new_end < text_size):
+                            ext_results.append((new_start, new_end + 1))
+                    else:
+                        new_start = start_pos + s_item['val']
+                        new_end = end_pos + s_item['val'] 
+                        if s_item['side'] == 'R':
+                            new_end += 1
+                            new_start += 1
+                        if (new_start > last_end_pos and
+                            new_end < text_size):
+                            ext_results.append((new_start, new_end + 1))
+
+    # Выбираем лучший результат
+    best_result = (start_pos, end_pos + 1)
+    min_size = float('inf')
+    
+    if results:
+        for result in results:
+            size = result[1] - result[0]
+            if 0 < size < min_size:
+                min_size = size
+                best_result = result
+    elif ext_results:
+        for result in ext_results:
+            size = result[1] - result[0]
+            if 0 < size < min_size:
+                min_size = size
+                best_result = result
+
+    return best_result
 
 
 def generate_text_code(
@@ -186,14 +286,17 @@ def generate_text_code(
         ### ОПЦИЯ ПРИВЯЗКИ К ГРАНИЦАМ ПРЕДЛОЖЕНИЯМ.
         # Корректируем позиции по границам предложений, если это указано
         if bind_borders and base_text_content and other_text_content:
-            start_base_pos, end_base_pos = adjust_to_sentence_borders(base_text_content, start_base_pos,
-                                                                      end_base_pos - 1)
-            start_other_pos, end_other_pos = adjust_to_sentence_borders(other_text_content, start_other_pos,
-                                                                        end_other_pos - 1)
+            # Получаем сдвиги для позиций для первого текста
+            s_lr1 = get_shifts_for_word(base_text_content.words, start_base_pos)
+            e_lr1 = get_shifts_for_word(base_text_content.words, end_base_pos)
+            start_base_pos, end_base_pos = get_new_fragment_positions(base_text_content, start_base_pos, end_base_pos - 1, s_lr1, e_lr1)
+
+            # Получаем сдвиги для позиций для второго текста
+            s_lr2 = get_shifts_for_word(other_text_content.words, start_other_pos)
+            e_lr2 = get_shifts_for_word(other_text_content.words, end_other_pos)
+            start_other_pos, end_other_pos = get_new_fragment_positions(other_text_content, start_other_pos, end_other_pos - 1, s_lr2, e_lr2)
             end_base_pos += 1
             end_other_pos += 1
-            logger.debug(
-                f"После корректировки границ: начальная позиция базового текста={start_base_pos}, конечная позиция базового текста={end_base_pos}, начальная позиция второго текста={start_other_pos}, конечная позиция второго текста={end_other_pos}")
 
         # Формируем фрагмент кода
         fragment = f"A{base_id}S{start_base_pos}E{end_base_pos - 1}B{other_id}S{start_other_pos}E{end_other_pos - 1}"

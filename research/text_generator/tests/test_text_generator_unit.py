@@ -1,9 +1,11 @@
+from copy import deepcopy
+
 import pytest
 from django.test import TestCase
 from pathlib import Path
 import json
 from research.text_generator.utils import rint_ext, get_random_texts, parse_code, get_length_text, get_array_of_shifts, \
-    generate_text_code, check_params, generate_text_by_code
+    generate_text_code, check_params, generate_text_by_code, get_new_fragment_positions
 from research.text_generator.dataclasses import *
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListItems, TblTextListDescription
@@ -462,8 +464,8 @@ class TextGeneratorTest(TestCase):
         )
 
         result = parse_code(code)
-        self.assertEqual(len(result["intervals"]["A"]), 5)
-        self.assertEqual(len(result["intervals"]["B"]), 5)
+        self.assertEqual(len(result["intervals"]["A"]), 6)
+        self.assertEqual(len(result["intervals"]["B"]), 6)
 
     def test_get_texts_code_correct_1more2_maxfrsize_borders(self):
         """Тест Б34: Проверка генерации кода с макс. размером фрагмента с привязкой к границам"""
@@ -513,8 +515,8 @@ class TextGeneratorTest(TestCase):
         )
 
         result = parse_code(code)
-        self.assertEqual(len(result["intervals"]["A"]), 17)
-        self.assertEqual(len(result["intervals"]["B"]), 17)
+        self.assertEqual(len(result["intervals"]["A"]), 22)
+        self.assertEqual(len(result["intervals"]["B"]), 22)
 
     def test_get_texts_code_correct_1more2_minfrsize_maxpoins_borders(self):
         """Тест Б37: Проверка кода с мин. фрагментом и макс. процентом с границами"""
@@ -530,8 +532,8 @@ class TextGeneratorTest(TestCase):
         )
 
         result = parse_code(code)
-        self.assertEqual(len(result["intervals"]["A"]), 20)
-        self.assertEqual(len(result["intervals"]["B"]), 20)
+        self.assertEqual(len(result["intervals"]["A"]), 26)
+        self.assertEqual(len(result["intervals"]["B"]), 26)
 
     def test_get_texts_code_correct_2more1_borders(self):
         """Тест Б38: Проверка генерации кода со вторым текстом больше первого с границами"""
@@ -581,8 +583,8 @@ class TextGeneratorTest(TestCase):
         )
 
         result = parse_code(code)
-        self.assertEqual(len(result["intervals"]["A"]), 2)
-        self.assertEqual(len(result["intervals"]["B"]), 2)
+        self.assertEqual(len(result["intervals"]["A"]), 3)
+        self.assertEqual(len(result["intervals"]["B"]), 3)
 
     def test_get_texts_code_correct_2more1_minfrsize_maxpoins_borders(self):
         """Тест Б41: Проверка кода с мин. фрагментом и макс. процентом вставок (2й текст > 1го) с границами"""
@@ -759,8 +761,6 @@ class TextGeneratorTest(TestCase):
         }
 
         # Формируем код
-        # fragment = f"A{base_id}S{start_base_pos}E{end_base_pos - 1}B{other_id}S{start_other_pos}E{end_other_pos - 1}"
-
         code = "".join([
             f"A{base_text.id}S{a["S"]}E{a["E"]}B{base_text.id}S{b["S"]}E{b["E"]}"
             for a, b in zip(intervals["A"], intervals["B"])
@@ -804,3 +804,129 @@ class TextGeneratorTest(TestCase):
         # Проверяем количество слов
         words = [item['word'] for item in result if not item['word'] == '|']
         self.assertEqual(len(words), 20)
+
+    def test_get_new_position_all_less_max_sr_el(self):
+        """Тест Б55: Проверка коррекции позиций с SR и EL меньше максимума"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=3)
+        e_lr = WordShifts(L=-3, R=2)
+
+        base_text1 = deepcopy(base_text)
+        base_text1.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text1,
+            start_pos=10,
+            end_pos=25,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+        
+        self.assertEqual(14, new_start)
+        self.assertEqual(22, new_end)
+
+    def test_get_new_position_all_less_max_same_sr_el(self):
+        """Тест Б56: Проверка коррекции с одинаковыми SR и EL меньше максимума"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=2)  # Одинаковые по модулю
+        e_lr = WordShifts(L=-2, R=2)
+
+        base_text1 = deepcopy(base_text)
+        base_text1.length = 100
+
+        # Корректируем границы 
+        new_start, new_end = get_new_fragment_positions(
+            base_text1,
+            start_pos=10,
+            end_pos=25,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+        
+        self.assertEqual(13, new_start)
+        self.assertEqual(23, new_end)
+
+    def test_get_new_position_sr_el(self):
+        """Тест Б57: Проверка коррекции с обычными SR и EL"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-11, R=3)
+        e_lr = WordShifts(L=-3, R=11)
+
+        base_text1 = deepcopy(base_text)
+        base_text1.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text1,
+            start_pos=20,
+            end_pos=35,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+        
+        self.assertEqual(24, new_start)
+        self.assertEqual(32, new_end)
+
+    def test_get_new_position_all_less_max_sl_er(self):
+        """Тест Б58: Проверка коррекции с SL и ER меньше максимума"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-1, R=2)
+        e_lr = WordShifts(L=-2, R=1)
+        
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text, 
+            start_pos=10,
+            end_pos=15,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+        
+        self.assertEqual(9, new_start)
+        self.assertEqual(17, new_end)
+
+    def test_get_new_position_sl_er(self):
+        """Тест Б59: Проверка коррекции с обычными SL и ER"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=11)
+        e_lr = WordShifts(L=-11, R=2)
+
+        base_text1 = deepcopy(base_text)
+        base_text1.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text1,
+            start_pos=5,
+            end_pos=30, 
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=1
+        )
+        
+        self.assertEqual(3, new_start)
+        self.assertEqual(33, new_end)
+
+    def test_get_new_position_sl_er_1sentence(self):
+        """Тест Б60: Проверка коррекции SL и ER для одного предложения"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=7)
+        e_lr = WordShifts(L=-7, R=2)
+        
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=15,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+        
+        self.assertEqual(8, new_start)
+        self.assertEqual(18, new_end)

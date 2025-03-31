@@ -11,6 +11,7 @@ class TextWord:
     paragraph_index: int
     sentence_index: int
     word_index: int
+    chapter_index: int
 
 @dataclass
 class TextContent:
@@ -27,7 +28,8 @@ class TextContent:
                 word=w.word,
                 paragraph_index=w.paragraph_index,
                 sentence_index=w.sentence_index,
-                word_index=w.word_index
+                word_index=w.word_index,
+                chapter_index=w.chapter_index
             ) for w in text.get_content()
         ]
         return cls(
@@ -98,3 +100,9 @@ class GeneratorParams:
             return False, "Минимальный размер заменяемого фрагмента 5"
 
         return True, ""
+
+@dataclass
+class WordShifts:
+    """Сдвиги для слова влево и вправо"""
+    L: int  # Сдвиг влево
+    R: int  # Сдвиг вправо

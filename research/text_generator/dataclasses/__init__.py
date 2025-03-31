@@ -1,7 +1,9 @@
-from research.text_generator.dataclasses.text_generator import TextWord, TextContent, CodeInterval, ParsedCode, GeneratorParams
+from research.text_generator.dataclasses.text_generator import (TextWord, TextContent, CodeInterval, ParsedCode,
+                                                                GeneratorParams, WordShifts)
 
 __all__ = ["TextWord",
            "TextContent",
            "CodeInterval",
            "ParsedCode",
-           "GeneratorParams"]
+           "GeneratorParams",
+           "WordShifts"]

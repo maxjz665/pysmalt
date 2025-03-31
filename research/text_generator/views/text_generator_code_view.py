@@ -43,14 +43,16 @@ def text_generator_code_view(request: HttpRequest) -> HttpResponse:
             word=word.word,
             paragraph_index=word.paragraph_index,
             sentence_index=word.sentence_index,
-            word_index=word.word_index
+            word_index=word.word_index,
+            chapter_index=word.chapter_index
         ) for word in base_text_item.text.get_content()]
 
         other_words = [TextWord(
             word=word.word,
             paragraph_index=word.paragraph_index,
             sentence_index=word.sentence_index,
-            word_index=word.word_index
+            word_index=word.word_index,
+            chapter_index=word.chapter_index
         ) for word in other_text_item.text.get_content()]
 
         # Генерируем текст
