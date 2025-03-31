@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import pytest
 from django.test import TestCase
 from pathlib import Path
@@ -811,12 +809,11 @@ class TextGeneratorTest(TestCase):
         s_lr = WordShifts(L=-2, R=3)
         e_lr = WordShifts(L=-3, R=2)
 
-        base_text1 = deepcopy(base_text)
-        base_text1.length = 100
+        base_text.length = 100
 
         # Корректируем границы
         new_start, new_end = get_new_fragment_positions(
-            base_text1,
+            base_text,
             start_pos=10,
             end_pos=25,
             s_lr=s_lr,
@@ -833,12 +830,11 @@ class TextGeneratorTest(TestCase):
         s_lr = WordShifts(L=-2, R=2)  # Одинаковые по модулю
         e_lr = WordShifts(L=-2, R=2)
 
-        base_text1 = deepcopy(base_text)
-        base_text1.length = 100
+        base_text.length = 100
 
-        # Корректируем границы 
+        # Корректируем границы
         new_start, new_end = get_new_fragment_positions(
-            base_text1,
+            base_text,
             start_pos=10,
             end_pos=25,
             s_lr=s_lr,
@@ -855,12 +851,11 @@ class TextGeneratorTest(TestCase):
         s_lr = WordShifts(L=-11, R=3)
         e_lr = WordShifts(L=-3, R=11)
 
-        base_text1 = deepcopy(base_text)
-        base_text1.length = 100
+        base_text.length = 100
 
         # Корректируем границы
         new_start, new_end = get_new_fragment_positions(
-            base_text1,
+            base_text,
             start_pos=20,
             end_pos=35,
             s_lr=s_lr,
@@ -896,12 +891,11 @@ class TextGeneratorTest(TestCase):
         s_lr = WordShifts(L=-2, R=11)
         e_lr = WordShifts(L=-11, R=2)
 
-        base_text1 = deepcopy(base_text)
-        base_text1.length = 100
+        base_text.length = 100
 
         # Корректируем границы
         new_start, new_end = get_new_fragment_positions(
-            base_text1,
+            base_text,
             start_pos=5,
             end_pos=30, 
             s_lr=s_lr,
@@ -917,7 +911,7 @@ class TextGeneratorTest(TestCase):
         base_text = TextContent.from_tbl_text(self.texts[329])
         s_lr = WordShifts(L=-2, R=7)
         e_lr = WordShifts(L=-7, R=2)
-        
+
         # Корректируем границы
         new_start, new_end = get_new_fragment_positions(
             base_text,
@@ -930,3 +924,213 @@ class TextGeneratorTest(TestCase):
         
         self.assertEqual(8, new_start)
         self.assertEqual(18, new_end)
+
+    def test_get_new_position_sl_el1(self):
+        """Тест Б61: Проверка коррекции SL и EL случай 1"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=11)
+        e_lr = WordShifts(L=-5, R=2)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+
+        self.assertEqual(8, new_start)
+        self.assertEqual(25, new_end)
+
+    def test_get_new_position_sl_el2(self):
+        """Тест Б62: Проверка коррекции SL и EL случай 2"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=11)
+        e_lr = WordShifts(L=-5, R=11)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+
+        self.assertEqual(8, new_start)
+        self.assertEqual(25, new_end)
+
+    def test_get_new_position_sl_el3(self):
+        """Тест Б63: Проверка коррекции SL и EL случай 3"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=5)
+        e_lr = WordShifts(L=-11, R=11)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+
+        self.assertEqual(8, new_start)
+        self.assertEqual(29, new_end)
+
+    def test_get_new_position_sl_el4(self):
+        """Тест Б64: Проверка коррекции SL и EL случай 4"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-2, R=11)
+        e_lr = WordShifts(L=-11, R=11)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=5,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=-1
+        )
+
+        self.assertEqual(3, new_start)
+        self.assertEqual(29, new_end)
+
+    def test_get_new_position_sl_el5(self):
+        """Тест Б65: Проверка коррекции SL и EL случай 5"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-11, R=11)
+        e_lr = WordShifts(L=-2, R=5)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=15,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(12, new_start)
+        self.assertEqual(28, new_end)
+
+    def test_get_new_position_sl_el6(self):
+        """Тест Б66: Проверка коррекции SL и EL случай 6"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-11, R=11)
+        e_lr = WordShifts(L=-2, R=11)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=15,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(12, new_start)
+        self.assertEqual(28, new_end)
+
+    def test_get_new_position_sr_er1(self):
+        """Тест Б67: Проверка коррекции SR и ER случай 1"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-3, R=4)
+        e_lr = WordShifts(L=-11, R=2)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=5
+        )
+
+        self.assertEqual(15, new_start)
+        self.assertEqual(33, new_end)
+
+    def test_get_new_position_sr_er2(self):
+        """Тест Б68: Проверка коррекции SR и ER случай 2"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-11, R=4)
+        e_lr = WordShifts(L=-11, R=2)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=13,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=-1
+        )
+
+        self.assertEqual(18, new_start)
+        self.assertEqual(33, new_end)
+
+    def test_get_new_position_sr_er3(self):
+        """Тест Б69: Проверка коррекции SR и ER случай 3"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-5, R=2)
+        e_lr = WordShifts(L=-11, R=11)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=10,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=2
+        )
+
+        self.assertEqual(13, new_start)
+        self.assertEqual(34, new_end)
+
+    def test_get_new_position_sr_er4(self):
+        """Тест Б70: Проверка коррекции SR и ER случай 4"""
+        base_text = TextContent.from_tbl_text(self.texts[329])
+        s_lr = WordShifts(L=-12, R=2)
+        e_lr = WordShifts(L=-11, R=12)
+
+        base_text.length = 100
+
+        # Корректируем границы
+        new_start, new_end = get_new_fragment_positions(
+            base_text,
+            start_pos=13,
+            end_pos=30,
+            s_lr=s_lr,
+            e_lr=e_lr,
+            last_end_pos=1
+        )
+
+        self.assertEqual(16, new_start)
+        self.assertEqual(34, new_end)
