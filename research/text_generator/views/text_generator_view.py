@@ -4,8 +4,10 @@ from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
-from research.text_generator.utils import generate_text_code, generate_text_by_code, get_random_texts
+from research.text_generator.utils import generate_text_code, generate_text_by_code, get_random_texts, export_text, \
+    export_parsing
 from research.text_generator.views.text_generator_code_view import text_generator_code_view
+from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
 from research.text_generator.dataclasses import *
 
@@ -38,6 +40,36 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
     # Обработка POST-запроса
     logger.debug(f"POST-запрос, mode={mode}")
 
+    action = request.POST.get('action')
+
+    # Обработка экспорта 
+    if action in ['export_text', 'export_parsing']:
+        code = request.POST.get('code')
+        base_text_id = int(request.POST.get('base_text_id'))
+        other_text_id = int(request.POST.get('other_text_id'))
+
+        # Получаем тексты напрямую
+        base_text = TblText.objects.get(id=base_text_id)
+        other_text = TblText.objects.get(id=other_text_id)
+        
+        # Преобразуем в TextContent
+        base_content = TextContent.from_tbl_text(base_text) 
+        other_content = TextContent.from_tbl_text(other_text)
+
+        # Генерируем текст по коду
+        generated_text = generate_text_by_code(code, base_content.words, other_content.words)
+
+        if action == 'export_text':
+            text = export_text(generated_text)
+            response = HttpResponse(text, content_type='text/plain')
+            response['Content-Disposition'] = 'attachment; filename="generated_text.txt"'
+            return response
+        elif action == 'export_parsing':
+            csv_data = export_parsing(generated_text)
+            response = HttpResponse(csv_data, content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="parsing.csv"'
+            return response
+
     params = GeneratorParams(
         base_textlist_id = request.POST.get("base_textlist"),
         other_textlist_id = request.POST.get("other_textlist"),
@@ -49,8 +81,6 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
         bind_borders = request.POST.get("bind_borders", "off") == "on",
         code_count = int(request.POST.get("code_count", 1)),
     )
-
-    action = request.POST.get('action')
 
     logger.debug(f"ID списка базового текста: {params.base_textlist_id}, ID списка вставляемого текста: {params.other_textlist_id}")
 

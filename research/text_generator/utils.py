@@ -1,6 +1,8 @@
 import logging
 import random
 import re
+import csv
+from io import StringIO
 from typing import Optional, List
 
 from research.text_generator.dataclasses import *
@@ -450,15 +452,23 @@ def parse_code(code: CodeGen) -> Optional[ParsedCode]:
     return result
 
 
-def generate_text_by_code(code: CodeGen, base_words: List[TextWord], other_words: List[TextWord]):
+def generate_text_by_code(code: CodeGen, base_words: List[TextWord], other_words: List[TextWord]) -> List[GeneratedWord]:
     """
-    Генерирует текст, используя код и последовательности слов
+    Генерирует текст, используя код и последовательности слов.
+    
+    Args:
+        code: Код вставок
+        base_words: Слова базового текста
+        other_words: Слова вставляемого текста
+        
+    Returns:
+        List[GeneratedWord]: Список сгенерированных слов
     """
     parsed = parse_code(code)
     if not parsed:
         return None
         
-    result = []
+    result: List[GeneratedWord] = []
     base_pos = 0
     prev_paragraph = base_words[0].paragraph_index if base_words else 0
     prev_sentence = base_words[0].sentence_index if base_words else 0
@@ -467,44 +477,64 @@ def generate_text_by_code(code: CodeGen, base_words: List[TextWord], other_words
     other_prev_paragraph = other_words[0].paragraph_index if other_words else 0
     other_prev_sentence = other_words[0].sentence_index if other_words else 0
     
-    # Обрабатываем каждый интервал
     for i in range(len(parsed["intervals"]["A"])):
         # Добавляем фрагмент базового текста
         start = parsed["intervals"]["A"][i]["S"]
-        # Текущая реализация
         for word in base_words[base_pos:start]:
-            # Существующая логика для базового текста
             start_paragraph = word.paragraph_index > prev_paragraph
             start_sentence = word.sentence_index > prev_sentence
             
             if start_paragraph:
                 prev_paragraph = word.paragraph_index
-                result.append({'word': '|', 'start_paragraph': True, 'highlight': False})
+                result.append(GeneratedWord(
+                    word=TextWord('|'),
+                    start_paragraph=True,
+                    highlight=False
+                ))
             elif start_sentence:
-                prev_sentence = word.sentence_index  
-                result.append({'word': '|', 'start_paragraph': False, 'highlight': False})
+                prev_sentence = word.sentence_index
+                result.append(GeneratedWord(
+                    word=TextWord('|'),
+                    start_paragraph=False,
+                    highlight=False,
+                    start_sentence=True
+                ))
                 
-            result.append({'word': word.word, 'start_paragraph': False, 'highlight': False})
-
+            result.append(GeneratedWord(
+                word=word,
+                start_paragraph=False,
+                highlight=False
+            ))
             
-        # Добавляем фрагмент вставляемого текста  
+        # Добавляем фрагмент вставляемого текста
         other_start = parsed["intervals"]["B"][i]["S"]
         other_end = parsed["intervals"]["B"][i]["E"] + 1
         
         for word in other_words[other_start:other_end]:
-            # Добавляем проверку разделителей для вставляемого текста
-            start_paragraph = word.paragraph_index > other_prev_paragraph  
+            start_paragraph = word.paragraph_index > other_prev_paragraph
             start_sentence = word.sentence_index > other_prev_sentence
 
             if start_paragraph:
                 other_prev_paragraph = word.paragraph_index
-                result.append({'word': '|', 'start_paragraph': True, 'highlight': True})
+                result.append(GeneratedWord(
+                    word=TextWord('|'),
+                    start_paragraph=True,
+                    highlight=True
+                ))
             elif start_sentence:
                 other_prev_sentence = word.sentence_index
-                result.append({'word': '|', 'start_paragraph': False, 'highlight': True})
+                result.append(GeneratedWord(
+                    word=TextWord('|'),
+                    start_paragraph=False,
+                    highlight=True,
+                    start_sentence=True
+                ))
                 
-            result.append({'word': word.word, 'start_paragraph': False, 'highlight': True})
-            
+            result.append(GeneratedWord(
+                word=word,
+                start_paragraph=False,
+                highlight=True
+            ))
             
         base_pos = parsed["intervals"]["A"][i]["E"] + 1
 
@@ -515,24 +545,25 @@ def generate_text_by_code(code: CodeGen, base_words: List[TextWord], other_words
         
         if start_paragraph:
             prev_paragraph = word.paragraph_index
-            result.append({
-                'word': '|',
-                'start_paragraph': True,
-                'highlight': False
-            })
+            result.append(GeneratedWord(
+                word=TextWord('|'),
+                start_paragraph=True,
+                highlight=False
+            ))
         elif start_sentence:
             prev_sentence = word.sentence_index
-            result.append({
-                'word': '|',
-                'start_paragraph': False, 
-                'highlight': False
-            })
+            result.append(GeneratedWord(
+                word=TextWord('|'),
+                start_paragraph=False, 
+                highlight=False,
+                start_sentence=True
+            ))
             
-        result.append({
-            'word': word.word,
-            'start_paragraph': False,
-            'highlight': False
-        })
+        result.append(GeneratedWord(
+            word=word,
+            start_paragraph=False,
+            highlight=False
+        ))
 
     return result
 
@@ -608,3 +639,25 @@ def check_params(
             return False, f"Указанная доля вставок меньше фактической. Укажите >= {perc + 0.01}"
 
     return True, ""
+
+
+def export_text(generated_text: List[GeneratedWord]) -> str:
+    text = ""
+    for item in generated_text:
+        if item.start_paragraph:
+            text += "\n\n"
+        elif item.word.word == '|':
+            text += " "
+        else:
+            text += item.word.word + " "
+    return text.strip()
+
+def export_parsing(generated_text: List[GeneratedWord]) -> str:
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Word', 'Source', 'Highlight'])
+    for item in generated_text:
+        if item.word.word != '|':
+            source = 'Base' if not item.highlight else 'Other'
+            writer.writerow([item.word, source, item.highlight])
+    return output.getvalue()

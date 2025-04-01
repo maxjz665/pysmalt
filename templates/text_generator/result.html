@@ -34,6 +34,24 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-3">
                                 <h4 class="mb-0">Текст</h4>
+                                <div class="btn-group">
+                                    <form method="post" action="" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="export_text">
+                                        <input type="hidden" name="code" value="{{ item.code }}">
+                                        <input type="hidden" name="base_text_id" value="{{ item.base_text_item.text.id }}">
+                                        <input type="hidden" name="other_text_id" value="{{ item.other_text_item.text.id }}">
+                                        <button type="submit" class="btn btn-primary">Экспорт текста</button>
+                                    </form>
+                                    <form method="post" action="" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="export_parsing">
+                                        <input type="hidden" name="code" value="{{ item.code }}">
+                                        <input type="hidden" name="base_text_id" value="{{ item.base_text_item.text.id }}">
+                                        <input type="hidden" name="other_text_id" value="{{ item.other_text_item.text.id }}">
+                                        <button type="submit" class="btn btn-info">Экспорт разбора</button>
+                                    </form>
+                                </div>
                             </div>
                             <pre style="white-space: pre-wrap; word-break: break-word; padding: 1rem; border-radius: 0.25rem; margin: 0;">{% for word in item.generated_text %}{% if word.start_paragraph %}<br><br>{% endif %}<span {% if word.highlight %}style="background-color: Khaki; font-weight: bold;"{% endif %}>{{ word.word }}</span>{% if not forloop.last %} {% endif %}{% endfor %}</pre>
                         </div>

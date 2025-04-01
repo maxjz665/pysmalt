@@ -7,6 +7,20 @@ from text_app.models.tbl_text import TblText
 @dataclass
 class TextWord:
     """Класс для представления слова в тексте"""
+    def __init__(self, word: str, paragraph_index: Optional[int] = None, sentence_index: Optional[int] = None,
+                 word_index: Optional[int] = None, chapter_index: Optional[int] = None):
+        self.word = word
+        self.paragraph_index = paragraph_index
+        self.sentence_index = sentence_index
+        self.word_index = word_index
+        self.chapter_index = chapter_index
+        
+    def __str__(self):
+        return self.word
+
+    def __repr__(self):
+        return self.word
+
     word: str
     paragraph_index: int
     sentence_index: int
@@ -117,3 +131,17 @@ class FragmentPosition:
 class CodeGen(str):
     """Класс для генерации кода"""
     pass
+
+@dataclass
+class GeneratedWord:
+    """Слово в сгенерированном тексте"""
+    word: TextWord
+    start_paragraph: bool
+    highlight: bool
+    start_sentence: bool = False
+
+    def __str__(self):
+        return self.word.word
+
+    def __repr__(self):
+        return self.word.word

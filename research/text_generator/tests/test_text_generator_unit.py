@@ -737,8 +737,8 @@ class TextGeneratorTest(TestCase):
             base_text.words
         )
 
-        # Проверяем что слова совпадают
-        words = [item['word'] for item in result if not item['word'] == '|']
+        # Проверяем что слова совпадают 
+        words = [item.word.word for item in result if item.word.word != '|']
         for i in range(5, 11):
             self.assertEqual(words[i], words[i + 10])
 
@@ -769,7 +769,7 @@ class TextGeneratorTest(TestCase):
         result = generate_text_by_code(code, base_text.words, base_text.words)
 
         # Проверяем что слова совпадают
-        words = [item['word'] for item in result if not item['word'] == '|']
+        words = [item.word.word for item in result if not item.word.word == '|']
         for interval in intervals["A"]:
             for i in range(interval["S"], interval["E"] + 1):
                 self.assertEqual(words[i], words[i + 3])
@@ -800,7 +800,7 @@ class TextGeneratorTest(TestCase):
         result = generate_text_by_code(code, base_text.words, base_text.words)
 
         # Проверяем количество слов
-        words = [item['word'] for item in result if not item['word'] == '|']
+        words = [item.word.word for item in result if not item.word.word == '|']
         self.assertEqual(len(words), 20)
 
     def test_get_new_position_all_less_max_sr_el(self):
