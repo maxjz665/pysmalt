@@ -1,10 +1,11 @@
 import logging
+
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
-from research.text_generator.dataclasses import TextWord
-from research.text_generator.utils import parse_code, generate_text_by_code
+from research.text_generator.dataclasses import *
+from research.text_generator.utils import parse_code, generate_text_by_code, export_text, export_parsing
 from text_app.models.tbl_textlist import TblTextListDescription
 
 logger = logging.getLogger(__name__)
@@ -20,14 +21,11 @@ def text_generator_code_view(request: HttpRequest) -> HttpResponse:
 
     code = request.POST.get("code", "").strip()
     action = request.POST.get('action')
-    
-    if not code:
-        messages.error(request, "Введите код для генерации")
-        return render(request, "text_generator/form_by_code.html", context={
-            "mode": mode,
-        })
 
     try:
+        if not code:
+            raise ValueError("Введите код для генерации")
+        
         parsed = parse_code(code)
         if not parsed:
             raise ValueError("Неверный формат кода")
@@ -38,26 +36,26 @@ def text_generator_code_view(request: HttpRequest) -> HttpResponse:
         if not base_text_item or not other_text_item:
             raise ValueError("Один из текстов не найден")
 
-        # Создаем объекты TextWord
-        base_words = [TextWord(
-            word=word.word,
-            paragraph_index=word.paragraph_index,
-            sentence_index=word.sentence_index,
-            word_index=word.word_index,
-            chapter_index=word.chapter_index
-        ) for word in base_text_item.text.get_content()]
+        # Преобразуем в TextContent
+        base_content = TextContent.from_tbl_text(base_text_item) 
+        other_content = TextContent.from_tbl_text(other_text_item)
 
-        other_words = [TextWord(
-            word=word.word,
-            paragraph_index=word.paragraph_index,
-            sentence_index=word.sentence_index,
-            word_index=word.word_index,
-            chapter_index=word.chapter_index
-        ) for word in other_text_item.text.get_content()]
-
-        # Генерируем текст
-        generated_text = generate_text_by_code(code, base_words, other_words)
-
+        # Генерируем текст по коду
+        generated_text = generate_text_by_code(code, base_content.words, other_content.words)
+        
+        ##### Обработка экспорта 
+        if action in ['export_text', 'export_parsing']:
+            if action == 'export_text':
+                text = export_text(generated_text)
+                response = HttpResponse(text, content_type='text/plain')
+                response['Content-Disposition'] = 'attachment; filename="generated_text.txt"'
+                return response
+            elif action == 'export_parsing':
+                csv_data = export_parsing(generated_text)
+                response = HttpResponse(csv_data, content_type='text/csv')
+                response['Content-Disposition'] = 'attachment; filename="parsing.csv"'
+                return response
+        
         return render(request, "text_generator/result.html", context={
             "codes": [{
                 'code': code,

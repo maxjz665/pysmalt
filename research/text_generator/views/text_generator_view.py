@@ -1,15 +1,13 @@
 import logging
 
-from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
+from research.text_generator.dataclasses import *
 from research.text_generator.utils import generate_text_code, generate_text_by_code, get_random_texts, export_text, \
     export_parsing
 from research.text_generator.views.text_generator_code_view import text_generator_code_view
-from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
-from research.text_generator.dataclasses import *
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,7 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
     """
     mode = request.GET.get('mode', 'byPars')
     
-    # Redirect to code view if mode is byCode
+    # Редирект в режим byCode
     if mode == 'byCode':
         return text_generator_code_view(request)
         
@@ -42,18 +40,18 @@ def text_generator_view(request: HttpRequest) -> HttpResponse:
 
     action = request.POST.get('action')
 
-    # Обработка экспорта 
+    # Обработка экспорта
     if action in ['export_text', 'export_parsing']:
         code = request.POST.get('code')
         base_text_id = int(request.POST.get('base_text_id'))
         other_text_id = int(request.POST.get('other_text_id'))
 
         # Получаем тексты напрямую
-        base_text = TblText.objects.get(id=base_text_id)
-        other_text = TblText.objects.get(id=other_text_id)
-        
+        base_text = TblTextListDescription.get_text_by_id(request.user, base_text_id)
+        other_text = TblTextListDescription.get_text_by_id(request.user, other_text_id)
+
         # Преобразуем в TextContent
-        base_content = TextContent.from_tbl_text(base_text) 
+        base_content = TextContent.from_tbl_text(base_text)
         other_content = TextContent.from_tbl_text(other_text)
 
         # Генерируем текст по коду

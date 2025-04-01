@@ -653,11 +653,27 @@ def export_text(generated_text: List[GeneratedWord]) -> str:
     return text.strip()
 
 def export_parsing(generated_text: List[GeneratedWord]) -> str:
+    """Экспорт разбора текста в CSV формате."""
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Word', 'Source', 'Highlight'])
+    
+    # Заголовки
+    headers = ['Word',]
+    headers.extend([f'Param_{i:02d}' for i in range(1, 21)])  # param_01 - param_20
+    writer.writerow(headers)
+    
     for item in generated_text:
         if item.word.word != '|':
-            source = 'Base' if not item.highlight else 'Other'
-            writer.writerow([item.word, source, item.highlight])
+            # Базовые поля
+            row = [item.word.word]
+            
+            # Добавляем параметры если они есть
+            if item.word.params:
+                params = [getattr(item.word.params, f'param_{i:02d}', 0) for i in range(1, 21)] if item.word.params else [0] * 20
+            else:
+                params = [0] * 20
+                
+            row.extend(params)
+            writer.writerow(row)
+            
     return output.getvalue()

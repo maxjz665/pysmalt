@@ -3,17 +3,46 @@ from typing import List, TypedDict, Dict, Optional, Tuple
 
 from text_app.models.tbl_text import TblText
 
+@dataclass
+class WordParams:
+    """Параметры слова из словаря"""
+    param_01: int
+    param_02: int
+    param_03: int
+    param_04: int
+    param_05: int
+    param_06: int
+    param_07: int
+    param_08: int
+    param_09: int
+    param_10: int
+    param_11: int
+    param_12: int
+    param_13: int
+    param_14: int
+    param_15: int
+    param_16: int
+    param_17: int
+    param_18: int
+    param_19: int
+    param_20: int
+    
+    @classmethod
+    def from_dict_word(cls, dict_word) -> 'WordParams':
+        """Создает WordParams из объекта DictWord"""
+        return cls(**{f'param_{i:02d}': getattr(dict_word, f'param_{i:02d}') for i in range(1, 21)})
 
 @dataclass
 class TextWord:
     """Класс для представления слова в тексте"""
     def __init__(self, word: str, paragraph_index: Optional[int] = None, sentence_index: Optional[int] = None,
-                 word_index: Optional[int] = None, chapter_index: Optional[int] = None):
+                 word_index: Optional[int] = None, chapter_index: Optional[int] = None, params: Optional[WordParams] = None):
         self.word = word
         self.paragraph_index = paragraph_index
         self.sentence_index = sentence_index
         self.word_index = word_index
         self.chapter_index = chapter_index
+        self.params = params
         
     def __str__(self):
         return self.word
@@ -26,6 +55,7 @@ class TextWord:
     sentence_index: int
     word_index: int
     chapter_index: int
+    params: WordParams
 
 @dataclass
 class TextContent:
@@ -37,15 +67,18 @@ class TextContent:
     @classmethod
     def from_tbl_text(cls, text: TblText) -> 'TextContent':
         """Создает TextContent из объекта TblText"""
-        words = [
-            TextWord(
-                word=w.word,
-                paragraph_index=w.paragraph_index,
-                sentence_index=w.sentence_index,
-                word_index=w.word_index,
-                chapter_index=w.chapter_index
-            ) for w in text.get_content()
-        ]
+        words = []
+        for word in text.get_content():
+            params = WordParams.from_dict_word(word.dictword) if hasattr(word, 'dictword') and word.dictword else None
+            words.append(TextWord(
+                word=word.word,
+                paragraph_index=word.paragraph_index,
+                sentence_index=word.sentence_index,
+                word_index=word.word_index,
+                chapter_index=word.chapter_index,
+                params=params
+            ))
+        
         return cls(
             id=text.id,
             words=words,
