@@ -1,5 +1,6 @@
 from research.text_generator.dataclasses.text_generator import (TextWord, TextContent, CodeInterval, ParsedCode,
-                                                                GeneratorParams, WordShifts, FragmentPosition)
+                                                                GeneratorParams, WordShifts, FragmentPosition,
+                                                                CodeGen)
 
 __all__ = ["TextWord",
            "TextContent",
@@ -7,4 +8,5 @@ __all__ = ["TextWord",
            "ParsedCode",
            "GeneratorParams",
            "WordShifts",
-           "FragmentPosition"]
+           "FragmentPosition",
+           "CodeGen"]

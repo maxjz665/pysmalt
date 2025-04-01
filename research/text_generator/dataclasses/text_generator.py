@@ -112,3 +112,8 @@ class FragmentPosition:
     """Позиция фрагмента в тексте"""
     start: int
     end: int
+
+@dataclass
+class CodeGen(str):
+    """Класс для генерации кода"""
+    pass

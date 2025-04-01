@@ -13,9 +13,7 @@ random.seed(42)
 
 
 def get_shifts_for_word(words: List[TextWord], pos: int) -> WordShifts:
-    """
-    Возвращает возможные сдвиги влево и вправо для позиции.
-    """
+    """Возвращает возможные сдвиги влево и вправо для позиции."""
     # Проверяем границы
     if pos >= len(words) or pos < 0:
         return WordShifts(L=0, R=0)
@@ -199,7 +197,7 @@ def generate_text_code(
     fragment_size: int,
     percent_of_inserts: float,
     bind_borders: bool = False
-) -> str:
+) -> CodeGen:
     """
     Генерирует код для вставки текста.
     
@@ -213,7 +211,7 @@ def generate_text_code(
     Returns:
         str: Сгенерированный код вставок
     """
-    
+
     # Проверяем параметры
     valid, error_msg = check_params(
         base_text.length,
@@ -282,7 +280,7 @@ def generate_text_code(
 
     start_base_pos = 0
     start_other_pos = 0
-    watermark = ""
+    code = CodeGen()
     count_b = 0
     count_o = 0
 
@@ -350,15 +348,15 @@ def generate_text_code(
         # Формируем фрагмент кода
         fragment = f"A{base_id}S{start_base_pos}E{end_base_pos - 1}B{other_id}S{start_other_pos}E{end_other_pos - 1}"
         logger.debug(f"Добавляем фрагмент: {fragment}")
-        watermark += fragment
+        code += fragment
 
         count_b += 1
         count_o += 1
         start_base_pos = end_base_pos
         start_other_pos = end_other_pos
 
-    logger.debug(f"Итоговый код: {watermark}")
-    return watermark
+    logger.debug(f"Итоговый код: {code}")
+    return code
 
 
 def get_array_of_shifts(ins_count: int, shifts_count: int) -> list[bool]:
@@ -391,10 +389,8 @@ def get_array_of_shifts(ins_count: int, shifts_count: int) -> list[bool]:
     return result
 
 
-def parse_code(code: str) -> Optional[ParsedCode]:
-    """
-    Парсит код и возвращает словарь с ID текстов и интервалами.
-    """
+def parse_code(code: CodeGen) -> Optional[ParsedCode]:
+    """Парсит код и возвращает словарь с ID текстов и интервалами."""
     if not re.match(r"^(A\d+S\d+E\d+B\d+S\d+E\d+)+$", code):
         return None
 
@@ -454,7 +450,7 @@ def parse_code(code: str) -> Optional[ParsedCode]:
     return result
 
 
-def generate_text_by_code(code, base_words, other_words):
+def generate_text_by_code(code: CodeGen, base_words: List[TextWord], other_words: List[TextWord]):
     """
     Генерирует текст, используя код и последовательности слов
     """
@@ -542,21 +538,7 @@ def generate_text_by_code(code, base_words, other_words):
 
 
 def rint_ext(start: int, end: int, percent_of_inserts: float) -> int:
-    """
-    Генерирует случайное целое число из интервала с вероятностным смещением к концу интервала.
-    
-    Функция использует процент вставок для определения степени смещения: чем больше процент,  
-    тем чаще будут генерироваться числа ближе к концу интервала. Это обеспечивает более
-    равномерное распределение вставок по тексту.
-    
-    Args:
-        start: Начало интервала (включительно)
-        end: Конец интервала (включительно)
-        percent_of_inserts: Доля вставок (0.0-1.0), влияет на степень смещения к концу интервала
-        
-    Returns:
-        int: Случайное число из интервала [start, end] с вероятностным смещением
-    """
+    """Генерирует случайное целое число с вероятностным смещением."""
     res = random.randint(start, end)
     i = 0.0
     while i <= percent_of_inserts:
@@ -565,12 +547,13 @@ def rint_ext(start: int, end: int, percent_of_inserts: float) -> int:
     return end - res + start
 
 
-def get_random_texts(base_list_id: int, other_list_id: int, base_list_items: List, other_list_items: List):
-    """
-    Возвращает случайных текстов из указанных списков.
-    Если списки одинаковые, гарантирует что тексты разные.
-    """
-
+def get_random_texts(
+    base_list_id: int, 
+    other_list_id: int, 
+    base_list_items: List[TblText], 
+    other_list_items: List[TblText]
+) -> tuple[TblText, TblText]:
+    """Возвращает случайную пару текстов из указанных списков."""
     # Выбираем случайный текст из базового списка
     base_text_item = random.choice(base_list_items)
     
@@ -584,10 +567,8 @@ def get_random_texts(base_list_id: int, other_list_id: int, base_list_items: Lis
     return base_text_item, other_text_item
 
 
-def get_length_text(text: TblText) -> int | None:
-    """
-    Возвращает длину текста в словах.
-    """
+def get_length_text(text: TblText) -> Optional[int]:
+    """Возвращает длину текста в словах."""
     if not text:
         return None
     
@@ -596,9 +577,13 @@ def get_length_text(text: TblText) -> int | None:
     return len(words) if words else None
 
 
-def check_params(base_text_length: int, other_text_length: int, percent_of_inserts: float, fragment_size: int) -> tuple[bool, str]:
+def check_params(
+    base_text_length: int, 
+    other_text_length: int, 
+    percent_of_inserts: float, 
+    fragment_size: int
+) -> tuple[bool, str]:
     """Проверяет корректность параметров генерации текста."""
-    
     # Проверяем корректность процента вставок
     if not (0.01 <= percent_of_inserts <= 0.95):
         return False, "Укажите долю вставок в диапазоне 0.01 - 0.95"
@@ -621,47 +606,5 @@ def check_params(base_text_length: int, other_text_length: int, percent_of_inser
         if base_text_length * percent_of_inserts < fragment_size:
             perc = round(fragment_size / base_text_length, 2)
             return False, f"Указанная доля вставок меньше фактической. Укажите >= {perc + 0.01}"
-
-    return True, ""
-
-
-def validate_form(params: dict) -> tuple[bool, str]:
-    """
-    Проверяет корректность параметров формы генерации текста.
-    
-    Args:
-        params: Словарь с параметрами формы
-        
-    Returns:
-        tuple[bool, str]: (успех проверки, сообщение об ошибке)
-    """
-    # Проверяем указан ли список базовых текстов
-    if not params.get('base_text_list'):
-        return False, "Необходимо выбрать группу основных текстов"
-
-    # Проверяем указан ли список вставляемых текстов    
-    if not params.get('other_text_list'):
-        return False, "Необходимо выбрать группу вставляемых текстов"
-
-    # Если не случайные тексты, проверяем указаны ли они
-    if not params.get('random_texts'):
-        if not params.get('base_text'):
-            return False, "Необходимо выбрать основной текст"
-        if not params.get('other_text'): 
-            return False, "Необходимо выбрать вставляемый текст"
-
-    # Проверяем число кодов
-    if not params.get('code_count') or int(params.get('code_count', 0)) < 1:
-        return False, "Число кодов должно быть >= 1"
-
-    # Проверяем процент вставок
-    percent = params.get('percent_of_inserts')
-    if not percent or not (0.01 <= float(percent) <= 0.95):
-        return False, "Укажите долю вставок в диапазоне 0.01 - 0.95"
-
-    # Проверяем размер фрагмента
-    fragment_size = params.get('fragment_size') 
-    if not fragment_size or int(fragment_size) < 5:
-        return False, "Минимальный размер заменяемого фрагмента 5"
 
     return True, ""
