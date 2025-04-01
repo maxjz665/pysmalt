@@ -812,7 +812,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=25,
@@ -821,8 +821,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
         
-        self.assertEqual(14, new_start)
-        self.assertEqual(22, new_end)
+        self.assertEqual(14, result.start)
+        self.assertEqual(22, result.end)
 
     def test_get_new_position_all_less_max_same_sr_el(self):
         """Тест Б56: Проверка коррекции с одинаковыми SR и EL меньше максимума"""
@@ -833,7 +833,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=25,
@@ -842,8 +842,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
         
-        self.assertEqual(13, new_start)
-        self.assertEqual(23, new_end)
+        self.assertEqual(13, result.start)
+        self.assertEqual(23, result.end)
 
     def test_get_new_position_sr_el(self):
         """Тест Б57: Проверка коррекции с обычными SR и EL"""
@@ -854,7 +854,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=35,
@@ -863,8 +863,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
         
-        self.assertEqual(24, new_start)
-        self.assertEqual(32, new_end)
+        self.assertEqual(24, result.start)
+        self.assertEqual(32, result.end)
 
     def test_get_new_position_all_less_max_sl_er(self):
         """Тест Б58: Проверка коррекции с SL и ER меньше максимума"""
@@ -873,7 +873,7 @@ class TextGeneratorTest(TestCase):
         e_lr = WordShifts(L=-2, R=1)
         
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text, 
             start_pos=10,
             end_pos=15,
@@ -882,8 +882,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
         
-        self.assertEqual(9, new_start)
-        self.assertEqual(17, new_end)
+        self.assertEqual(9, result.start)
+        self.assertEqual(17, result.end)
 
     def test_get_new_position_sl_er(self):
         """Тест Б59: Проверка коррекции с обычными SL и ER"""
@@ -894,7 +894,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=5,
             end_pos=30, 
@@ -903,8 +903,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=1
         )
         
-        self.assertEqual(3, new_start)
-        self.assertEqual(33, new_end)
+        self.assertEqual(3, result.start)
+        self.assertEqual(33, result.end)
 
     def test_get_new_position_sl_er_1sentence(self):
         """Тест Б60: Проверка коррекции SL и ER для одного предложения"""
@@ -913,7 +913,7 @@ class TextGeneratorTest(TestCase):
         e_lr = WordShifts(L=-7, R=2)
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=15,
@@ -922,8 +922,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
         
-        self.assertEqual(8, new_start)
-        self.assertEqual(18, new_end)
+        self.assertEqual(8, result.start)
+        self.assertEqual(18, result.end)
 
     def test_get_new_position_sl_el1(self):
         """Тест Б61: Проверка коррекции SL и EL случай 1"""
@@ -934,7 +934,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -943,8 +943,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
 
-        self.assertEqual(8, new_start)
-        self.assertEqual(25, new_end)
+        self.assertEqual(8, result.start)
+        self.assertEqual(25, result.end)
 
     def test_get_new_position_sl_el2(self):
         """Тест Б62: Проверка коррекции SL и EL случай 2"""
@@ -955,7 +955,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -964,8 +964,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
 
-        self.assertEqual(8, new_start)
-        self.assertEqual(25, new_end)
+        self.assertEqual(8, result.start)
+        self.assertEqual(25, result.end)
 
     def test_get_new_position_sl_el3(self):
         """Тест Б63: Проверка коррекции SL и EL случай 3"""
@@ -976,7 +976,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -985,8 +985,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
 
-        self.assertEqual(8, new_start)
-        self.assertEqual(29, new_end)
+        self.assertEqual(8, result.start)
+        self.assertEqual(29, result.end)
 
     def test_get_new_position_sl_el4(self):
         """Тест Б64: Проверка коррекции SL и EL случай 4"""
@@ -997,7 +997,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=5,
             end_pos=30,
@@ -1006,8 +1006,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=-1
         )
 
-        self.assertEqual(3, new_start)
-        self.assertEqual(29, new_end)
+        self.assertEqual(3, result.start)
+        self.assertEqual(29, result.end)
 
     def test_get_new_position_sl_el5(self):
         """Тест Б65: Проверка коррекции SL и EL случай 5"""
@@ -1018,7 +1018,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=30,
@@ -1027,8 +1027,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(12, new_start)
-        self.assertEqual(28, new_end)
+        self.assertEqual(12, result.start)
+        self.assertEqual(28, result.end)
 
     def test_get_new_position_sl_el6(self):
         """Тест Б66: Проверка коррекции SL и EL случай 6"""
@@ -1039,7 +1039,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=30,
@@ -1048,8 +1048,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(12, new_start)
-        self.assertEqual(28, new_end)
+        self.assertEqual(12, result.start)
+        self.assertEqual(28, result.end)
 
     def test_get_new_position_sr_er1(self):
         """Тест Б67: Проверка коррекции SR и ER случай 1"""
@@ -1060,7 +1060,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -1069,8 +1069,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
 
-        self.assertEqual(15, new_start)
-        self.assertEqual(33, new_end)
+        self.assertEqual(15, result.start)
+        self.assertEqual(33, result.end)
 
     def test_get_new_position_sr_er2(self):
         """Тест Б68: Проверка коррекции SR и ER случай 2"""
@@ -1081,7 +1081,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=13,
             end_pos=30,
@@ -1090,8 +1090,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=-1
         )
 
-        self.assertEqual(18, new_start)
-        self.assertEqual(33, new_end)
+        self.assertEqual(18, result.start)
+        self.assertEqual(33, result.end)
 
     def test_get_new_position_sr_er3(self):
         """Тест Б69: Проверка коррекции SR и ER случай 3"""
@@ -1102,7 +1102,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -1111,8 +1111,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(13, new_start)
-        self.assertEqual(34, new_end)
+        self.assertEqual(13, result.start)
+        self.assertEqual(34, result.end)
 
     def test_get_new_position_sr_er4(self):
         """Тест Б70: Проверка коррекции SR и ER случай 4"""
@@ -1123,7 +1123,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=13,
             end_pos=30,
@@ -1132,8 +1132,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=1
         )
 
-        self.assertEqual(16, new_start)
-        self.assertEqual(34, new_end)
+        self.assertEqual(16, result.start)
+        self.assertEqual(34, result.end)
 
     def test_get_new_position_sr_er5(self):
         """Тест Б71: Проверка коррекции SR и ER случай 5"""
@@ -1144,7 +1144,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=30,
@@ -1153,8 +1153,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(16, new_start)
-        self.assertEqual(32, new_end)
+        self.assertEqual(16, result.start)
+        self.assertEqual(32, result.end)
 
     def test_get_new_position_sr_er6(self):
         """Тест Б72: Проверка коррекции SR и ER случай 6"""
@@ -1165,7 +1165,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=40,
@@ -1174,8 +1174,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=5
         )
 
-        self.assertEqual(17, new_start)
-        self.assertEqual(43, new_end)
+        self.assertEqual(17, result.start)
+        self.assertEqual(43, result.end)
 
     def test_get_new_position_sr_er7_last_end(self):
         """Тест Б73: Проверка коррекции SR и ER с учетом последней позиции"""
@@ -1186,7 +1186,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=15,
@@ -1195,8 +1195,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=8
         )
 
-        self.assertEqual(13, new_start)
-        self.assertEqual(19, new_end)
+        self.assertEqual(13, result.start)
+        self.assertEqual(19, result.end)
 
     def test_get_new_position_s0_1(self):
         """Тест Б74: Проверка коррекции S0 случай 1"""
@@ -1207,7 +1207,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=22,
@@ -1216,8 +1216,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(11, new_start)
-        self.assertEqual(17, new_end)
+        self.assertEqual(11, result.start)
+        self.assertEqual(17, result.end)
 
     def test_get_new_position_s0_2(self):
         """Тест Б75: Проверка коррекции S0 случай 2"""
@@ -1228,7 +1228,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=22,
@@ -1237,8 +1237,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(11, new_start)
-        self.assertEqual(17, new_end)
+        self.assertEqual(11, result.start)
+        self.assertEqual(17, result.end)
 
     def test_get_new_position_s0_3(self):
         """Тест Б76: Проверка коррекции S0 случай 3"""
@@ -1249,7 +1249,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=18,
             end_pos=30,
@@ -1258,8 +1258,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(19, new_start)
-        self.assertEqual(25, new_end)
+        self.assertEqual(19, result.start)
+        self.assertEqual(25, result.end)
 
     def test_get_new_position_s0_4(self):
         """Тест Б77: Проверка коррекции S0 случай 4"""
@@ -1270,7 +1270,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=18,
             end_pos=30,
@@ -1279,8 +1279,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(19, new_start)
-        self.assertEqual(25, new_end)
+        self.assertEqual(19, result.start)
+        self.assertEqual(25, result.end)
 
     def test_get_new_position_s0_5(self):
         """Тест Б78: Проверка коррекции S0 случай 5"""
@@ -1291,7 +1291,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=25,
@@ -1300,8 +1300,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(21, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(21, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_s0_6(self):
         """Тест Б79: Проверка коррекции S0 случай 6"""
@@ -1312,7 +1312,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=25,
@@ -1321,8 +1321,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(21, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(21, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_s0_7(self):
         """Тест Б80: Проверка коррекции S0 случай 7"""
@@ -1333,7 +1333,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=25,
@@ -1342,8 +1342,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(21, new_start)
-        self.assertEqual(27, new_end)
+        self.assertEqual(21, result.start)
+        self.assertEqual(27, result.end)
 
     def test_get_new_position_s0_8(self):
         """Тест Б81: Проверка коррекции S0 случай 8"""
@@ -1354,7 +1354,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=25,
@@ -1363,8 +1363,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(21, new_start)
-        self.assertEqual(27, new_end)
+        self.assertEqual(21, result.start)
+        self.assertEqual(27, result.end)
 
     def test_get_new_position_0s_1(self):
         """Тест Б82: Проверка коррекции 0S случай 1"""
@@ -1375,7 +1375,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=25,
@@ -1384,8 +1384,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(10, new_start)
-        self.assertEqual(20, new_end)
+        self.assertEqual(10, result.start)
+        self.assertEqual(20, result.end)
 
     def test_get_new_position_0s_2(self):
         """Тест Б83: Проверка коррекции 0S случай 2"""
@@ -1396,7 +1396,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -1405,8 +1405,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(16, new_start)
-        self.assertEqual(36, new_end)
+        self.assertEqual(16, result.start)
+        self.assertEqual(36, result.end)
 
     def test_get_new_position_0s_3(self):
         """Тест Б84: Проверка коррекции 0S случай 3"""
@@ -1417,7 +1417,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=20,
@@ -1426,8 +1426,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(10, new_start)
-        self.assertEqual(16, new_end)
+        self.assertEqual(10, result.start)
+        self.assertEqual(16, result.end)
 
     def test_get_new_position_0s_4(self):
         """Тест Б85: Проверка коррекции 0S случай 4"""
@@ -1438,7 +1438,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -1447,8 +1447,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(15, new_start)
-        self.assertEqual(36, new_end)
+        self.assertEqual(15, result.start)
+        self.assertEqual(36, result.end)
 
     def test_get_new_position_0s_5(self):
         """Тест Б86: Проверка коррекции 0S случай 5"""
@@ -1459,7 +1459,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы 
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=15,
@@ -1468,8 +1468,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(10, new_start)
-        self.assertEqual(20, new_end)
+        self.assertEqual(10, result.start)
+        self.assertEqual(20, result.end)
 
     def test_get_new_position_0s_6(self):
         """Тест Б87: Проверка коррекции 0S случай 6"""
@@ -1480,7 +1480,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=15,
@@ -1489,8 +1489,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(10, new_start)
-        self.assertEqual(16, new_end)
+        self.assertEqual(10, result.start)
+        self.assertEqual(16, result.end)
 
     def test_get_new_position_e0_1(self):
         """Тест Б88: Проверка коррекции E0 случай 1"""
@@ -1501,7 +1501,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=30,
@@ -1510,8 +1510,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(20, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(20, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_e0_2(self):
         """Тест Б89: Проверка коррекции E0 случай 2"""
@@ -1522,7 +1522,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=30,
@@ -1531,8 +1531,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(20, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(20, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_e0_3(self):
         """Тест Б90: Проверка коррекции E0 случай 3"""
@@ -1543,7 +1543,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=30,
@@ -1552,8 +1552,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(25, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(25, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_e0_4(self):
         """Тест Б91: Проверка коррекции E0 случай 4"""
@@ -1564,7 +1564,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=30,
@@ -1573,8 +1573,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(25, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(25, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_e0_5(self):
         """Тест Б92: Проверка коррекции E0 случай 5"""
@@ -1585,7 +1585,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=25,
             end_pos=30,
@@ -1594,8 +1594,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(22, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(22, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_e0_6(self):
         """Тест Б93: Проверка коррекции E0 случай 6"""
@@ -1606,7 +1606,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=26,
             end_pos=30,
@@ -1615,8 +1615,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(26, new_start)
-        self.assertEqual(31, new_end)
+        self.assertEqual(26, result.start)
+        self.assertEqual(31, result.end)
 
     def test_get_new_position_0e_1(self):
         """Тест Б94: Проверка коррекции 0E случай 1"""
@@ -1627,7 +1627,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=30,
@@ -1636,8 +1636,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(15, new_start)
-        self.assertEqual(30, new_end)
+        self.assertEqual(15, result.start)
+        self.assertEqual(30, result.end)
 
     def test_get_new_position_0e_2(self):
         """Тест Б95: Проверка коррекции 0E случай 2""" 
@@ -1648,7 +1648,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=30,
@@ -1657,8 +1657,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(24, new_start)
-        self.assertEqual(30, new_end)
+        self.assertEqual(24, result.start)
+        self.assertEqual(30, result.end)
 
     def test_get_new_position_0e_3(self):
         """Тест Б96: Проверка коррекции 0E случай 3"""
@@ -1669,7 +1669,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=30,
@@ -1678,8 +1678,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(24, new_start)
-        self.assertEqual(30, new_end)
+        self.assertEqual(24, result.start)
+        self.assertEqual(30, result.end)
 
     def test_get_new_position_0e_4(self):
         """Тест Б97: Проверка коррекции 0E случай 4"""
@@ -1690,7 +1690,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=20,
             end_pos=30,
@@ -1699,8 +1699,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(24, new_start)
-        self.assertEqual(30, new_end)
+        self.assertEqual(24, result.start)
+        self.assertEqual(30, result.end)
 
     def test_get_new_position_0e_5(self):
         """Тест Б98: Проверка коррекции 0E случай 5"""
@@ -1711,7 +1711,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=20,
@@ -1720,8 +1720,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(13, new_start)
-        self.assertEqual(20, new_end)
+        self.assertEqual(13, result.start)
+        self.assertEqual(20, result.end)
 
     def test_get_new_position_0e_6(self):
         """Тест Б99: Проверка коррекции 0E случай 6"""
@@ -1732,7 +1732,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=15,
             end_pos=20,
@@ -1741,8 +1741,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(20, new_start)
-        self.assertEqual(27, new_end)
+        self.assertEqual(20, result.start)
+        self.assertEqual(27, result.end)
 
     def test_get_new_position_0s_e0(self):
         """Тест Б100: Проверка коррекции 0S и E0"""
@@ -1753,7 +1753,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=11,
             end_pos=20,
@@ -1762,8 +1762,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(11, new_start)
-        self.assertEqual(21, new_end)
+        self.assertEqual(11, result.start)
+        self.assertEqual(21, result.end)
 
     def test_get_new_position_s0_e0(self):
         """Тест Б101: Проверка коррекции S0 и E0"""
@@ -1774,7 +1774,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=20,
@@ -1783,8 +1783,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(11, new_start)
-        self.assertEqual(21, new_end)
+        self.assertEqual(11, result.start)
+        self.assertEqual(21, result.end)
 
     def test_get_new_position_0s_0e(self):
         """Тест Б102: Проверка коррекции 0S и 0E"""
@@ -1795,7 +1795,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=20,
@@ -1804,8 +1804,8 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(10, new_start)
-        self.assertEqual(20, new_end)
+        self.assertEqual(10, result.start)
+        self.assertEqual(20, result.end)
 
     def test_get_new_position_s0_0e(self):
         """Тест Б103: Проверка коррекции S0 и 0E"""
@@ -1816,7 +1816,7 @@ class TextGeneratorTest(TestCase):
         base_text.length = 100
 
         # Корректируем границы
-        new_start, new_end = get_new_fragment_positions(
+        result = get_new_fragment_positions(
             base_text,
             start_pos=10,
             end_pos=20,
@@ -1825,5 +1825,5 @@ class TextGeneratorTest(TestCase):
             last_end_pos=2
         )
 
-        self.assertEqual(11, new_start)
-        self.assertEqual(20, new_end)
+        self.assertEqual(11, result.start)
+        self.assertEqual(20, result.end)

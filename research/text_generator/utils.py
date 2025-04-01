@@ -52,7 +52,7 @@ def get_new_fragment_positions(
     s_lr: WordShifts, 
     e_lr: WordShifts, 
     last_end_pos: int = -1
-) -> tuple[int, int]:
+) -> FragmentPosition:
     """Корректирует позиции чтобы они попадали на границы предложений."""
     BORDER_SHIFT_MAX = 10  
     MIN_FRAGMENT_SIZE = 5
@@ -190,7 +190,7 @@ def get_new_fragment_positions(
                 min_size = size 
                 best_result = result
 
-    return best_result
+    return FragmentPosition(start=best_result[0], end=best_result[1])
 
 
 def generate_text_code(
@@ -334,12 +334,16 @@ def generate_text_code(
             # Получаем сдвиги для позиций для первого текста
             s_lr1 = get_shifts_for_word(base_text_content.words, start_base_pos)
             e_lr1 = get_shifts_for_word(base_text_content.words, end_base_pos)
-            start_base_pos, end_base_pos = get_new_fragment_positions(base_text_content, start_base_pos, end_base_pos - 1, s_lr1, e_lr1)
+            result = get_new_fragment_positions(base_text_content, start_base_pos, end_base_pos - 1, s_lr1, e_lr1)
+
+            start_base_pos, end_base_pos = result.start, result.end
 
             # Получаем сдвиги для позиций для второго текста
             s_lr2 = get_shifts_for_word(other_text_content.words, start_other_pos)
             e_lr2 = get_shifts_for_word(other_text_content.words, end_other_pos)
-            start_other_pos, end_other_pos = get_new_fragment_positions(other_text_content, start_other_pos, end_other_pos - 1, s_lr2, e_lr2)
+            result2 = get_new_fragment_positions(other_text_content, start_other_pos, end_other_pos - 1, s_lr2, e_lr2)
+            start_other_pos, end_other_pos = result2.start, result2.end
+
             end_base_pos += 1
             end_other_pos += 1
 

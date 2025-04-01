@@ -106,3 +106,9 @@ class WordShifts:
     """Сдвиги для слова влево и вправо"""
     L: int  # Сдвиг влево
     R: int  # Сдвиг вправо
+
+@dataclass
+class FragmentPosition:
+    """Позиция фрагмента в тексте"""
+    start: int
+    end: int
