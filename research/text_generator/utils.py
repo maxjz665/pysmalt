@@ -120,6 +120,7 @@ def get_new_fragment_positions(
                 else:
                     # Пробуем альтернативные варианты
                     if abs(s_item['val']) > abs(e_item['val']):
+                        # Сдвиг конца и начала на величину e_item
                         end_pos_res = end_pos
                         start_pos_res = start_pos
                         start_pos_res += e_item['val']
@@ -131,6 +132,7 @@ def get_new_fragment_positions(
                             end_pos_res < text_size):
                             ext_results.append((start_pos_res, end_pos_res + 1))
                     else:
+                        # Сдвиг начала и конца на величину s_item
                         end_pos_res = end_pos
                         start_pos_res = start_pos
                         start_pos_res += s_item['val']
@@ -141,9 +143,11 @@ def get_new_fragment_positions(
                         if (start_pos_res > last_end_pos and
                             end_pos_res < text_size):
                             ext_results.append((start_pos_res, end_pos_res + 1))
-    
+
+
     # Если есть только допустимые сдвиги для начальной позиции
     elif s_items:
+        # Сдвиг начала и конца на величину s_item
         for s_item in s_items:
             end_pos_res = end_pos
             start_pos_res = start_pos
@@ -159,6 +163,7 @@ def get_new_fragment_positions(
 
     # Если есть только допустимые сдвиги для конечной позиции
     elif e_items:
+        # Сдвиг конца и начала на величину e_item
         for e_item in e_items:
             end_pos_res = end_pos
             start_pos_res = start_pos
@@ -452,7 +457,7 @@ def parse_code(code: CodeGen) -> Optional[ParsedCode]:
     return result
 
 
-def generate_text_by_code(code: CodeGen, base_words: List[TextWord], other_words: List[TextWord]) -> List[GeneratedWord]:
+def generate_text_by_code(code: CodeGen, base_words: List[TextWord], other_words: List[TextWord]) -> List[GeneratedWord] | None:
     """
     Генерирует текст, используя код и последовательности слов.
     
