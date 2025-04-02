@@ -12,7 +12,8 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 random.seed(42)
-
+BORDER_SHIFT_MAX = 10
+MIN_FRAGMENT_SIZE = 5
 
 def get_shifts_for_word(words: List[TextWord], pos: int) -> WordShifts:
     """Возвращает возможные сдвиги влево и вправо для позиции."""
@@ -54,8 +55,6 @@ def get_new_fragment_positions(
     last_end_pos: int = -1
 ) -> FragmentPosition:
     """Корректирует позиции чтобы они попадали на границы предложений."""
-    BORDER_SHIFT_MAX = 10  
-    MIN_FRAGMENT_SIZE = 5
     text_size = text.length
 
     # Выбираем минимальный и максимальный сдвиги для начальной позиции
