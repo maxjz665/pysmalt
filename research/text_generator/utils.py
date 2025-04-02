@@ -12,8 +12,8 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 random.seed(42)
-BORDER_SHIFT_MAX = 10
-MIN_FRAGMENT_SIZE = 5
+BORDER_SHIFT_MAX = 10 # Максимальный сдвиг для границ
+MIN_FRAGMENT_SIZE = 5 # Минимальный размер фрагмента для вставки
 
 def get_shifts_for_word(words: List[TextWord], pos: int) -> WordShifts:
     """Возвращает возможные сдвиги влево и вправо для позиции."""
@@ -286,6 +286,8 @@ def generate_text_code(
 
     start_base_pos = 0
     start_other_pos = 0
+    last_base_end = -1 
+    last_other_end = -1
     code = CodeGen()
     count_b = 0
     count_o = 0
@@ -338,15 +340,30 @@ def generate_text_code(
             # Получаем сдвиги для позиций для первого текста
             s_lr1 = get_shifts_for_word(base_text_content.words, start_base_pos)
             e_lr1 = get_shifts_for_word(base_text_content.words, end_base_pos)
-            result = get_new_fragment_positions(base_text_content, start_base_pos, end_base_pos - 1, s_lr1, e_lr1)
-
+            result = get_new_fragment_positions(
+                base_text_content, 
+                start_base_pos, 
+                end_base_pos - 1, 
+                s_lr1, 
+                e_lr1,
+                last_base_end
+            )
             start_base_pos, end_base_pos = result.start, result.end
+            last_base_end = end_base_pos  # Обновляем последнюю позицию
 
             # Получаем сдвиги для позиций для второго текста
             s_lr2 = get_shifts_for_word(other_text_content.words, start_other_pos)
             e_lr2 = get_shifts_for_word(other_text_content.words, end_other_pos)
-            result2 = get_new_fragment_positions(other_text_content, start_other_pos, end_other_pos - 1, s_lr2, e_lr2)
+            result2 = get_new_fragment_positions(
+                other_text_content, 
+                start_other_pos, 
+                end_other_pos - 1, 
+                s_lr2, 
+                e_lr2,
+                last_other_end
+            )
             start_other_pos, end_other_pos = result2.start, result2.end
+            last_other_end = end_other_pos  # Обновляем последнюю позицию
 
             end_base_pos += 1
             end_other_pos += 1

@@ -530,8 +530,8 @@ class TextGeneratorTest(TestCase):
         )
 
         result = parse_code(code)
-        self.assertEqual(len(result["intervals"]["A"]), 26)
-        self.assertEqual(len(result["intervals"]["B"]), 26)
+        self.assertEqual(len(result["intervals"]["A"]), 27)
+        self.assertEqual(len(result["intervals"]["B"]), 27)
 
     def test_get_texts_code_correct_2more1_borders(self):
         """Тест Б38: Проверка генерации кода со вторым текстом больше первого с границами"""
