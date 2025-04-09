@@ -22,5 +22,6 @@ urlpatterns = [
     path('', include('user_app.urls')),  # профили пользователя + авторизация
     path('research/r_tree/', include('r_tree_app.urls')),  # работа с деревьями решений
     path('research/r_bigrams/', include('r_ngrams_app.urls')),  # работа с деревьями решений
-    path('research/text_generator/', include('text_generator.urls'))  # работа с генерацией текстов
+    path('research/text_generator/', include('text_generator.urls')), # работа с генерацией текстов
+    path('research/hetco_app/', include('hetco_app.urls')),  # работа с модулем Хетсо
 ]
