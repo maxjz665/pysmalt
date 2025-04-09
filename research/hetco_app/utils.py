@@ -3,17 +3,16 @@ import csv
 import xlsxwriter
 import math
 
-
 class HetcoUtils:
     def __init__(self):
         # Инициализация переменных класса
         self.xlsxNAME = 'exp3t.xlsx'
         self.AUTHOR = 'EXP3'
         self.allText = [154, 159]  # Список текстов
-        self.trainText = [154]  # Обучающие тексты
+        self.trainText = [154]     # Обучающие тексты
         self.COUNT = len(self.allText)
-        self.LENGTH = 500  # Длина отрывка в словах
-        self.SENT = 30  # Количество предложений в отрывке
+        self.LENGTH = 500          # Длина отрывка в словах
+        self.SENT = 30             # Количество предложений в отрывке
 
         self.parts = ["существительное", "прилагательное", "числительное", "местоимение", "глагол",
                       "причастие", "деепричастие", "наречие", "кат.состояния", "частица",
@@ -22,45 +21,23 @@ class HetcoUtils:
                       "неязыковой", "сокращённое", "многочленное", "заголовок"]
         self.partLen = len(self.parts)
 
+        self.name = [['ДНЕВНИКЪ', 'ПИСАТЕЛЯ', 'IV', 'Нѣчто', 'личное', 'Меня'],
+                     ['Соборяне', 'Старогородская', 'хроника', 'Н', 'Лѣскова', 'Стебницкаго']]
+
     def get_part_of_speech(self, word):
         """Заглушка для определения части речи."""
         return "неизвестно"  # Пока возвращаем заглушку
 
-    def read_data(self):
-        """Чтение данных из CSV-файлов."""
-        self.data = []
-        self.name = []
-        for text in range(self.COUNT):
-            self.data.append([])
-            sentFlag = True
-            sentence = []
-            sentCounter = 0
-            wordCounter = 0
-            self.name.append([])
-            with open(f"{self.AUTHOR}_csv/{self.allText[text]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    row[1] = row[1].replace('"', '').strip()
-                    row[2] = row[2].replace('"', '').strip()
-                    if row[0] != "":
-                        sentFlag = False
-                        sentence.append(row[2])
-                        wordCounter += 1
-                        if wordCounter < 7:
-                            self.name[text].append(row[0])
-                    else:
-                        if sentFlag:
-                            continue
-                        sentFlag = True
-                        length = len(sentence)
-                        if length < 3:
-                            sentence.clear()
-                            continue
-                        self.data[text].append([sentence[0], sentence[1], sentence[length - 3],
-                                                sentence[length - 2], sentence[length - 1]])
-                        sentCounter += 1
-                        sentence.clear()
+    def read_csv_file(self, text_id):
+        """Чтение CSV-файла для указанного текста."""
+        file_path = f"{self.AUTHOR}_csv/{text_id}.csv"
+        data = []
+        with open(file_path, encoding='UTF-8', newline='') as File:
+            reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
+            for row in reader:
+                cleaned_row = [item.replace('"', '').strip() for item in row]
+                data.append(cleaned_row)
+        return data
 
     def process_point_9(self):
         """Пункт 9: Анализ длин слов в отрывках."""
@@ -68,18 +45,16 @@ class HetcoUtils:
         result = []
         for text in range(self.COUNT):
             mass = []
-            with open(f"{self.AUTHOR}_csv/{self.allText[text]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                counter = 0
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    if row[0] != "":
-                        counter += 1
-                        mass.append(len(row[0]))
-                    if counter == self.LENGTH:
-                        result.append([text, np.mean(mass), np.var(mass), np.std(mass)])
-                        mass.clear()
-                        counter = 0
+            data = self.read_csv_file(self.allText[text])
+            counter = 0
+            for row in data:
+                if row[0] != "":
+                    counter += 1
+                    mass.append(len(row[0]))
+                if counter == self.LENGTH:
+                    result.append([text, np.mean(mass), np.var(mass), np.std(mass)])
+                    mass.clear()
+                    counter = 0
 
         coTRAIN = sum(1 for r in result if self.allText[r[0]] in self.trainText)
         meTRAIN = sum(r[1] for r in result if self.allText[r[0]] in self.trainText)
@@ -90,7 +65,7 @@ class HetcoUtils:
         sTRAIN = np.std(meanMassTrain) if coTRAIN > 1 else 0
         dTRAIN = np.var(meanMassTrain) if coTRAIN > 1 else 0
         finalTable9.append(['TRAIN', coTRAIN, mTRAIN, vaTRAIN / coTRAIN if coTRAIN > 0 else 0,
-                            stTRAIN / coTRAIN if coTRAIN > 0 else 0, dTRAIN, sTRAIN])
+                           stTRAIN / coTRAIN if coTRAIN > 0 else 0, dTRAIN, sTRAIN])
 
         for currentText in range(self.COUNT):
             coTEST = sum(1 for r in result if r[0] == currentText)
@@ -101,11 +76,10 @@ class HetcoUtils:
             meanMassTest = [r[1] for r in result if r[0] == currentText]
             sTEST = np.std(meanMassTest) if coTEST > 1 else 0
             dTEST = np.var(meanMassTest) if coTEST > 1 else 0
-            sd = np.sqrt(
-                ((coTRAIN - 1) * dTRAIN + (coTEST - 1) * dTEST) / (coTRAIN + coTEST - 2)) if coTRAIN + coTEST > 2 else 0
+            sd = np.sqrt(((coTRAIN - 1) * dTRAIN + (coTEST - 1) * dTEST) / (coTRAIN + coTEST - 2)) if coTRAIN + coTEST > 2 else 0
             answer = ((mTEST - mTRAIN) / sd * np.sqrt(coTRAIN * coTEST / (coTRAIN + coTEST))) if sd != 0 else 0
             finalTable9.append([f'#{currentText}', coTEST, mTEST, vaTEST / coTEST if coTEST > 0 else 0,
-                                stTEST / coTEST if coTEST > 0 else 0, dTEST, sTEST, sd, answer])
+                               stTEST / coTEST if coTEST > 0 else 0, dTEST, sTEST, sd, answer])
         return finalTable9
 
     def process_point_10(self):
@@ -114,18 +88,16 @@ class HetcoUtils:
         counter = [0] * self.COUNT
         for i in range(self.COUNT):
             wordLen = [i] + [0] * 16
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    if row[0] != "":
-                        counter[i] += 1
-                        WL = len(row[0])
-                        if WL < 16:
-                            wordLen[WL] += 1
-                        else:
-                            wordLen[16] += 1
-                result.append(wordLen)
+            data = self.read_csv_file(self.allText[i])
+            for row in data:
+                if row[0] != "":
+                    counter[i] += 1
+                    WL = len(row[0])
+                    if WL < 16:
+                        wordLen[WL] += 1
+                    else:
+                        wordLen[16] += 1
+            result.append(wordLen)
 
         train = [0] * 16
         trainCounter = 0
@@ -153,25 +125,23 @@ class HetcoUtils:
             mass = []
             wCounter = 0
             sCounter = 0
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                sflag = True
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    if row[0] != "":
-                        wCounter += 1
-                        sflag = False
-                    else:
-                        if sflag:
-                            continue
-                        sflag = True
-                        sCounter += 1
-                        mass.append(wCounter)
-                        wCounter = 0
-                    if sCounter == self.SENT:
-                        result.append([i, np.mean(mass), np.var(mass), np.std(mass)])
-                        mass.clear()
-                        sCounter = 0
+            data = self.read_csv_file(self.allText[i])
+            sflag = True
+            for row in data:
+                if row[0] != "":
+                    wCounter += 1
+                    sflag = False
+                else:
+                    if sflag:
+                        continue
+                    sflag = True
+                    sCounter += 1
+                    mass.append(wCounter)
+                    wCounter = 0
+                if sCounter == self.SENT:
+                    result.append([i, np.mean(mass), np.var(mass), np.std(mass)])
+                    mass.clear()
+                    sCounter = 0
 
         coTRAIN = sum(1 for r in result if self.allText[r[0]] in self.trainText)
         meTRAIN = sum(r[1] for r in result if self.allText[r[0]] in self.trainText)
@@ -182,7 +152,7 @@ class HetcoUtils:
         sTRAIN = np.std(meanMassTrain) if coTRAIN > 1 else 0
         dTRAIN = np.var(meanMassTrain) if coTRAIN > 1 else 0
         finalTable11.append(['TRAIN', coTRAIN, mTRAIN, vaTRAIN / coTRAIN if coTRAIN > 0 else 0,
-                             stTRAIN / coTRAIN if coTRAIN > 0 else 0, dTRAIN, sTRAIN])
+                            stTRAIN / coTRAIN if coTRAIN > 0 else 0, dTRAIN, sTRAIN])
 
         for currentText in range(self.COUNT):
             coTEST = sum(1 for r in result if r[0] == currentText)
@@ -193,11 +163,10 @@ class HetcoUtils:
             meanMassTest = [r[1] for r in result if r[0] == currentText]
             sTEST = np.std(meanMassTest) if coTEST > 1 else 0
             dTEST = np.var(meanMassTest) if coTEST > 1 else 0
-            sd = np.sqrt(
-                ((coTRAIN - 1) * dTRAIN + (coTEST - 1) * dTEST) / (coTRAIN + coTEST - 2)) if coTRAIN + coTEST > 2 else 0
+            sd = np.sqrt(((coTRAIN - 1) * dTRAIN + (coTEST - 1) * dTEST) / (coTRAIN + coTEST - 2)) if coTRAIN + coTEST > 2 else 0
             answer = ((mTEST - mTRAIN) / sd * np.sqrt(coTRAIN * coTEST / (coTRAIN + coTEST))) if sd != 0 else 0
             finalTable11.append([f'#{currentText}', coTEST, mTEST, vaTEST / coTEST if coTEST > 0 else 0,
-                                 stTEST / coTEST if coTEST > 0 else 0, dTEST, sTEST, sd, answer])
+                                stTEST / coTEST if coTEST > 0 else 0, dTEST, sTEST, sd, answer])
         return finalTable11
 
     def process_point_12(self):
@@ -207,23 +176,21 @@ class HetcoUtils:
         sCounter = [0] * self.COUNT
         for i in range(self.COUNT):
             wCounter = 0
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                sflag = True
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    if row[0] != "":
-                        wCounter += 1
-                        sflag = False
-                    else:
-                        if sflag:
-                            continue
-                        sflag = True
-                        sCounter[i] += 1
-                        if wCounter > 64:
-                            wCounter = 64
-                        f[i][math.ceil(wCounter / 5) - 1] += 1
-                        wCounter = 0
+            data = self.read_csv_file(self.allText[i])
+            sflag = True
+            for row in data:
+                if row[0] != "":
+                    wCounter += 1
+                    sflag = False
+                else:
+                    if sflag:
+                        continue
+                    sflag = True
+                    sCounter[i] += 1
+                    if wCounter > 64:
+                        wCounter = 64
+                    f[i][math.ceil(wCounter / 5) - 1] += 1
+                    wCounter = 0
 
         train = [0] * fiveParts
         trainCounter = 0
@@ -252,26 +219,24 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    if row[0] != "":
-                        counter += 1
-                        text.append(row[0].lower())
-                    if counter == self.LENGTH:
-                        partCounter[i] += 1
-                        yet = []
-                        for word in text:
-                            if word in yet:
-                                continue
-                            yet.append(word)
-                            col = text.count(word)
-                            if col > devi:
-                                col = devi
-                            spek[i][col - 1] += 1
-                        counter = 0
-                        text.clear()
+            data = self.read_csv_file(self.allText[i])
+            for row in data:
+                if row[0] != "":
+                    counter += 1
+                    text.append(row[0].lower())
+                if counter == self.LENGTH:
+                    partCounter[i] += 1
+                    yet = []
+                    for word in text:
+                        if word in yet:
+                            continue
+                        yet.append(word)
+                        col = text.count(word)
+                        if col > devi:
+                            col = devi
+                        spek[i][col - 1] += 1
+                    counter = 0
+                    text.clear()
 
         for i in range(self.COUNT):
             for j in range(devi):
@@ -304,27 +269,25 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    if row[0] != "":
-                        counter += 1
-                        totalCounter[i] += 1
-                        text.append(row[0].lower())
-                    if counter == self.LENGTH:
-                        partCounter[i] += 1
-                        yet = []
-                        for word in text:
-                            if word in yet:
-                                continue
-                            yet.append(word)
-                            col = text.count(word)
-                            if col > devi:
-                                col = devi
-                            spek[i][col - 1] += 1
-                        counter = 0
-                        text.clear()
+            data = self.read_csv_file(self.allText[i])
+            for row in data:
+                if row[0] != "":
+                    counter += 1
+                    totalCounter[i] += 1
+                    text.append(row[0].lower())
+                if counter == self.LENGTH:
+                    partCounter[i] += 1
+                    yet = []
+                    for word in text:
+                        if word in yet:
+                            continue
+                        yet.append(word)
+                        col = text.count(word)
+                        if col > devi:
+                            col = devi
+                        spek[i][col - 1] += 1
+                    counter = 0
+                    text.clear()
 
         mf = []
         for i in range(self.COUNT):
@@ -357,21 +320,19 @@ class HetcoUtils:
         partlen0 = []
         for i in range(self.COUNT):
             mass = []
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                counter = 0
-                for row in reader:
-                    row[0] = row[0].replace('"', '').strip()
-                    if row[0] != "":
-                        counter += 1
-                        if not row[0].lower() in mass:
-                            mass.append(row[0].lower())
-                    if counter == self.LENGTH:
-                        if self.allText[i] in self.trainText:
-                            partlen0.append(len(mass))
-                        partlen.append([i, len(mass)])
-                        mass.clear()
-                        counter = 0
+            data = self.read_csv_file(self.allText[i])
+            counter = 0
+            for row in data:
+                if row[0] != "":
+                    counter += 1
+                    if not row[0].lower() in mass:
+                        mass.append(row[0].lower())
+                if counter == self.LENGTH:
+                    if self.allText[i] in self.trainText:
+                        partlen0.append(len(mass))
+                    partlen.append([i, len(mass)])
+                    mass.clear()
+                    counter = 0
 
         mean0 = np.mean(partlen0) if partlen0 else 0
         var0 = np.var(partlen0) if len(partlen0) > 1 else 0
@@ -397,26 +358,24 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                for row in reader:
-                    row[1] = row[1].replace('"', '').strip()
-                    if row[0] != "":
-                        counter += 1
-                        text.append(row[1].lower())
-                    if counter == self.LENGTH:
-                        partCounter[i] += 1
-                        yet = []
-                        for word in text:
-                            if word in yet:
-                                continue
-                            yet.append(word)
-                            col = text.count(word)
-                            if col > devi:
-                                col = devi
-                            spek[i][col - 1] += 1
-                        counter = 0
-                        text.clear()
+            data = self.read_csv_file(self.allText[i])
+            for row in data:
+                if row[0] != "":
+                    counter += 1
+                    text.append(row[1].lower())
+                if counter == self.LENGTH:
+                    partCounter[i] += 1
+                    yet = []
+                    for word in text:
+                        if word in yet:
+                            continue
+                        yet.append(word)
+                        col = text.count(word)
+                        if col > devi:
+                            col = devi
+                        spek[i][col - 1] += 1
+                    counter = 0
+                    text.clear()
 
         for i in range(self.COUNT):
             for j in range(devi):
@@ -449,27 +408,25 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                for row in reader:
-                    row[1] = row[1].replace('"', '').strip()
-                    if row[0] != "":
-                        counter += 1
-                        totalCounter[i] += 1
-                        text.append(row[1].lower())
-                    if counter == self.LENGTH:
-                        partCounter[i] += 1
-                        yet = []
-                        for word in text:
-                            if word in yet:
-                                continue
-                            yet.append(word)
-                            col = text.count(word)
-                            if col > devi:
-                                col = devi
-                            spek[i][col - 1] += 1
-                        counter = 0
-                        text.clear()
+            data = self.read_csv_file(self.allText[i])
+            for row in data:
+                if row[0] != "":
+                    counter += 1
+                    totalCounter[i] += 1
+                    text.append(row[1].lower())
+                if counter == self.LENGTH:
+                    partCounter[i] += 1
+                    yet = []
+                    for word in text:
+                        if word in yet:
+                            continue
+                        yet.append(word)
+                        col = text.count(word)
+                        if col > devi:
+                            col = devi
+                        spek[i][col - 1] += 1
+                    counter = 0
+                    text.clear()
 
         mf = []
         for i in range(self.COUNT):
@@ -502,21 +459,19 @@ class HetcoUtils:
         partlen0 = []
         for i in range(self.COUNT):
             mass = []
-            with open(f"{self.AUTHOR}_csv/{self.allText[i]}.csv", encoding='UTF-8', newline='') as File:
-                reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-                counter = 0
-                for row in reader:
-                    row[1] = row[1].replace('"', '').strip()
-                    if row[0] != "":
-                        counter += 1
-                        if not row[1].lower() in mass:
-                            mass.append(row[1].lower())
-                    if counter == self.LENGTH:
-                        if self.allText[i] in self.trainText:
-                            partlen0.append(len(mass))
-                        partlen.append([i, len(mass)])
-                        mass.clear()
-                        counter = 0
+            data = self.read_csv_file(self.allText[i])
+            counter = 0
+            for row in data:
+                if row[0] != "":
+                    counter += 1
+                    if not row[1].lower() in mass:
+                        mass.append(row[1].lower())
+                if counter == self.LENGTH:
+                    if self.allText[i] in self.trainText:
+                        partlen0.append(len(mass))
+                    partlen.append([i, len(mass)])
+                    mass.clear()
+                    counter = 0
 
         mean0 = np.mean(partlen0) if partlen0 else 0
         var0 = np.var(partlen0) if len(partlen0) > 1 else 0
@@ -627,10 +582,8 @@ class HetcoUtils:
                 worksheet.write(xlRow + 1, 11, strName.replace(',', '').replace('\'', ''))
         workbook.close()
 
-
 if __name__ == "__main__":
     hetco_utils = HetcoUtils()
-    hetco_utils.read_data()
     finalTable9 = hetco_utils.process_point_9()
     alpha10 = hetco_utils.process_point_10()
     finalTable11 = hetco_utils.process_point_11()
