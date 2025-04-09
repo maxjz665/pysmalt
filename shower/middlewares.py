@@ -7,7 +7,7 @@ from operator import add
 from time import time
 
 from django.db import connection
-
+from django.http import FileResponse  # Добавляем импорт FileResponse
 
 def stats_middleware(get_response):
     """
@@ -30,6 +30,10 @@ def stats_middleware(get_response):
         start = time()
         response = get_response(request)
         total_time = time() - start
+
+        # Пропускаем обработку для FileResponse
+        if isinstance(response, FileResponse):
+            return response
 
         # compute the db time for the queries just run
         db_queries = len(connection.queries) - n

@@ -1,27 +1,38 @@
 import math
 from dataclasses import dataclass
+from typing import List
 
 import numpy as np
 import xlsxwriter
 
+from research.text_generator.dataclasses.text_generator import GeneratedWord
+from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_word import TblWord
 
 
 @dataclass
 class WordData:
     """Класс для хранения слова и его начальной формы"""
-    word: str  # Исходное слово
-    initial_form: str  # Начальная форма слова
+    word: str
+    initial_form: str
+    start_sentence: bool = False
 
 class HetcoUtils:
-    def __init__(self, base_text_id: int, other_text_ids: list[int], author: str):
+    def __init__(self, generated_text: List[GeneratedWord], other_text_list: TblTextListDescription, author: str):
+        """
+        Args:
+            generated_text: Сгенерированный текст
+            other_text_list: Список текстов для сравнения
+            author: Автор текста
+        """
+        self.generated_text = generated_text
+        
         # Инициализация переменных класса
-        self.trainText = [base_text_id]
-        self.allText = [base_text_id] + other_text_ids
-        self.xlsxNAME = f'{base_text_id}-{author}.xlsx'
+        self.trainText = [0]  # ID 0 для сгенерированного текста
+        other_text_ids = list(other_text_list.item_ids)
+        self.allText = [0] + other_text_ids  # 0 + остальные ID
+        self.xlsxNAME = f'generated-{author}.xlsx'
         self.AUTHOR = author
-        # self.allText = [154, 159]  # Список текстов
-        # self.trainText = [154]     # Обучающие тексты
         self.COUNT = len(self.allText)
         self.LENGTH = 500          # Длина отрывка в словах
         self.SENT = 30             # Количество предложений в отрывке
@@ -33,26 +44,52 @@ class HetcoUtils:
                       "неязыковой", "сокращённое", "многочленное", "заголовок"]
         self.partLen = len(self.parts)
 
-        self.name = [['ДНЕВНИКЪ', 'ПИСАТЕЛЯ', 'IV', 'Нѣчто', 'личное', 'Меня'], ['Соборяне', 'Старогородская', 'хроника', 'Н', 'Лѣскова', 'Стебницкаго']]
+        self.name = []
 
-    @staticmethod
-    def get_text_words(text_id: int) -> list[WordData]:
+
+        for id in self.allText:
+            if id == 0:
+                self.name.append("Сгенерированный текст")
+            else:
+                self.name = "test"
+
+    def get_text_words(self, text_id: int) -> list[WordData]:
         """Получение слов текста с их начальными формами."""
+        # Для сгенерированного текста возвращаем его слова
+        if text_id == 0:
+            words = []
+            for word in self.generated_text:
+                words.append(WordData(
+                    word=word.word.word,
+                    initial_form=word.word.word.lower(),
+                    start_sentence=word.start_sentence
+                ))
+            return words
+            
+        # Для остальных текстов используем БД
         words = []
         text_words = (TblWord.objects.filter(text_id=text_id)
                       .select_related('dictword')
                       .order_by('chapter_index', 'paragraph_index',
                                 'sentence_index', 'word_index'))
 
+        prev_word = None
         for word in text_words:
             if word.dictword:
                 initial = word.dictword.initial_form
             else:
                 initial = word.word.lower()
+
+            # Проверяем начало нового предложения или параграфа
+            start_sentence = prev_word and prev_word.is_new_sentence(word)
+
             words.append(WordData(
                 word=word.word,
-                initial_form=initial
+                initial_form=initial,
+                start_sentence=start_sentence
             ))
+            prev_word = word
+
         return words
 
     def process_point_9(self):
@@ -147,7 +184,7 @@ class HetcoUtils:
                 if word_data.word:
                     wCounter += 1
                     sflag = False
-                else:
+                if word_data.start_sentence:
                     if sflag:
                         continue
                     sflag = True
@@ -198,7 +235,7 @@ class HetcoUtils:
                 if word_data.word:
                     wCounter += 1
                     sflag = False
-                else:
+                if word_data.start_sentence:
                     if sflag:
                         continue
                     sflag = True
@@ -232,14 +269,19 @@ class HetcoUtils:
         spek = [[0] * devi for _ in range(self.COUNT)]
         partCounter = [0] * self.COUNT
         totalCounter = [0] * self.COUNT
+        
         for i in range(self.COUNT):
             text = []
             counter = 0
+            total_words = 0  # Счетчик общего количества слов
             words = self.get_text_words(self.allText[i])
+            
             for word_data in words:
                 if word_data.word:
                     counter += 1
+                    total_words += 1
                     text.append(word_data.word.lower())
+                    
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -254,9 +296,24 @@ class HetcoUtils:
                     counter = 0
                     text.clear()
 
+            # Обработка оставшихся слов, если текст не кратен LENGTH
+            if text:
+                partCounter[i] += 1
+                yet = []
+                for word in text:
+                    if word in yet:
+                        continue
+                    yet.append(word)
+                    col = text.count(word)
+                    if col > devi:
+                        col = devi
+                    spek[i][col - 1] += 1
+
+        # Подсчет общего количества слов для каждого текста
         for i in range(self.COUNT):
-            for j in range(devi):
-                totalCounter[i] += spek[i][j]
+            totalCounter[i] = sum(spek[i][j] for j in range(devi))
+            if totalCounter[i] == 0:
+                totalCounter[i] = 1  # Защита от деления на ноль
 
         trainSpek = [0] * devi
         trainTotal = 0
@@ -265,6 +322,11 @@ class HetcoUtils:
                 for j in range(devi):
                     trainSpek[j] += spek[i][j]
                 trainTotal += totalCounter[i]
+        
+        # Защита от деления на ноль для обучающего текста
+        if trainTotal == 0:
+            trainTotal = 1
+            
         tp = [trainSpek[j] / trainTotal for j in range(devi)]
         tpn = np.cumsum(tp)
 
@@ -282,15 +344,18 @@ class HetcoUtils:
         spek = [[0] * devi for _ in range(self.COUNT)]
         partCounter = [0] * self.COUNT
         totalCounter = [0] * self.COUNT
+        
         for i in range(self.COUNT):
             text = []
             counter = 0
             words = self.get_text_words(self.allText[i])
+            
             for word_data in words:
                 if word_data.word:
                     counter += 1
                     totalCounter[i] += 1
                     text.append(word_data.word.lower())
+                    
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -305,10 +370,27 @@ class HetcoUtils:
                     counter = 0
                     text.clear()
 
+            # Обработка оставшихся слов
+            if text:
+                partCounter[i] += 1
+                yet = []
+                for word in text:
+                    if word in yet:
+                        continue
+                    yet.append(word)
+                    col = text.count(word)
+                    if col > devi:
+                        col = devi
+                    spek[i][col - 1] += 1
+
+        # Рассчет взвешенных частот
         mf = []
         for i in range(self.COUNT):
             mf.append([spek[i][j] * (j + 1) for j in range(devi - 1)])
             mfSum = sum(mf[i])
+            # Защита от деления на ноль
+            if partCounter[i] == 0:
+                partCounter[i] = 1
             mf[i].append(partCounter[i] * self.LENGTH - mfSum)
 
         trainSpek = [0] * devi
@@ -318,12 +400,19 @@ class HetcoUtils:
                 for j in range(devi):
                     trainSpek[j] += mf[i][j]
                 trainTotal += partCounter[i] * self.LENGTH
+
+        # Защита от деления на ноль для обучающего текста
+        if trainTotal == 0:
+            trainTotal = 1
+            
         tp = [trainSpek[j] / trainTotal for j in range(devi)]
         tpn = np.cumsum(tp)
 
         ld14 = []
         for i in range(self.COUNT):
             totalCounter[i] = partCounter[i] * self.LENGTH
+            if totalCounter[i] == 0:
+                totalCounter[i] = 1  # Защита от деления на ноль
             p = [mf[i][j] / totalCounter[i] for j in range(devi)]
             pn = np.cumsum(p)
             d = [abs(tpn[j] - pn[j]) for j in range(devi)]
@@ -371,14 +460,17 @@ class HetcoUtils:
         spek = [[0] * devi for _ in range(self.COUNT)]
         partCounter = [0] * self.COUNT
         totalCounter = [0] * self.COUNT
+        
         for i in range(self.COUNT):
             text = []
             counter = 0
             words = self.get_text_words(self.allText[i])
+            
             for word_data in words:
                 if word_data.word:
                     counter += 1
                     text.append(word_data.initial_form.lower())
+                    
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -393,9 +485,24 @@ class HetcoUtils:
                     counter = 0
                     text.clear()
 
+            # Обработка оставшихся слов
+            if text:
+                partCounter[i] += 1
+                yet = []
+                for word in text:
+                    if word in yet:
+                        continue
+                    yet.append(word)
+                    col = text.count(word)
+                    if col > devi:
+                        col = devi
+                    spek[i][col - 1] += 1
+
+        # Подсчет общего количества слов для каждого текста
         for i in range(self.COUNT):
-            for j in range(devi):
-                totalCounter[i] += spek[i][j]
+            totalCounter[i] = sum(spek[i][j] for j in range(devi))
+            if totalCounter[i] == 0:
+                totalCounter[i] = 1  # Защита от деления на ноль
 
         trainSpek = [0] * devi
         trainTotal = 0
@@ -404,6 +511,11 @@ class HetcoUtils:
                 for j in range(devi):
                     trainSpek[j] += spek[i][j]
                 trainTotal += totalCounter[i]
+
+        # Защита от деления на ноль для обучающего текста
+        if trainTotal == 0:
+            trainTotal = 1
+
         tp = [trainSpek[j] / trainTotal for j in range(devi)]
         tpn = np.cumsum(tp)
 
@@ -421,15 +533,18 @@ class HetcoUtils:
         spek = [[0] * devi for _ in range(self.COUNT)]
         partCounter = [0] * self.COUNT
         totalCounter = [0] * self.COUNT
+        
         for i in range(self.COUNT):
             text = []
             counter = 0
             words = self.get_text_words(self.allText[i])
+            
             for word_data in words:
                 if word_data.word:
                     counter += 1
                     totalCounter[i] += 1
                     text.append(word_data.initial_form.lower())
+                    
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -444,6 +559,24 @@ class HetcoUtils:
                     counter = 0
                     text.clear()
 
+            # Обработка оставшихся слов
+            if text:
+                partCounter[i] += 1
+                yet = []
+                for word in text:
+                    if word in yet:
+                        continue
+                    yet.append(word)
+                    col = text.count(word)
+                    if col > devi:
+                        col = devi
+                    spek[i][col - 1] += 1
+
+            # Защита от деления на ноль для partCounter
+            if partCounter[i] == 0:
+                partCounter[i] = 1
+
+        # Рассчет взвешенных частот
         mf = []
         for i in range(self.COUNT):
             mf.append([spek[i][j] * (j + 1) for j in range(devi - 1)])
@@ -457,12 +590,20 @@ class HetcoUtils:
                 for j in range(devi):
                     trainSpek[j] += mf[i][j]
                 trainTotal += partCounter[i] * self.LENGTH
+
+        # Защита от деления на ноль для обучающего текста
+        if trainTotal == 0:
+            trainTotal = 1
+
         tp = [trainSpek[j] / trainTotal for j in range(devi)]
         tpn = np.cumsum(tp)
 
         ld14m = []
         for i in range(self.COUNT):
             totalCounter[i] = partCounter[i] * self.LENGTH
+            # Защита от деления на ноль для totalCounter
+            if totalCounter[i] == 0:
+                totalCounter[i] = 1
             p = [mf[i][j] / totalCounter[i] for j in range(devi)]
             pn = np.cumsum(p)
             d = [abs(tpn[j] - pn[j]) for j in range(devi)]
@@ -594,6 +735,6 @@ class HetcoUtils:
                     worksheet.write(xlRow + 1, 10, res15m[xlRow][5], badFormat)
                 else:
                     worksheet.write(xlRow + 1, 10, res15m[xlRow][5])
-                strName = str(self.name[xlRow]).strip('[]')
+                strName = self.name
                 worksheet.write(xlRow + 1, 11, strName.replace(',', '').replace('\'', ''))
         workbook.close()
