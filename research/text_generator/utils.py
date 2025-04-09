@@ -59,8 +59,8 @@ def get_new_fragment_positions(
 
     # Выбираем минимальный и максимальный сдвиги для начальной позиции
     if abs(s_lr.L) == abs(s_lr.R):
-        min_sh_s = {'side': 'R', 'val': s_lr.R}  # Всегда R для начала
-        max_sh_s = {'side': 'L', 'val': s_lr.L}  # Всегда L для конца
+        min_sh_s = {'side': 'R', 'val': s_lr.R}
+        max_sh_s = {'side': 'L', 'val': s_lr.L}
     else:
         if abs(s_lr.L) < abs(s_lr.R):
             min_sh_s = {'side': 'L', 'val': s_lr.L}
@@ -71,8 +71,8 @@ def get_new_fragment_positions(
 
     # Выбираем минимальный и максимальный сдвиги для конечной позиции
     if abs(e_lr.L) == abs(e_lr.R):
-        min_sh_e = {'side': 'L', 'val': e_lr.L}  # Всегда L для конца
-        max_sh_e = {'side': 'R', 'val': e_lr.R}  # Всегда R для начала
+        min_sh_e = {'side': 'L', 'val': e_lr.L}
+        max_sh_e = {'side': 'R', 'val': e_lr.R}
     else:
         if abs(e_lr.L) < abs(e_lr.R):
             min_sh_e = {'side': 'L', 'val': e_lr.L}
@@ -176,9 +176,11 @@ def get_new_fragment_positions(
                 end_pos_res < text_size):
                 results.append((start_pos_res, end_pos_res + 1))
 
+
     # Выбираем лучший результат
     best_result = (start_pos, end_pos + 1)
-    
+
+
     if results:
         min_size = float('inf')
         for result in results:
