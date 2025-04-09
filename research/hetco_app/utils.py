@@ -1,15 +1,27 @@
-import numpy as np
-import csv
-import xlsxwriter
 import math
+from dataclasses import dataclass
+
+import numpy as np
+import xlsxwriter
+
+from text_app.models.tbl_word import TblWord
+
+
+@dataclass
+class WordData:
+    """Класс для хранения слова и его начальной формы"""
+    word: str  # Исходное слово
+    initial_form: str  # Начальная форма слова
 
 class HetcoUtils:
-    def __init__(self):
+    def __init__(self, base_text_id: int, other_text_ids: list[int], author: str):
         # Инициализация переменных класса
-        self.xlsxNAME = 'exp3t.xlsx'
-        self.AUTHOR = 'EXP3'
-        self.allText = [154, 159]  # Список текстов
-        self.trainText = [154]     # Обучающие тексты
+        self.trainText = [base_text_id]
+        self.allText = [base_text_id] + other_text_ids
+        self.xlsxNAME = f'{base_text_id}-{author}.xlsx'
+        self.AUTHOR = author
+        # self.allText = [154, 159]  # Список текстов
+        # self.trainText = [154]     # Обучающие тексты
         self.COUNT = len(self.allText)
         self.LENGTH = 500          # Длина отрывка в словах
         self.SENT = 30             # Количество предложений в отрывке
@@ -21,23 +33,27 @@ class HetcoUtils:
                       "неязыковой", "сокращённое", "многочленное", "заголовок"]
         self.partLen = len(self.parts)
 
-        self.name = [['ДНЕВНИКЪ', 'ПИСАТЕЛЯ', 'IV', 'Нѣчто', 'личное', 'Меня'],
-                     ['Соборяне', 'Старогородская', 'хроника', 'Н', 'Лѣскова', 'Стебницкаго']]
+        self.name = [['ДНЕВНИКЪ', 'ПИСАТЕЛЯ', 'IV', 'Нѣчто', 'личное', 'Меня'], ['Соборяне', 'Старогородская', 'хроника', 'Н', 'Лѣскова', 'Стебницкаго']]
 
-    def get_part_of_speech(self, word):
-        """Заглушка для определения части речи."""
-        return "неизвестно"  # Пока возвращаем заглушку
+    @staticmethod
+    def get_text_words(text_id: int) -> list[WordData]:
+        """Получение слов текста с их начальными формами."""
+        words = []
+        text_words = (TblWord.objects.filter(text_id=text_id)
+                      .select_related('dictword')
+                      .order_by('chapter_index', 'paragraph_index',
+                                'sentence_index', 'word_index'))
 
-    def read_csv_file(self, text_id):
-        """Чтение CSV-файла для указанного текста."""
-        file_path = f"{self.AUTHOR}_csv/{text_id}.csv"
-        data = []
-        with open(file_path, encoding='UTF-8', newline='') as File:
-            reader = csv.reader(File, delimiter=',', quotechar=',', quoting=csv.QUOTE_NONE)
-            for row in reader:
-                cleaned_row = [item.replace('"', '').strip() for item in row]
-                data.append(cleaned_row)
-        return data
+        for word in text_words:
+            if word.dictword:
+                initial = word.dictword.initial_form
+            else:
+                initial = word.word.lower()
+            words.append(WordData(
+                word=word.word,
+                initial_form=initial
+            ))
+        return words
 
     def process_point_9(self):
         """Пункт 9: Анализ длин слов в отрывках."""
@@ -45,12 +61,12 @@ class HetcoUtils:
         result = []
         for text in range(self.COUNT):
             mass = []
-            data = self.read_csv_file(self.allText[text])
             counter = 0
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[text])
+            for word_data in words:
+                if word_data.word:
                     counter += 1
-                    mass.append(len(row[0]))
+                    mass.append(len(word_data.word))
                 if counter == self.LENGTH:
                     result.append([text, np.mean(mass), np.var(mass), np.std(mass)])
                     mass.clear()
@@ -88,11 +104,11 @@ class HetcoUtils:
         counter = [0] * self.COUNT
         for i in range(self.COUNT):
             wordLen = [i] + [0] * 16
-            data = self.read_csv_file(self.allText[i])
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     counter[i] += 1
-                    WL = len(row[0])
+                    WL = len(word_data.word)
                     if WL < 16:
                         wordLen[WL] += 1
                     else:
@@ -125,10 +141,10 @@ class HetcoUtils:
             mass = []
             wCounter = 0
             sCounter = 0
-            data = self.read_csv_file(self.allText[i])
             sflag = True
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     wCounter += 1
                     sflag = False
                 else:
@@ -176,10 +192,10 @@ class HetcoUtils:
         sCounter = [0] * self.COUNT
         for i in range(self.COUNT):
             wCounter = 0
-            data = self.read_csv_file(self.allText[i])
             sflag = True
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     wCounter += 1
                     sflag = False
                 else:
@@ -219,11 +235,11 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            data = self.read_csv_file(self.allText[i])
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     counter += 1
-                    text.append(row[0].lower())
+                    text.append(word_data.word.lower())
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -269,12 +285,12 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            data = self.read_csv_file(self.allText[i])
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     counter += 1
                     totalCounter[i] += 1
-                    text.append(row[0].lower())
+                    text.append(word_data.word.lower())
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -320,13 +336,13 @@ class HetcoUtils:
         partlen0 = []
         for i in range(self.COUNT):
             mass = []
-            data = self.read_csv_file(self.allText[i])
             counter = 0
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     counter += 1
-                    if not row[0].lower() in mass:
-                        mass.append(row[0].lower())
+                    if not word_data.word.lower() in mass:
+                        mass.append(word_data.word.lower())
                 if counter == self.LENGTH:
                     if self.allText[i] in self.trainText:
                         partlen0.append(len(mass))
@@ -358,11 +374,11 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            data = self.read_csv_file(self.allText[i])
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     counter += 1
-                    text.append(row[1].lower())
+                    text.append(word_data.initial_form.lower())
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -408,12 +424,12 @@ class HetcoUtils:
         for i in range(self.COUNT):
             text = []
             counter = 0
-            data = self.read_csv_file(self.allText[i])
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     counter += 1
                     totalCounter[i] += 1
-                    text.append(row[1].lower())
+                    text.append(word_data.initial_form.lower())
                 if counter == self.LENGTH:
                     partCounter[i] += 1
                     yet = []
@@ -459,13 +475,13 @@ class HetcoUtils:
         partlen0 = []
         for i in range(self.COUNT):
             mass = []
-            data = self.read_csv_file(self.allText[i])
             counter = 0
-            for row in data:
-                if row[0] != "":
+            words = self.get_text_words(self.allText[i])
+            for word_data in words:
+                if word_data.word:
                     counter += 1
-                    if not row[1].lower() in mass:
-                        mass.append(row[1].lower())
+                    if not word_data.initial_form.lower() in mass:
+                        mass.append(word_data.initial_form.lower())
                 if counter == self.LENGTH:
                     if self.allText[i] in self.trainText:
                         partlen0.append(len(mass))
@@ -581,17 +597,3 @@ class HetcoUtils:
                 strName = str(self.name[xlRow]).strip('[]')
                 worksheet.write(xlRow + 1, 11, strName.replace(',', '').replace('\'', ''))
         workbook.close()
-
-if __name__ == "__main__":
-    hetco_utils = HetcoUtils()
-    finalTable9 = hetco_utils.process_point_9()
-    alpha10 = hetco_utils.process_point_10()
-    finalTable11 = hetco_utils.process_point_11()
-    alpha12 = hetco_utils.process_point_12()
-    ld13 = hetco_utils.process_point_13()
-    ld14 = hetco_utils.process_point_14()
-    res15 = hetco_utils.process_point_15()
-    ld13m = hetco_utils.process_point_13mod()
-    ld14m = hetco_utils.process_point_14mod()
-    res15m = hetco_utils.process_point_15mod()
-    hetco_utils.write_to_excel(finalTable9, alpha10, finalTable11, alpha12, ld13, ld14, res15, ld13m, ld14m, res15m)
