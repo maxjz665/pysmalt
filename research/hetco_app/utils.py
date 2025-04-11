@@ -27,10 +27,9 @@ class HetcoUtils:
         """
         self.generated_text = generated_text
         
-        # Инициализация переменных класса
-        self.trainText = [0]  # ID 0 для сгенерированного текста
         other_text_ids = list(other_text_list.item_ids)
-        self.allText = [0] + other_text_ids  # 0 + остальные ID
+        self.trainText = other_text_ids # ID 0 для сгенерированного текста
+        self.allText = [0] + other_text_ids
         self.xlsxNAME = f'generated-{author}.xlsx'
         self.AUTHOR = author
         self.COUNT = len(self.allText)
@@ -44,14 +43,9 @@ class HetcoUtils:
                       "неязыковой", "сокращённое", "многочленное", "заголовок"]
         self.partLen = len(self.parts)
 
-        self.name = []
-
-
-        for id in self.allText:
-            if id == 0:
-                self.name.append("Сгенерированный текст")
-            else:
-                self.name = "test"
+        self.text_names = ["Generated Text"]
+        for item in other_text_list.items.all():
+            self.text_names.append(f"{item.text.title} - {author}")
 
     def get_text_words(self, text_id: int) -> list[WordData]:
         """Получение слов текста с их начальными формами."""
@@ -694,8 +688,7 @@ class HetcoUtils:
                 worksheet.write(xlRow + 1, 8, ld13m[xlRow], trainFormat)
                 worksheet.write(xlRow + 1, 9, ld14m[xlRow], trainFormat)
                 worksheet.write(xlRow + 1, 10, res15m[xlRow][5], trainFormat)
-                strName = str(self.name[xlRow]).strip('[]')
-                worksheet.write(xlRow + 1, 11, strName.replace(',', '').replace('\'', ''), trainFormat)
+                worksheet.write(xlRow + 1, 11, self.text_names[xlRow], trainFormat)
             else:
                 worksheet.write(xlRow + 1, 0, self.allText[xlRow])
                 if abs(finalTable9[xlRow + 2][8]) > maxs[1]:
@@ -738,8 +731,7 @@ class HetcoUtils:
                     worksheet.write(xlRow + 1, 10, res15m[xlRow][5], badFormat)
                 else:
                     worksheet.write(xlRow + 1, 10, res15m[xlRow][5])
-                strName = self.name
-                worksheet.write(xlRow + 1, 11, strName.replace(',', '').replace('\'', ''))
+                worksheet.write(xlRow + 1, 11, self.text_names[xlRow])
 
         workbook.close()
         
