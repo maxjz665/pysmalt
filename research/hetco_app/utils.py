@@ -647,15 +647,18 @@ class HetcoUtils:
 
     def write_to_excel(self, finalTable9, alpha10, finalTable11, alpha12, ld13, ld14, res15, ld13m, ld14m, res15m):
         """Запись результатов в Excel."""
-        workbook = xlsxwriter.Workbook(self.xlsxNAME)
+        from io import BytesIO
+        output = BytesIO()
+        
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})  # Используем in_memory режим
         worksheet = workbook.add_worksheet()
+        
         trainFormat = workbook.add_format({'fg_color': 'green'})
         badFormat = workbook.add_format({'fg_color': 'red'})
         borderFormat = workbook.add_format({'fg_color': 'silver'})
-        worksheet.write(0, 0, 'Код', borderFormat)
+        
         maxs = [0] * 18
         for text in range(self.COUNT):
-            worksheet.write(0, text + 1, text + 1, borderFormat)
             if self.allText[text] in self.trainText:
                 if abs(finalTable9[text + 2][8]) > abs(maxs[1]):
                     maxs[1] = abs(finalTable9[text + 2][8])
@@ -737,4 +740,11 @@ class HetcoUtils:
                     worksheet.write(xlRow + 1, 10, res15m[xlRow][5])
                 strName = self.name
                 worksheet.write(xlRow + 1, 11, strName.replace(',', '').replace('\'', ''))
+
         workbook.close()
+        
+        # Получаем данные из буфера
+        excel_data = output.getvalue()
+        output.close()
+        
+        return excel_data

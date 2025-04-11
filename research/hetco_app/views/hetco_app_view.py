@@ -64,16 +64,15 @@ def hetco_app_view(request: HttpRequest) -> HttpResponse:
         res15m = hetco.process_point_15mod()
 
         # Записываем результаты в Excel
-        hetco.write_to_excel(table9, alpha10, table11, alpha12, 
-                           ld13, ld14, res15, ld13m, ld14m, res15m)
+        excel_data = hetco.write_to_excel(table9, alpha10, table11, alpha12, 
+                                       ld13, ld14, res15, ld13m, ld14m, res15m)
 
-        # Возвращаем файл
-        response = FileResponse(
-            open(hetco.xlsxNAME, 'rb'),
+        # Возвращаем Excel как ответ
+        response = HttpResponse(
+            excel_data,
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        response['Content-Disposition'] = f'attachment; filename="{hetco.xlsxNAME}"'
-        
+        response['Content-Disposition'] = f'attachment; filename="hetco-{other_list.name}.xlsx"'
         return response
 
     except Exception as e:
