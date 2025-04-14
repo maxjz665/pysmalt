@@ -11,9 +11,9 @@ def search_color(value, arg):
     for item in value:
         if item.get("start") <= arg < item.get("end"):
             if item.get("pros") < 0.33:
-                return ""
+                return "background-color:LightGreen"
             elif item.get("pros") < 0.66:
-                return "background-color:Khaki"
-            return "background-color:LightGreen"
+                return ""
+            return "background-color:Khaki"
 
     return ""

@@ -23,24 +23,33 @@
             <div>Минимальный порог вхождения: {{ content.min_occurrence }}</div>
             <div>Способ расчета: {% if content.is_use_initial %}по начальным значениям{% else %} по словоформам{% endif %}</div>
             <div>Способ разделения: {% if content.is_sentence_split %}по предложениям{% else %}по абзацам{% endif %}</div>
-            <form method="post">
-            {% csrf_token %}
-            <div class="row">
-                {% if content.build_at %}
-                    <div class="col">Сборка: {{ content.build_at }}</div>
-                {% else %}
-                    <div class="col">Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
-                    <script>
+            {% if content.build_at %}
+                <div>Сборка: {{ content.build_at }}</div>
+            {% else %}
+                <div>Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
+                <script>
                     $(document).ready(function () {
                         window.setTimeout(function() {
                             window.location.href = "{% url "r_ngrams_app/dataset_show" content.id %}";
                         }, 5000);
                         });
-                        </script>
+                </script>
+            {% endif %}
+            {% if user.is_authenticated and user.is_researcher %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary mb-2" name="action" id="action" value="recalc">Пересчитать словарь</button>
+                        {% if content.is_public %}
+                            <button type="submit" class="btn btn-danger mb-2" name="action" id="action-pub" value="unpublish">Снять с публикации</button>
+                        {% else %}
+                            <button type="submit" class="btn btn-success mb-2" name="action" id="action-pub" value="publish">Опубликовать</button>
                         {% endif %}
-                        <div class="col"><button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать датасет</button></div>
                     </div>
-                </form>
+                </div>
+            </form>
+            {% endif %}
             </div>
         </div>
         <div class="col card">

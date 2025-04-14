@@ -133,6 +133,32 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
                                                                      "first_texts": first_texts,
                                                                      "second_texts": second_texts,
                                                                      "success_message": "Запущена задача построения дерева"})
+    if action == "publish":
+        if request.user.is_authenticated and (request.user == list_data.owner or request.user.has_admin):
+            list_data.public = True
+            list_data.save()
+            return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                              "first_texts": first_texts,
+                                                                              "second_texts": second_texts,
+                                                                              "success_message": "Дерево опубликовано"})
+        return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                          "first_texts": first_texts,
+                                                                          "second_texts": second_texts,
+                                                                          "error_message": "Нет прав на управление деревом"})
+
+    if action == "unpublish":
+        if request.user.is_authenticated and (request.user == list_data.owner or request.user.has_admin):
+            list_data.public = False
+            list_data.save()
+            return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                              "first_texts": first_texts,
+                                                                              "second_texts": second_texts,
+                                                                              "success_message": "Дерево снято с публикации"})
+        return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                          "first_texts": first_texts,
+                                                                          "second_texts": second_texts,
+                                                                          "error_message": "Нет прав на управление деревом"})
+
 
     return render(request, "r_tree_app/list_data.html",
                   context={"error_message": "Неизвестная операция над деревом решений",
@@ -192,7 +218,7 @@ def check_text(request: HttpRequest, list_id):
 
     clf = list_data.graph_pickle
 
-    part_size = 200  # TODO: либо вынести в настройки проверки, либо брать из свойств дерева
+    part_size = list_data.block_size
     parts = int(len(content) / part_size)
     pos = get_pos()
     dict_size = len(pos)
@@ -213,10 +239,25 @@ def check_text(request: HttpRequest, list_id):
 
         # обработка вектора деревом решений
         result = clf.predict_proba([ret_item])
-        # print(result)
         ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1]})
 
+    percent_pros = 0
+    percent_equal = 0
+    percent_cons = 0
+    for item in ret:
+        if item["pros"] < 0.33:
+            percent_cons += 1
+        elif item["pros"] < 0.66:
+            percent_equal += 1
+        else:
+            percent_pros += 1
+
+    if len(ret) > 0:
+        percent_cons = percent_cons / len(ret) * 100
+        percent_pros = percent_pros / len(ret) * 100
+        percent_equal = percent_equal / len(ret) * 100
     return render(request, "r_tree_app/check.html", context={"content": list_data, "texts": texts,
                                                              "link": "text_app/papers_data", "selectionTextId": paper_id,
                                                              "paper": paper,
-                                                             "text": content, "colormap": ret})
+                                                             "text": content, "colormap": ret, "percentPros": percent_pros, "percentEqual": percent_equal,
+                                                             "percentCons": percent_cons})

@@ -35,12 +35,28 @@ class TblUser(AbstractBaseUser):
     researcher = models.IntegerField(default=0)
 
     def has_level(self, level):
+        """
+        Проверка наличия заданного уровня доступа
+        """
         return self.level >= level
 
     @property
+    def is_researcher(self):
+        """
+        Является ли пользователь исследователем
+        """
+        return self.researcher > 0 or self.has_level(self.LEVEL_ADMIN)
+
+    @property
     def has_manager(self):
+        """
+        Является ли пользователь менеджером
+        """
         return self.has_level(self.LEVEL_MANAGER)
 
     @property
     def has_admin(self):
+        """
+        Является ли пользователь администратором
+        """
         return self.has_level(self.LEVEL_ADMIN)

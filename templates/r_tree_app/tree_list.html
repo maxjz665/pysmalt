@@ -10,7 +10,9 @@
 {% endblock %}
 
 {% block content %}
-    <a href="{% url 'r_tree_app/add_list' %}">Добавить дерево</a>
+    {% if user.is_authenticated and user.is_researcher %}
+        <a href="{% url 'r_tree_app/add_list' %}">Добавить дерево</a>
+    {% endif %}
 
     <table class='table table-bordered border-primary'>
     <thead><tr><th>№</th><th>Название</th><th>Первый список</th><th>Второй список</th><th>Размер блока</th></tr></thead>
