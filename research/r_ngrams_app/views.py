@@ -5,7 +5,7 @@ import asyncio
 import json
 
 from aiomqtt import Client
-from django.db.models import Q
+from django.db.models import Q, ObjectDoesNotExist
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 
@@ -110,9 +110,9 @@ def dataset_show_list(request: HttpRequest, list_id: int) -> HttpResponse:
     """
     Отображение содержимого датасета
     """
-    dataset_data = TblBigramDataset.objects.get(id=list_id)
-    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
-                                                        (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except ObjectDoesNotExist:
         return render(request, "not_found.html", context={
             "message": "Нет прав на просмотр датасета N-грамм",
             "return_url": "r_ngrams_app/dataset_list",
@@ -122,6 +122,10 @@ def dataset_show_list(request: HttpRequest, list_id: int) -> HttpResponse:
 
     if request.method == "GET":
         return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data})
+
+    if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
+        return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data,
+                                                                          "error_message": "Нет прав на управление датасетом"})
 
     action = request.POST.get("action", "")
     if action == "recalc":
@@ -139,9 +143,25 @@ def dataset_show_list(request: HttpRequest, list_id: int) -> HttpResponse:
         loop.close()
         return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data,
                                                                      "success_message": "Запущена задача построения датасета"})
+    if action == "publish":
+        if request.user.is_authenticated and (request.user == dataset_data.owner or request.user.has_admin):
+            dataset_data.is_public = True
+            dataset_data.save()
+            return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data, "success_message": "Словарь опубликован"})
+        return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data,
+                                                                              "error_message": "Нет прав на управление датасетом"})
+
+    if action == "unpublish":
+        if request.user.is_authenticated and (request.user == dataset_data.owner or request.user.has_admin):
+            dataset_data.is_public = False
+            dataset_data.save()
+            return render(request, "r_ngrams_app/dataset_data.html",
+                          context={"content": dataset_data, "success_message": "Словарь снят с публикации"})
+        return render(request, "r_ngrams_app/dataset_data.html", context={"content": dataset_data,
+                                                                              "error_message": "Нет прав на управление датасетом"})
 
     return render(request, "r_ngrams_app/dataset_data.html",
-                  context={"error_message": "Неизвестная операция над деревом решений",
+                  context={"error_message": "Неизвестная операция над словарем",
                            "content": dataset_data})
 
 async def send_broker_message(list_id: int):
@@ -151,9 +171,9 @@ async def send_broker_message(list_id: int):
 
 
 def check_text(request, list_id: int) -> HttpResponse:
-    dataset_data = TblBigramDataset.objects.get(id=list_id)
-    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
-                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except TblBigramDataset.DoesNotExist:
         return render(request, "not_found.html", context={
             "message": "Нет прав на просмотр датасета N-грамм",
             "return_url": "r_ngrams_app/dataset_list",
@@ -188,9 +208,9 @@ def search_ngram_dataset(request, list_id: int, ngram_item: str) -> HttpResponse
     """
     Поиск N-граммы в текстах датасета
     """
-    dataset_data = TblBigramDataset.objects.get(id=list_id)
-    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
-                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except TblBigramDataset.DoesNotExist:
         return render(request, "not_found.html", context={
             "message": "Нет прав на просмотр датасета N-грамм",
             "return_url": "r_ngrams_app/dataset_list",
@@ -214,9 +234,9 @@ def search_ngram_text(request, list_id: int, ngram_item: str, text_id: int) -> H
     """
     Поиск N-граммы в конкретном тексте
     """
-    dataset_data = TblBigramDataset.objects.get(id=list_id)
-    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
-                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except TblBigramDataset.DoesNotExist:
         return render(request, "not_found.html", context={
             "message": "Нет прав на просмотр датасета N-грамм",
             "return_url": "r_ngrams_app/dataset_list",
@@ -242,9 +262,9 @@ def check_group(request, list_id: int) -> HttpResponse:
     """
     Сравнение спектра текста и группы
     """
-    dataset_data = TblBigramDataset.objects.get(id=list_id)
-    if dataset_data is None or (dataset_data.is_public == 0 and (not request.user.is_authenticated or
-                                                                 (request.user.id != dataset_data.owner.id and not request.user.has_admin))):
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except TblBigramDataset.DoesNotExist:
         return render(request, "not_found.html", context={
             "message": "Нет прав на просмотр датасета N-грамм",
             "return_url": "r_ngrams_app/dataset_list",

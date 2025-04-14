@@ -3,6 +3,7 @@
 """
 from collections import namedtuple, deque
 
+from django.contrib.auth.models import AnonymousUser
 from django.db import models
 
 from shower.models import BaseModel
@@ -34,6 +35,22 @@ class TblBigramDataset(BaseModel):
     build_at = models.DateTimeField(null=True, default=None, db_comment="Время последней сборки")
     build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)
 
+    @classmethod
+    def get_item(cls, user = AnonymousUser, list_id: int = None):
+        """
+        Получение данных N-граммы с проверкой прав пользователя
+        """
+        ret = TblBigramDataset.objects.get(id=list_id)
+        if user.is_anonymous or not user.is_authenticated:
+            if not ret.is_public:
+                raise TblTextListDescription.DoesNotExist
+        else:
+            if not user.has_level(TblUser.LEVEL_ADMIN):
+                if ret.owner != user:
+                    raise TblTextListDescription.DoesNotExist
+        return ret
+
+
     @staticmethod
     def _filter_ngrams(dataset: dict, total_ngrams: float, ngrams: dict):
         """
@@ -56,7 +73,7 @@ class TblBigramDataset(BaseModel):
         dataset = {}
         StatData = namedtuple('StatData', ['value', 'pos'])
         total_ngrams = 0
-        for item in self.content:  # подгатавливаем словарь для работы с текстом
+        for item in self.content:  # подготавливаем словарь для работы с текстом
             dataset[item[0]] = StatData(item[1], len(dataset))
             total_ngrams += item[1]["count"]
         total_ngrams = 1000 / total_ngrams # делаем множитель для нормализации значений по словарю

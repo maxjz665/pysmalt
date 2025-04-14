@@ -10,8 +10,8 @@
         <a class="btn btn-primary" href="{{ paper.url }}" target="_blank">Смотреть оригинал</a>
     {% endif %}
      <button type='button' class='btn btn-primary' data-toggle='modal' data-target='#colormap-table'>Просмотр раскраски в виде таблицы</button>
-    <b>Легенда:</b> "<span style='background-color:Khaki'>{{ content.first_list.name }}</span>" ({$percentPros}%), 
- "<span style='background-color:LightGreen'>50/50</span>" ({$percentEqual}%), "<span>{{ content.second_list.name }}</span>" ({$percentCons}%)
+    <b>Легенда:</b> "<span style='background-color:Khaki'>{{ content.first_list.name }}</span>" ({{ percentPros|floatformat }}%),
+ "<span>50/50</span>" ({{ percentEqual|floatformat }}%), "<span style='background-color:LightGreen'>{{ content.second_list.name }}</span>" ({{ percentCons|floatformat }}%)
 </div>
 <div class='alert alert-warning' role='alert'>Внимание! Размеры выделенного фрагмента определены приблизительно. Более точное их определение требует других методов.</div>
 
@@ -57,14 +57,16 @@
         </button>
       </div>
       <div class="modal-body">
-      <b>Легенда:</b> "<span style='background-color:Khaki'>{{ content.first_list.name }}</span> ({$percentPros}%)", 
-      "<span style='background-color:LightGreen'>50/50</span> ({$percentEqual}%)", "<span>{{ content.second_list.name }}</span> ({$percentCons}%)"
+      <b>Легенда:</b> "<span style='background-color:Khaki'>{{ content.first_list.name }}</span> ({{ percentPros|floatformat }}%)",
+      "<span>50/50</span> ({{ percentEqual|floatformat }}%)", "<span style='background-color:LightGreen'>{{ content.second_list.name }}</span> ({{ percentCons|floatformat }}%)"
       <a type="button" class="btn btn-secondary" href="?action=export-colormap&id={$_REQUEST['id']}">Экспорт</a>
         <table class="table table-bordered">
             <thead><tr><th>Начало</th><th>Конец</th><th>{{ content.first_list.name }}</th><th>{{ content.second_list.name }}</th></tr></thead>
             <tbody>
             {% for item in colormap %}
-            <tr><td>{{ item.start }}</td><td>{{ item.end }}</td><td>{{ item.pros }}</td><td>{{ item.cons }}</td></tr>
+            <tr {% if item.pros >= 0.66 %} style='background-color:Khaki' {% endif %}
+                    {% if item.pros < 0.33 %}style='background-color:LightGreen'{% endif %}>
+                <td>{{ item.start }}</td><td>{{ item.end }}</td><td>{{ item.pros }}</td><td>{{ item.cons }}</td></tr>
             {% endfor %}
             </tbody>
         </table>

@@ -15,46 +15,67 @@
 {%  block content %}
     <h2>Дерево решений "{{ content.name }}"</h2>
     <div class="container">
-    <div class="row">
-        {% if content.build_at %}
-        Сборка: {{ content.build_at }} <a class="btn btn-info" href="{% url 'r_tree_app/check_text' content.id %}">Проверить текст</a>
+        <div class="row">
+        <div class="col card">
+            <div class="card-body">
+            {% if content.build_at %}
+                <div>Сборка: {{ content.build_at }}</div>
+            {% else %}
+                <div>Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
+                <script>
+                    $(document).ready(function () {
+                        window.setTimeout(function() {
+                            window.location.href = "{% url "r_tree_app/show_list" content.id %}";
+                        }, 5000);
+                        });
+                </script>
+            {% endif %}
+            {% if user.is_authenticated and user.is_researcher %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary mb-2" name="action" id="action" value="recalc">Пересчитать дерево</button>
+                        {% if content.public %}
+                            <button type="submit" class="btn btn-danger mb-2" name="action" id="action-pub" value="unpublish">Снять с публикации</button>
+                        {% else %}
+                            <button type="submit" class="btn btn-success mb-2" name="action" id="action-pub" value="publish">Опубликовать</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+            {% endif %}
             </div>
+        </div>
+        <div class="col card">
+            <div class="card-body">
+                <a class="btn btn-info" href="{% url 'r_tree_app/check_text' content.id %}">Проверить текст</a>
+            </div>
+        </div>
+        </div>
+        {% if content.build_at %}
             <div class="row">
-        <img src="{% url 'r_tree_app/list_graph' content.id %}" alt="Модель графа">
-        {% else %}
-        Статус: {{ content.build_status }}  (для обновления статуса страница будет перезагружена в течение 5 секунд)
-            <script>
-                $(document).ready(function () {
-                    window.setTimeout(function() {
-                        window.location.href = "{% url "r_tree_app/show_list" content.id %}";
-                    }, 5000);
-                });
-            </script>
-
+                <img width="100%" src="{% url 'r_tree_app/list_graph' content.id %}" alt="Модель графа">
+            </div>
         {% endif %}
-    </div>
-    <div class="row">
-        <div class="col">
-            <h3>Первая группа</h3>
-            <ul>
-                {% for item in first_texts %}
-            	    <li>{% bib_item item.text %}
-                {% endfor %}
-            </ul>
+
+        <div class="row">
+            <div class="col">
+                <h3>Первая группа</h3>
+                <ul>
+                    {% for item in first_texts %}
+            	        <li>{% bib_item item.text %}
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="col">
+                <h3>Вторая группа</h3>
+                <ul>
+                    {% for item in second_texts %}
+            	        <li>{% bib_item item.text %}
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
-        <div class="col">
-            <h3>Вторая группа</h3>
-            <ul>
-                {% for item in second_texts %}
-            	    <li>{% bib_item item.text %}
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-    
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-primary" name="action" id="action" value="recalc">Пересчитать дерево</button>
-    </form>
     </div>
 {% endblock %}

@@ -1,7 +1,17 @@
 {% extends 'index.html' %}
 
+{%  block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">Деревья решений</li>
+            <li class="breadcrumb-item"><a href="{% url "r_tree_app/tree_list" %}">Список деревьев</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Добавление дерева решений</li>
+        </ol>
+    </nav>
+{%  endblock %}
+
+
 {% block content %}
-    <h2>Добавление нового дерева решений</h2>
     <form method="post" enctype="multipart/form-data">
     <div class="container">
     <div class="row">

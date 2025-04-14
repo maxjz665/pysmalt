@@ -10,7 +10,9 @@
 {% endblock %}
 
 {% block content %}
-    <a class="btn btn-success mb-2" href="{% url 'r_ngrams_app/dataset_add' %}">Добавить датасет</a>
+    {% if user.is_authenticated and user.is_researcher %}
+        <a class="btn btn-success mb-2" href="{% url 'r_ngrams_app/dataset_add' %}">Добавить датасет</a>
+    {% endif %}
 
     <table class='table table-bordered border-primary'>
         <thead><tr><th>№</th><th>Название</th><th>Список текстов</th><th>Размер N-граммы</th><th>Макс. число N-грамм</th><th>Мин. встречаемость</th>
