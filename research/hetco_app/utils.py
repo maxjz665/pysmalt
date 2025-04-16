@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import xlsxwriter
@@ -17,50 +17,34 @@ class WordData:
     initial_form: str
     start_sentence: bool = False
 
-class HetcoUtils:
-    def __init__(self, generated_text: List[GeneratedWord], other_text_list: TblTextListDescription, author: str):
+    @staticmethod 
+    def from_generated_word(generated_word: GeneratedWord) -> 'WordData':
         """
-        Args:
-            generated_text: Сгенерированный текст
-            other_text_list: Список текстов для сравнения
-            author: Автор текста
-        """
-        self.generated_text = generated_text
+        Преобразует GeneratedWord в WordData
         
-        other_text_ids = list(other_text_list.item_ids)
-        self.trainText = other_text_ids # ID 0 для сгенерированного текста
-        self.allText = [0] + other_text_ids
-        self.xlsxNAME = f'generated-{author}.xlsx'
-        self.AUTHOR = author
-        self.COUNT = len(self.allText)
-        self.LENGTH = 500          # Длина отрывка в словах
-        self.SENT = 30             # Количество предложений в отрывке
+        Args:
+            generated_word: Слово из сгенерированного текста
 
-        self.parts = ["существительное", "прилагательное", "числительное", "местоимение", "глагол",
-                      "причастие", "деепричастие", "наречие", "кат.состояния", "частица",
-                      "предлог", "союз", "модальное", "междометие", "звукоподражательное",
-                      "иностранное", "цитата", "вводное", "старославянизм", "фразеологизм",
-                      "неязыковой", "сокращённое", "многочленное", "заголовок"]
-        self.partLen = len(self.parts)
+        Returns:
+            WordData: Преобразованное слово
+        """
+        return WordData(
+            word=generated_word.word.word,
+            initial_form=generated_word.word.word.lower(),
+            start_sentence=generated_word.start_sentence
+        )
 
-        self.text_names = ["Generated Text"]
-        for item in other_text_list.items.all():
-            self.text_names.append(f"{item.text.title} - {author}")
+    @staticmethod
+    def from_tbl_words(text_id: int) -> List['WordData']:
+        """
+        Создает список WordData из TblWord
+        
+        Args:
+            text_id: ID текста
 
-    def get_text_words(self, text_id: int) -> list[WordData]:
-        """Получение слов текста с их начальными формами."""
-        # Для сгенерированного текста возвращаем его слова
-        if text_id == 0:
-            words = []
-            for word in self.generated_text:
-                words.append(WordData(
-                    word=word.word.word,
-                    initial_form=word.word.word.lower(),
-                    start_sentence=word.start_sentence
-                ))
-            return words
-            
-        # Для остальных текстов используем БД
+        Returns:
+            List[WordData]: Список слов
+        """
         words = []
         text_words = (TblWord.objects.filter(text_id=text_id)
                       .select_related('dictword')
@@ -85,6 +69,49 @@ class HetcoUtils:
             prev_word = word
 
         return words
+
+class HetcoUtils:
+    def __init__(self, testing_text: List[WordData], other_text_list: TblTextListDescription, author: str, testing_text_name: Optional[str] = None):
+        """
+        Args:
+            testing_text: Тестирцемый текст
+            other_text_list: Список текстов для сравнения
+            author: Автор текста
+        """
+        self.testing_text = testing_text
+        
+        other_text_ids = list(other_text_list.item_ids)
+        self.trainText = other_text_ids # ID 0 для сгенерированного текста
+        self.allText = [0] + other_text_ids
+        self.xlsxNAME = f'generated-{author}.xlsx'
+        self.AUTHOR = author
+        self.COUNT = len(self.allText)
+        self.LENGTH = 500          # Длина отрывка в словах
+        self.SENT = 30             # Количество предложений в отрывке
+
+        self.parts = ["существительное", "прилагательное", "числительное", "местоимение", "глагол",
+                      "причастие", "деепричастие", "наречие", "кат.состояния", "частица",
+                      "предлог", "союз", "модальное", "междометие", "звукоподражательное",
+                      "иностранное", "цитата", "вводное", "старославянизм", "фразеологизм",
+                      "неязыковой", "сокращённое", "многочленное", "заголовок"]
+        self.partLen = len(self.parts)
+
+        if testing_text_name:
+            self.text_names = [testing_text_name]
+        else:
+            self.text_names = ["Generated Text"]
+
+        for item in other_text_list.items.all():
+            self.text_names.append(f"{item.text.title} - {author}")
+
+    def get_text_words(self, text_id: int) -> list[WordData]:
+        """Получение слов текста с их начальными формами."""
+        # Для сгенерированного текста возвращаем его слова
+        if text_id == 0:
+            return self.testing_text
+            
+        # Для остальных текстов используем БД
+        return WordData.from_tbl_words(text_id)
 
     def process_point_9(self):
         """Пункт 9: Анализ длин слов в отрывках."""
