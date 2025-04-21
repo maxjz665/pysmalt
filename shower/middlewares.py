@@ -7,7 +7,7 @@ from operator import add
 from time import time
 
 from django.db import connection
-
+from django.http import FileResponse  # Добавляем импорт FileResponse
 
 def stats_middleware(get_response):
     """
@@ -31,11 +31,14 @@ def stats_middleware(get_response):
         response = get_response(request)
         total_time = time() - start
 
+        # Пропускаем обработку для FileResponse
+        if isinstance(response, FileResponse):
+            return response
+
         # compute the db time for the queries just run
         db_queries = len(connection.queries) - n
         if db_queries:
-            db_time = reduce(add, [float(q['time'])
-                                   for q in connection.queries[n:]])
+            db_time = reduce(add, [float(q['time']) for q in connection.queries[n:]])
         else:
             db_time = 0.0
 
@@ -52,24 +55,29 @@ def stats_middleware(get_response):
         # replace the comment if found
         if response:
             try:
-                # detects TemplateResponse which are not yet rendered
-                if response.is_rendered:
+                # Проверяем, отрендерен ли ответ (для TemplateResponse)
+                if hasattr(response, 'is_rendered') and response.is_rendered:
                     rendered_content = response.content
                 else:
-                    rendered_content = response.rendered_content
-            except AttributeError:  # django < 1.5
+                    rendered_content = response.rendered_content if hasattr(response, 'rendered_content') else response.content
+            except AttributeError:  # Совместимость с Django < 1.5
                 rendered_content = response.content
+
             if rendered_content:
-                s = rendered_content.decode('utf-8')
-                regexp = re.compile(
-                    r'(?P<cmt><!--\s*STATS:(?P<fmt>.*?)ENDSTATS\s*-->)'
-                )
-                match = regexp.search(s)
-                if match:
-                    s = (s[:match.start('cmt')] +
-                         match.group('fmt') % stats +
-                         s[match.end('cmt'):])
-                    response.content = s
+                try:
+                    s = rendered_content.decode('utf-8')
+                    regexp = re.compile(
+                        r'(?P<cmt><!--\s*STATS:(?P<fmt>.*?)ENDSTATS\s*-->)'
+                    )
+                    match = regexp.search(s)
+                    if match:
+                        s = (s[:match.start('cmt')] +
+                             match.group('fmt') % stats +
+                             s[match.end('cmt'):])
+                        response.content = s.encode('utf-8')  # Перекодируем обратно в байты
+                except UnicodeDecodeError:
+                    # Если декодирование не удалось, просто возвращаем ответ без изменений
+                    pass
 
         return response
 

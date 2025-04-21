@@ -1,0 +1,42 @@
+[
+    {
+        "model": "text_app.TblTextListItems",
+        "pk": 1,
+        "fields": {
+            "list": 1,
+            "text": 329
+        }
+    },
+    {
+        "model": "text_app.TblTextListItems",
+        "pk": 2,
+        "fields": {
+            "list": 1,
+            "text": 330
+        }
+    },
+    {
+        "model": "text_app.TblTextListItems",
+        "pk": 3,
+        "fields": {
+            "list": 2,
+            "text": 331
+        }
+    },
+    {
+        "model": "text_app.TblTextListItems",
+        "pk": 4,
+        "fields": {
+            "list": 2,
+            "text": 332
+        }
+    },
+    {
+        "model": "text_app.TblTextListItems",
+        "pk": 5,
+        "fields": {
+            "list": 2,
+            "text": 333
+        }
+    }
+]

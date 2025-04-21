@@ -1,0 +1,115 @@
+{% extends "index.html" %}
+
+{% block content %}
+<h2>Анализ метрик Хетсо</h2>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Источник текста:</label>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="source_type" id="source_code" value="code" checked>
+            <label class="form-check-label" for="source_code">
+                Код генерации
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="source_type" id="source_text" value="text">
+            <label class="form-check-label" for="source_text">
+                Текст из списка
+            </label>
+        </div>
+    </div>
+
+    <div class="form-group" id="code_input_group">
+        <label for="code_input">Код генерации текста:</label>
+        <textarea class="form-control" 
+                  id="code_input" 
+                  name="code_input" 
+                  rows="4" 
+                  placeholder="Введите код в формате: A10S2E10B22S5E13"></textarea>
+        <small class="form-text text-muted">
+            Код должен быть в формате: A{id1}S{start1}E{end1}B{id2}S{start2}E{end2}
+        </small>
+    </div>
+
+    <div class="form-group" id="text_input_group" style="display: none;">
+        <label for="text_list">Список текстов:</label>
+        <select class="form-control selectpicker" data-live-search="true"
+                id="text_list" name="text_list">
+            <option value="">Выберите список</option>
+            {% for list in text_lists %}
+                <option value="{{ list.id }}">{{ list.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="text_id" class="mt-3">Текст для анализа:</label>
+        <select class="form-control selectpicker" data-live-search="true"
+                id="text_id" name="text_id">
+            <option value="">Сначала выберите список</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="other_list">Список текстов для сравнения:</label>
+        <select class="form-control selectpicker" data-live-search="true"
+                id="other_list" name="other_list" required>
+            <option value="">Выберите список</option>
+            {% for list in text_lists %}
+                <option value="{{ list.id }}">{{ list.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Выполнить анализ</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceCode = document.getElementById('source_code');
+    const sourceText = document.getElementById('source_text');
+    const codeInputGroup = document.getElementById('code_input_group');
+    const textInputGroup = document.getElementById('text_input_group');
+    const codeInput = document.getElementById('code_input');
+    const textList = document.getElementById('text_list');
+    const textId = document.getElementById('text_id');
+
+    function toggleInputs() {
+        if (sourceCode.checked) {
+            codeInputGroup.style.display = 'block';
+            textInputGroup.style.display = 'none';
+            codeInput.setAttribute('required', '');
+            textId.removeAttribute('required');
+            textList.removeAttribute('required');
+        } else {
+            codeInputGroup.style.display = 'none';
+            textInputGroup.style.display = 'block';
+            codeInput.removeAttribute('required');
+            textId.setAttribute('required', '');
+            textList.setAttribute('required', '');
+        }
+    }
+
+    sourceCode.addEventListener('change', toggleInputs);
+    sourceText.addEventListener('change', toggleInputs);
+
+    textList.addEventListener('change', function() {
+        if (this.value) {
+            fetch(`{% url "hetco_texts" %}?list_id=${this.value}`)
+                .then(response => response.json())
+                .then(data => {
+                    textId.innerHTML = '<option value="">Выберите текст</option>' + 
+                        data.texts.map(text => 
+                            `<option value="${text.id}">${text.title}</option>`
+                        ).join('');
+                    $(textId).selectpicker('refresh');
+                });
+        } else {
+            textId.innerHTML = '<option value="">Сначала выберите список</option>';
+            $(textId).selectpicker('refresh');
+        }
+    });
+});
+</script>
+{% endblock %}
