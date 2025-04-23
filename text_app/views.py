@@ -6,11 +6,15 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
+from django.utils.html import escape
 
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
+from text_app.models.tbl_author_types import TblAuthorTypes
+from text_app.models.tbl_author import TblAuthor
+from text_app.models.tbl_magazine import TblMagazine
 from text_app.models.tbl_word import TblWord
 from user_app.models import TblUser
 
@@ -47,7 +51,8 @@ def list_papers(request: HttpRequest):
     text_lists = text_lists.order_by('name').all()
 
     return render(request, "text_app/list_papers.html", context={'texts': texts, "view": view,
-                                                                 "link": "text_app/papers_data", 'text_lists': text_lists})
+                                                                 "link": "text_app/papers_data",
+                                                                 'text_lists': text_lists})
 
 
 def list_attrs(request: HttpRequest):
@@ -272,3 +277,20 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
 
     item.delete()
     return redirect("text_app/text_lists")
+
+
+def import_form(request: HttpRequest):
+    """
+    Форма загрузки текстов
+    """
+    if not request.user.is_authenticated:
+        return render(request, "not_found.html",
+                      context={"message": "Не авторизованный доступ",
+                               "return_url": "text_app/papers_list",
+                               "return_name": "К спискам текстов"})
+    author_types = TblAuthorTypes.objects.all()
+    authors = TblAuthor.objects.all()
+    magazines = TblMagazine.objects.all()
+
+    return render(request, "text_app/import_form.html",
+                  context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines})
