@@ -2,9 +2,12 @@ import time
 
 from django.conf import settings
 from django.contrib.auth import login, logout
+from django.contrib.auth.models import User, Group
 from django.db import OperationalError
 from django.http import HttpRequest
 from django.shortcuts import render, redirect
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 
 from user_app.forms.user_creation_form import UserCreationForm
 from user_app.forms.user_login_form import UserLoginForm
@@ -20,6 +23,23 @@ def log_in(request: HttpRequest):
     next_url = request.GET.get("next", "")
     form_login_user = UserLoginForm(request.POST)
     form_create_user = UserCreationForm(request.POST)
+    if(len(Group.objects.all()) != 0):
+        if(len(Group.objects.filter(name="USERS")) == 0):
+            Group.objects.create(name='USERS')
+        if (not Group.objects.filter(name="EDITORS")):
+            Group.objects.create(name='EDITORS')
+        if (not Group.objects.filter(name="MANAGERS")):
+            Group.objects.create(name='MANAGERS')
+        if (not Group.objects.filter(name="ADMINS")):
+            Group.objects.create(name='ADMINS')
+        if (not Group.objects.filter(name="RESEARCHERS")):
+            Group.objects.create(name='RESEARCHERS')
+    else:
+        Group.objects.create(name='USERS')
+        Group.objects.create(name='EDITORS')
+        Group.objects.create(name='MANAGERS')
+        Group.objects.create(name='ADMINS')
+        Group.objects.create(name='RESEARCHERS')
 
     if request.method == 'POST':
         # обработка данных формы

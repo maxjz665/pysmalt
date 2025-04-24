@@ -4,11 +4,13 @@
 """
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.contrib.auth.models import Group
 
 from text_app.models.tbl_text import TblText
 from django import template
 
 register = template.Library()
+
 
 
 @register.simple_tag(name='bib_item')

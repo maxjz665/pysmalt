@@ -14,11 +14,3 @@ class TblAuthorTypes(models.Model):
 
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
-
-    @property
-    def items(self):
-        """
-        Маппинг списка текстов с текстами
-        :return:
-        """
-        return TblAuthorTypes.objects

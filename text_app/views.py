@@ -283,11 +283,8 @@ def import_form(request: HttpRequest):
     """
     Форма загрузки текстов
     """
-    if not request.user.is_authenticated:
-        return render(request, "not_found.html",
-                      context={"message": "Не авторизованный доступ",
-                               "return_url": "text_app/papers_list",
-                               "return_name": "К спискам текстов"})
+    if not request.user.is_authenticated or not request.user.has_manager:
+        return render(request, "not_found.html", context={"message": "Недостаточно прав"})
     author_types = TblAuthorTypes.objects.all()
     authors = TblAuthor.objects.all()
     magazines = TblMagazine.objects.all()
