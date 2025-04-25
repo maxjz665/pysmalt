@@ -303,6 +303,7 @@ def check_group(request, list_id: int) -> HttpResponse:
                                                                               'block_size': block_size})
     group_ids = TblTextListDescription.get_item(request.user, group_id).items
     group = []
+    text_id = int(text_id)
     for item in group_ids:
         if item.text_id != text_id:
             group.append({"text_id": item.text_id, "content": item.get_content()})
