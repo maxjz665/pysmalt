@@ -59,9 +59,9 @@
     {% if result %}
         <h2>Результаты для текста в целом</h2>
         <ul>
-            <li>Минимальное манхеттенское расстояние: {{ result.min|floatformat:-5 }} (<a href="{% url "text_app/papers_data" result.min_id %}">{{ result.min_id }}</a>)</li>
+            <li>Минимальное манхеттенское расстояние: {{ result.min|floatformat:-5 }} (<a href="{% url 'text_app/papers_data' result.min_id %}">{{ result.min_id }}</a>)</li>
         <li>Среднее манхеттенское расстояние: {{ result.avg|floatformat:-5 }}</li>
-            <li>Максимальное манхеттенское расстояние: {{ result.max|floatformat:-5 }} (<a href="{% url "text_app/papers_data" result.max_id %}">{{ result.max_id }}</a>)</li>
+            <li>Максимальное манхеттенское расстояние: {{ result.max|floatformat:-5 }} (<a href="{% url 'text_app/papers_data' result.max_id %}">{{ result.max_id }}</a>)</li>
         </ul>
             <h3>N-граммы всего текста</h3>
         Формат: "позиция в тексте: значение -> число вхождений (нормализованное значение словаря на 1000 n-грамм)"
@@ -79,9 +79,9 @@
             <tbody>
             {%  for item in block_result.result %}
                 <tr><td>{{ item.start }}</td><td>{{ item.end }}</td><td>{{ item.min|floatformat:-5 }} {% if item.min != 0 %}
-                    (<a href="{% url "text_app/papers_data" item.min_id %}">{{ item.min_id }}</a>: {{ item.min_part }}){% endif %}</td>
+                    (<a href="{% url 'text_app/papers_data' item.min_id %}">{{ item.min_id }}</a>: {{ item.min_part }}){% endif %}</td>
                     <td>{{ item.avg|floatformat:-5 }}</td>
-                    <td>{{ item.max|floatformat:-5 }} (<a href="{% url "text_app/papers_data" item.max_id %}">{{ item.max_id }}</a>: {{ item.max_part }})</td></tr>
+                    <td>{{ item.max|floatformat:-5 }} (<a href="{% url 'text_app/papers_data' item.max_id %}">{{ item.max_id }}</a>: {{ item.max_part }})</td></tr>
             {% endfor %}
             </tbody>
         </table>
