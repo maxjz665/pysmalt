@@ -223,12 +223,12 @@ class TblBigramDataset(BaseModel):
                     if min_block is None or distance < min_block:
                         min_block = distance
                         min_id = item["text_id"]
-                        min_part = f"{item_block["start"]}-{item_block["end"]}"
+                        min_part = f"{item_block['start']}-{item_block['end']}"
                     sum_block += distance
                     if distance > max_block:
                         max_block = distance
                         max_id = item["text_id"]
-                        max_part = f"{item_block["start"]}-{item_block["end"]}"
+                        max_part = f"{item_block['start']}-{item_block['end']}"
             ret_block_ngrams.append({"start": target_block["start"], "end": target_block["end"], "min": min_block,
                                      "min_id": min_id, "min_part": min_part, "avg": sum_block / block_count, "max": max_block, "max_id": max_id,
                                      "max_part": max_part})
