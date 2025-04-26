@@ -1,6 +1,8 @@
 """
 Модель слова в тексте
 """
+import re
+
 from django.db import models
 
 from text_app.models.tbl_dict_word import TblDictWord, TblDictWord2
@@ -41,3 +43,11 @@ class TblWord(models.Model):
         if self.chapter_index != next_word.chapter_index or self.paragraph_index != next_word.paragraph_index:
             return True
         return False
+
+    @staticmethod
+    def fix_word(word: str) -> str:
+        return re.sub(r"[Іі]", "i",
+                      re.sub(r"[áà]", "а",
+                             re.sub(r"[óò]", "о",
+                                    re.sub(r"[ёéѐè]", "е",
+                                           re.sub(r"[́̀]", "", word)))))

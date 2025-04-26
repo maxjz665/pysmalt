@@ -23,23 +23,6 @@ def log_in(request: HttpRequest):
     next_url = request.GET.get("next", "")
     form_login_user = UserLoginForm(request.POST)
     form_create_user = UserCreationForm(request.POST)
-    if(len(Group.objects.all()) != 0):
-        if(len(Group.objects.filter(name="USERS")) == 0):
-            Group.objects.create(name='USERS')
-        if (not Group.objects.filter(name="EDITORS")):
-            Group.objects.create(name='EDITORS')
-        if (not Group.objects.filter(name="MANAGERS")):
-            Group.objects.create(name='MANAGERS')
-        if (not Group.objects.filter(name="ADMINS")):
-            Group.objects.create(name='ADMINS')
-        if (not Group.objects.filter(name="RESEARCHERS")):
-            Group.objects.create(name='RESEARCHERS')
-    else:
-        Group.objects.create(name='USERS')
-        Group.objects.create(name='EDITORS')
-        Group.objects.create(name='MANAGERS')
-        Group.objects.create(name='ADMINS')
-        Group.objects.create(name='RESEARCHERS')
 
     if request.method == 'POST':
         # обработка данных формы

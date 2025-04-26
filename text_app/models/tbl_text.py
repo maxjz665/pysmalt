@@ -1,7 +1,9 @@
 """
 Модель текста
 """
+import re
 from operator import and_
+
 from unicodedata import category
 
 from django.contrib.auth.models import AnonymousUser
@@ -10,7 +12,6 @@ from django.db import models
 from text_app.models.tbl_author import TblAuthor
 from text_app.models.tbl_magazine import TblMagazine
 from user_app.models import TblUser
-
 
 class TblText(models.Model):
     """

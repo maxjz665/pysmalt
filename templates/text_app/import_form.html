@@ -166,10 +166,50 @@
         <label for="grmFile">Файл с текстом (*.txt)</label>
         <input type="file" class="form-control-file" id="grmFile" accept=".txt" name="grmFile">
     </div>
-
+    <div id="fileContentPreview" class="mt-3 card card-body" style="display: none;">
+        <h5>Предварительный анализ текста</h5>
+        <div id="fileContentText"></div>
+    </div>
+    {% csrf_token %}
     <button type="submit" class="btn btn-primary mb-2" name="submit" value="run_import">Импорт текста</button>
     <button type="submit" class="btn btn-secondary mb-2" name="submit" value="run_check">Анализ текста</button>
     <a href="../help.php?section=import-text" class="btn btn-info mb-2">Справка</a>
 </form>
 </div>
+<script>
+document.getElementById('grmFile').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.type !== "text/plain") {
+        alert("Пожалуйста, загрузите текстовый файл (.txt)");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+
+        // Отправка содержимого на сервер
+        fetch("{% url 'analyze_text' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ text: content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('fileContentText').innerHTML = data.result;
+            document.getElementById('fileContentPreview').style.display = 'block';
+        })
+        .catch(error => {
+            console.error("Ошибка:", error);
+        });
+    };
+
+    reader.readAsText(file, 'UTF-8');
+});
+</script>
 {% endblock content %}

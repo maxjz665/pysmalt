@@ -1,12 +1,16 @@
 """
 Контроллер обработки запросов на работу с текстами
 """
+import json
+import re
+import time
+from datetime import datetime, timedelta
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
-from django.utils.html import escape
 
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
@@ -15,7 +19,7 @@ from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_author_types import TblAuthorTypes
 from text_app.models.tbl_author import TblAuthor
 from text_app.models.tbl_magazine import TblMagazine
-from text_app.models.tbl_word import TblWord
+from text_app.models.parser import Parser
 from user_app.models import TblUser
 
 
@@ -289,5 +293,93 @@ def import_form(request: HttpRequest):
     authors = TblAuthor.objects.all()
     magazines = TblMagazine.objects.all()
 
-    return render(request, "text_app/import_form.html",
+    if request.method == 'POST':
+        print("форма отправлена")
+    else:
+        return render(request, "text_app/import_form.html",
                   context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines})
+
+
+def analyze_text(request):
+    if request.method == "POST":
+        start_time = time.time()
+        res = ""
+        data = json.loads(request.body)
+        text = data.get("text", "")
+
+        sections = re.split(r"\n|\r\n", text)
+        sections = list(filter(None, sections))
+        lines = Parser.parseTextFile(sections)
+
+        res += f"<p>Found {len(sections)} lines<br>"
+
+        output = ""
+
+        section = 0; chapter_index = 1; paragraph_index = 1; sentence_index = 1; word_index = 1;
+        for item in lines:
+            try:
+                ret = Parser.encode_in_old_type(item)
+            except Exception as e:
+                print("\n", str(e), "\n", e.__traceback__)
+                #if is_import_procedure:
+                #    parser.rollback_transaction()
+                break
+            if isinstance(item, (list, tuple)) and len(item) > 0 and isinstance(item[0], str) and len(item[0]) > 0:
+                check_str = ret["ENCODED_WORD"]
+
+                if ret["WORD"] == check_str:
+                    if "ID" in ret:
+                        printed_word = f"{ret['WORD']}({ret['ID']},P={ret['PARAM_01']})"
+                        if ret['PARAM_01'] < 0:
+                            output += f"<span style='color:red'>{printed_word}</span>"
+                        else:
+                            output += printed_word
+                    else:
+                        output += f"<span style='color:blueviolet'>{ret['WORD']}</span>"
+                else:
+                    output += f"<span style='color:red'>{ret['WORD']}({check_str})</span>"
+
+                output += f"[{chapter_index}:{paragraph_index}:{sentence_index}:{word_index}] "
+
+                #if is_import_procedure:
+                #    word_id = parser.save_word_in_db(ret, text_id, chapter_index, paragraph_index, sentence_index, word_index)
+                #    output += f"{{{word_id}}} "
+
+                section = 0
+                word_index += 1
+
+            else:
+                section += 1
+                if section == 1:
+                    output += "| "
+                    word_index = 1
+                    sentence_index += 1
+                elif section == 2:
+                    output += "<br/>"
+                    word_index = 1
+                    sentence_index = 1
+                    paragraph_index += 1
+                else:
+                    if word_index != 1 or sentence_index != 1 or paragraph_index != 1:
+                        output += "</p><p>"
+                        word_index = 1
+                        sentence_index = 1
+                        paragraph_index = 1
+                        chapter_index += 1
+
+        res += output + "</p>"
+
+        # Разница во времени
+        diff = time.time() - start_time  # в секундах, с дробной частью
+        # Вычисляем минуты и секунды
+        diff_minutes = int(diff // 60)
+        diff_seconds = int(diff % 60)
+        date = f"{diff_minutes:02}:{diff_seconds:02}"
+        # Микросекунды
+        fdiff = f"{int((diff - int(diff)) * 10_000_000):07d}"
+        # Подсчёт total
+        total = Parser.miss + Parser.hit
+        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Miss: {Parser.miss}, Hit: {Parser.hit}, Total: {total} Not found: {Parser.notFound}</p>"
+
+        return JsonResponse({"result": res})
+    return JsonResponse({"error": "Invalid request"}, status=400)
