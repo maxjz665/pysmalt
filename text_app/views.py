@@ -282,6 +282,22 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
     item.delete()
     return redirect("text_app/text_lists")
 
+#Получает список частей речи и их id
+def get_attrs():
+    menu_items = TblMenuItems.objects.all()
+    menu_params = TblMenuParams.objects.all()
+    attrs = []
+    i = 0
+    for item in menu_params[0]._meta.fields[3:26]:
+        item_id = int(getattr(menu_params[0], item.name))
+        attrs.append({
+            "id": i,
+            "name": menu_items[item_id].item_caption,
+        })
+        print(menu_items[item_id].item_caption)
+        i += 1
+    return attrs
+
 
 def import_form(request: HttpRequest):
     """
@@ -292,12 +308,14 @@ def import_form(request: HttpRequest):
     author_types = TblAuthorTypes.objects.all()
     authors = TblAuthor.objects.all()
     magazines = TblMagazine.objects.all()
+    attrs = get_attrs()
+
 
     if request.method == 'POST':
         print("форма отправлена")
     else:
         return render(request, "text_app/import_form.html",
-                  context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines})
+                  context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines, "attrs": attrs})
 
 
 def analyze_text(request):
@@ -335,7 +353,7 @@ def analyze_text(request):
                         else:
                             output += printed_word
                     else:
-                        output += f"<span style='color:blueviolet'>{ret['WORD']}</span>"
+                        output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:blueviolet'>{ret['WORD']}</a>"
                 else:
                     output += f"<span style='color:red'>{ret['WORD']}({check_str})</span>"
 

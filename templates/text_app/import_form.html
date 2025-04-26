@@ -169,47 +169,99 @@
     <div id="fileContentPreview" class="mt-3 card card-body" style="display: none;">
         <h5>Предварительный анализ текста</h5>
         <div id="fileContentText"></div>
+        <div id="wordSettingsPanel" class="card card-body mt-3" style="display: none;">
+            <h5>Настройка слова</h5>
+            <p><strong>Слово:</strong> <span id="selectedWord">-</span></p>
+            <div class="form-group">
+                <label for="wordPartOfSpeech">Атрибут</label>
+                <select id="wordPartOfSpeech" class="form-control">
+                    {% include "text_app/components/attrs_as_option.html" with attrs=attrs %}
+                </select>
+            </div>
+            <button id="saveWordSettings" class="btn btn-success">Сохранить</button>
+        </div>
     </div>
     {% csrf_token %}
     <button type="submit" class="btn btn-primary mb-2" name="submit" value="run_import">Импорт текста</button>
-    <button type="submit" class="btn btn-secondary mb-2" name="submit" value="run_check">Анализ текста</button>
     <a href="../help.php?section=import-text" class="btn btn-info mb-2">Справка</a>
 </form>
 </div>
-<script>
-document.getElementById('grmFile').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const wordSettingsPanel = document.getElementById('wordSettingsPanel');
+        const selectedWordSpan = document.getElementById('selectedWord');
+        const wordPartOfSpeechSelect = document.getElementById('wordPartOfSpeech');
+        const saveButton = document.getElementById('saveWordSettings');
 
-    if (file.type !== "text/plain") {
-        alert("Пожалуйста, загрузите текстовый файл (.txt)");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const content = e.target.result;
-
-        // Отправка содержимого на сервер
-        fetch("{% url 'analyze_text' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({ text: content })
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('fileContentText').innerHTML = data.result;
-            document.getElementById('fileContentPreview').style.display = 'block';
-        })
-        .catch(error => {
-            console.error("Ошибка:", error);
+        document.getElementById('fileContentText').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.scrollBy({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+            if (e.target.classList.contains('not-found')) {
+                const word = e.target.dataset.word;
+                selectedWordSpan.textContent = word;
+                wordSettingsPanel.style.display = 'block';
+                // При открытии сбрасываем выбор части речи
+                wordPartOfSpeechSelect.value = '';
+                saveButton.dataset.word = word;
+            }
         });
-    };
 
-    reader.readAsText(file, 'UTF-8');
-});
-</script>
+        saveButton.addEventListener('click', function() {
+            const word = saveButton.dataset.word;
+            const partOfSpeech = wordPartOfSpeechSelect.value;
+            if (!partOfSpeech) {
+                alert('Пожалуйста, выберите часть речи.');
+                return;
+            }
+
+            console.log(`Сохраняем: слово "${word}", часть речи "${partOfSpeech}"`);
+
+
+        });
+    });
+
+    </script>
+    <script>
+    document.getElementById('grmFile').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.type !== "text/plain") {
+            alert("Пожалуйста, загрузите текстовый файл (.txt)");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+
+            // Отправка содержимого на сервер
+            fetch("{% url 'analyze_text' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ text: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('fileContentText').innerHTML = data.result;
+                document.getElementById('fileContentPreview').style.display = 'block';
+                window.scrollBy({
+                    top: document.body.scrollHeight,
+                    behavior: 'smooth'
+                });
+            })
+            .catch(error => {
+                console.error("Ошибка:", error);
+            });
+        };
+
+        reader.readAsText(file, 'UTF-8');
+    });
+    </script>
 {% endblock content %}
