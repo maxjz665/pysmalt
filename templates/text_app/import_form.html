@@ -94,7 +94,7 @@
 
     <div  class="form-group">
         <label for="inputName">Полное название (современный вариант надписи)</label>
-        <input type="text" class="form-control" name="inputName" id="inputName" placeholder="Введите название произведения в современной орфографии" value="">
+        <input type="text" class="form-control" name="inputName" id="inputName" placeholder="Введите название произведения в современной орфографии" value="" required>
     </div>
 
     <div  class="form-group">
@@ -117,7 +117,7 @@
 
         <div class="form-group col-md-3">
             <label for="inputJournalNo">Номер издания</label>
-            <input type="text" class="form-control" id="inputJournalNo" placeholder="Введите номер издания или оставьте пустым" name="inputJournalNo" value="">
+            <input type="text" class="form-control" id="inputJournalNo" placeholder="Введите номер издания или оставьте пустым" name="inputJournalNo" value="" required>
         </div>
     </div>
 
@@ -172,6 +172,9 @@
         <div id="wordSettingsPanel" class="card card-body mt-3" style="display: none;">
             <h5>Настройка слова</h5>
             <p><strong>Слово:</strong> <span id="selectedWord">-</span></p>
+            <p id="aiSuggestion" style="color: steelblue; font-style: italic; display: none;">
+                Часть речи определена ИИ: <span id="aiPartOfSpeech"></span>
+            </p>
             <div class="form-group">
                 <label for="wordPartOfSpeech">Атрибут</label>
                 <select id="wordPartOfSpeech" class="form-control">
@@ -192,30 +195,68 @@
         const selectedWordSpan = document.getElementById('selectedWord');
         const wordPartOfSpeechSelect = document.getElementById('wordPartOfSpeech');
         const saveButton = document.getElementById('saveWordSettings');
+        let selectedWord = null
+        let dataWord = null
 
         document.getElementById('fileContentText').addEventListener('click', function(e) {
             e.preventDefault();
+            aiPartOfSpeech.textContent = ""
+            aiSuggestion.style.display = 'none';
             window.scrollBy({
                 top: document.body.scrollHeight,
                 behavior: 'smooth'
             });
             if (e.target.classList.contains('not-found')) {
-                const word = e.target.dataset.word;
-                selectedWordSpan.textContent = word;
-                wordSettingsPanel.style.display = 'block';
-                // При открытии сбрасываем выбор части речи
-                wordPartOfSpeechSelect.value = '';
-                saveButton.dataset.word = word;
+                fetch("{% url 'analyze_word' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({ word: e.target.dataset.word })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Ответ от сервера:", data);
+
+                    const select = document.getElementById('wordPartOfSpeech');
+                    const aiSuggestion = document.getElementById('aiSuggestion');
+                    const aiPartOfSpeech = document.getElementById('aiPartOfSpeech');
+
+                    // Вставляем часть речи от нейросети
+                    aiPartOfSpeech.textContent = data.part_of_speech;
+                    aiSuggestion.style.display = 'block';
+
+                    select.value = data.id;
+
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
             }
+            selectedWord = e.target
+            const word = e.target.dataset.word;
+            dataWord = selectedWord.parentNode.querySelector(`span[data-word="${word}"]`);
+            selectedWordSpan.textContent = word;
+            wordSettingsPanel.style.display = 'block';
+            // При открытии сбрасываем выбор части речи
+            if (dataWord.dataset.hasOwnProperty("pos"))
+                wordPartOfSpeechSelect.value = dataWord.dataset.pos;
+            saveButton.dataset.word = word;
         });
 
-        saveButton.addEventListener('click', function() {
-            const word = saveButton.dataset.word;
+        saveButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const word = selectedWordSpan.textContent;
             const partOfSpeech = wordPartOfSpeechSelect.value;
             if (!partOfSpeech) {
                 alert('Пожалуйста, выберите часть речи.');
-                return;
             }
+            selectedWord.dataset.pos = partOfSpeech;
+            dataWord = selectedWord.parentNode.querySelector(`span[data-word="${word}"]`);
+            dataWord.dataset.pos = partOfSpeech
+            dataWord.innerText = `(_,P=${partOfSpeech})`;
+            selectedWord.style.color = 'black';
 
             console.log(`Сохраняем: слово "${word}", часть речи "${partOfSpeech}"`);
 
@@ -249,6 +290,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                document.getElementById('fileContentText').innerHTML = ""
                 document.getElementById('fileContentText').innerHTML = data.result;
                 document.getElementById('fileContentPreview').style.display = 'block';
                 window.scrollBy({

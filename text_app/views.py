@@ -6,6 +6,7 @@ import re
 import time
 from datetime import datetime, timedelta
 
+import stanza
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
@@ -21,7 +22,6 @@ from text_app.models.tbl_author import TblAuthor
 from text_app.models.tbl_magazine import TblMagazine
 from text_app.models.parser import Parser
 from user_app.models import TblUser
-
 
 def index(request: HttpRequest):
     """
@@ -294,7 +294,7 @@ def get_attrs():
             "id": i,
             "name": menu_items[item_id].item_caption,
         })
-        print(menu_items[item_id].item_caption)
+        #print(menu_items[item_id].item_caption)
         i += 1
     return attrs
 
@@ -316,6 +316,7 @@ def import_form(request: HttpRequest):
     else:
         return render(request, "text_app/import_form.html",
                   context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines, "attrs": attrs})
+
 
 
 def analyze_text(request):
@@ -351,9 +352,11 @@ def analyze_text(request):
                         if ret['PARAM_01'] < 0:
                             output += f"<span style='color:red'>{printed_word}</span>"
                         else:
-                            output += printed_word
+                            output += f"<a href='#' class='found' data-word='{ret['WORD']}' style='color:black'>{ret['WORD']}</a>" \
+                                      f"<span data-word='{ret['WORD']}' data-id='{ret['ID']}' data-pos='{ret['PARAM_01']}'>({ret['ID']},P={ret['PARAM_01']})</span>"
                     else:
-                        output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:blueviolet'>{ret['WORD']}</a>"
+                        output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:blueviolet'>{ret['WORD']}</a>" \
+                                  f"<span data-word='{ret['WORD']}' data-id='' data-pos=''>(Х)</span>"
                 else:
                     output += f"<span style='color:red'>{ret['WORD']}({check_str})</span>"
 
@@ -400,4 +403,49 @@ def analyze_text(request):
         res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Miss: {Parser.miss}, Hit: {Parser.hit}, Total: {total} Not found: {Parser.notFound}</p>"
 
         return JsonResponse({"result": res})
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+nlp = stanza.Pipeline(lang='ru', processors='tokenize,pos')
+
+stanza_pos_mapping = {
+    'ADJ': 1,
+    'ADP': 10,
+    'ADV': 7,
+    'AUX': 4,
+    'CCONJ': 11,
+    'INTJ': 13,
+    'NOUN': 0,
+    'NUM': 9,
+    'PART': 9,
+    'PRON': 3,
+    'PUNCT': 20,
+    'SCONJ': 11,
+    'SYM': 20,
+    'VERB': 4,
+    'X': 20  # неизвестная категория
+    ### деепричастия и т д добавить
+}
+
+def analyze_word(request):
+    if request.method == "POST":
+        import json
+        data = json.loads(request.body)
+        word = data.get('word', '')
+
+        attrs = get_attrs()
+
+        if word:
+            doc = nlp(word)
+            pos = doc.sentences[0].words[0].upos  # либо .upos для более общего типа
+
+            if pos in stanza_pos_mapping:
+                attr_data = list(filter(lambda x: x['id'] == stanza_pos_mapping[pos], attrs))[0]
+                id = attr_data["id"]
+                pos = attr_data['name']
+            else:
+                pos = "None"
+                id = "None"
+
+            return JsonResponse({"part_of_speech": pos, "id": id})
+
     return JsonResponse({"error": "Invalid request"}, status=400)

@@ -17,4 +17,5 @@ urlpatterns = [
     path('lists/new', views.text_list_create, name="text_app/text_list_create"),
     path('import/', views.import_form, name="text_app/import"),
     path('analyze/', views.analyze_text, name='analyze_text'),
+    path('analyze_word/', views.analyze_word, name='analyze_word'),
 ]
