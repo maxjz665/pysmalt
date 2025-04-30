@@ -2,6 +2,7 @@
 Модель слова в тексте
 """
 import re
+from datetime import date
 
 from django.db import models
 
@@ -43,6 +44,32 @@ class TblWord(models.Model):
         if self.chapter_index != next_word.chapter_index or self.paragraph_index != next_word.paragraph_index:
             return True
         return False
+
+    @classmethod
+    def save_word(cls, text_obj, word_data):
+        entry = None
+        if not word_data["id"]:
+            if word_data["pos"]:
+                entry = TblDictWord(word=word_data["word"], param_01=word_data["pos"])
+                entry.save()
+        else:
+            entry = TblDictWord.objects.filter(id=word_data["id"]).get()
+        word = cls(
+            text=text_obj,
+            word_length=len(word_data["word"]),
+            chapter_index=word_data["chapter"],
+            paragraph_index=word_data["paragraph"],
+            sentence_index=word_data["sentence"],
+            word_index=word_data["wordindex"],
+            chdate=date.today().strftime("%Y-%m-%d"),
+            word=word_data["word"],
+            dictword=entry,
+            dictword2=None,
+            wordorder=0,
+            wordno=0,
+        )
+        word.save()
+
 
     @staticmethod
     def fix_word(word: str) -> str:

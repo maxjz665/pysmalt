@@ -16,12 +16,14 @@ from django.shortcuts import render, redirect
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
+from text_app.models.tbl_word import TblWord
 from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_author_types import TblAuthorTypes
 from text_app.models.tbl_author import TblAuthor
 from text_app.models.tbl_magazine import TblMagazine
 from text_app.models.parser import Parser
 from user_app.models import TblUser
+
 
 def index(request: HttpRequest):
     """
@@ -282,7 +284,8 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
     item.delete()
     return redirect("text_app/text_lists")
 
-#Получает список частей речи и их id
+
+# Получает список частей речи и их id
 def get_attrs():
     menu_items = TblMenuItems.objects.all()
     menu_params = TblMenuParams.objects.all()
@@ -294,7 +297,7 @@ def get_attrs():
             "id": i,
             "name": menu_items[item_id].item_caption,
         })
-        #print(menu_items[item_id].item_caption)
+        # print(menu_items[item_id].item_caption)
         i += 1
     return attrs
 
@@ -310,13 +313,60 @@ def import_form(request: HttpRequest):
     magazines = TblMagazine.objects.all()
     attrs = get_attrs()
 
-
     if request.method == 'POST':
-        print("форма отправлена")
+        if request.POST.get('action') == 'run_import':
+            def get_or_none(key):
+                value = request.POST.get(key)
+                return value if value and value.strip() else None
+
+            # Получаем данные из формы
+            title = get_or_none('inputName')
+            author = get_or_none('inputAuthor')
+            magazine = get_or_none('inputJournal')
+            magazine_no = get_or_none('inputJournalNo')
+            publication_date = get_or_none('inputDate')
+            comment = get_or_none('comment')
+            url = get_or_none('inputUrl')
+            background = None
+            category = get_or_none('category')
+            text_type = get_or_none('textType')
+            author_verify = get_or_none('authorVerify')
+            author_type = get_or_none('authorType')
+            author2 = get_or_none('inputAuthor2')
+            author2_type = get_or_none('author2Type')
+            author3 = get_or_none('inputAuthor3')
+            author3_type = get_or_none('author3Type')
+            short_title = get_or_none('shortTitle')
+            magazine_volume = get_or_none('magazineVolume')
+            magazine_section = get_or_none('magazineSection')
+            pages = get_or_none('pages')
+            censorship = get_or_none('censorship')
+            attributions = get_or_none('attributions')
+            status = get_or_none('status')
+            origin_title = get_or_none('originTitle')
+
+            grm_file = request.FILES.get('grmFile')  # Файл .txt
+
+            words_json = request.POST.get('words_json')
+            words = json.loads(words_json)
+            print(title, magazine, grm_file.name if grm_file else "Файл не загружен")#удалить
+            # логика сохранения в бд отключена для отладки
+            '''text_obj = TblText.save_text_in_db(title, author, magazine, magazine_no, publication_date, comment, url, background,
+                                    category, text_type, author_verify, author_type, author2, author2_type, author3, author3_type,
+                                    short_title, magazine_volume, magazine_section, pages, censorship, attributions,
+                                    status, origin_title)'''
+            i = 0#удалить
+            for word in words:
+                #TblWord.save_word(TblText.objects.filter(id=331).get(), word) #логика сохранения в бд отключена для отладки
+                print(word)#удалить
+                i += 1#удалить
+                if i == 4:#удалить
+                    break#удалить
+            return redirect('home')
     else:
         return render(request, "text_app/import_form.html",
-                  context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines, "attrs": attrs})
-
+                      context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines,
+                               "attrs": attrs})
 
 
 def analyze_text(request):
@@ -334,13 +384,17 @@ def analyze_text(request):
 
         output = ""
 
-        section = 0; chapter_index = 1; paragraph_index = 1; sentence_index = 1; word_index = 1;
+        section = 0
+        chapter_index = 1
+        paragraph_index = 1
+        sentence_index = 1
+        word_index = 1
         for item in lines:
             try:
                 ret = Parser.encode_in_old_type(item)
             except Exception as e:
                 print("\n", str(e), "\n", e.__traceback__)
-                #if is_import_procedure:
+                # if is_import_procedure:
                 #    parser.rollback_transaction()
                 break
             if isinstance(item, (list, tuple)) and len(item) > 0 and isinstance(item[0], str) and len(item[0]) > 0:
@@ -362,7 +416,7 @@ def analyze_text(request):
 
                 output += f"[{chapter_index}:{paragraph_index}:{sentence_index}:{word_index}] "
 
-                #if is_import_procedure:
+                # if is_import_procedure:
                 #    word_id = parser.save_word_in_db(ret, text_id, chapter_index, paragraph_index, sentence_index, word_index)
                 #    output += f"{{{word_id}}} "
 
@@ -405,6 +459,7 @@ def analyze_text(request):
         return JsonResponse({"result": res})
     return JsonResponse({"error": "Invalid request"}, status=400)
 
+
 nlp = stanza.Pipeline(lang='ru', processors='tokenize,pos')
 
 stanza_pos_mapping = {
@@ -425,6 +480,7 @@ stanza_pos_mapping = {
     'X': 20  # неизвестная категория
     ### деепричастия и т д добавить
 }
+
 
 def analyze_word(request):
     if request.method == "POST":
