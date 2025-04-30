@@ -168,7 +168,10 @@
     </div>
     <input type="hidden" name="words_json" id="wordsJson">
     <div id="fileContentPreview" class="mt-3 card card-body" style="display: none;">
-        <h5>Предварительный анализ текста</h5>
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Предварительный анализ текста</h5>
+            <button id="analyzeWithAI" class="btn btn-secondary mb-2">Анализ с помощью ИИ</button>
+        </div>
         <div id="fileContentText"></div>
         <div id="wordSettingsPanel" class="card card-body mt-3" style="display: none;">
             <h5>Настройка слова</h5>
@@ -214,6 +217,28 @@
             hiddenInput.value = JSON.stringify(wordsData);
         }
     }
+    async function analyze_word(word) {
+        try {
+            const response = await fetch("{% url 'analyze_word' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ word: word })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error("Ошибка при анализе слова:", error);
+            return null;
+        }
+    }
     document.addEventListener('DOMContentLoaded', function() {
         const wordSettingsPanel = document.getElementById('wordSettingsPanel');
         const selectedWordSpan = document.getElementById('selectedWord');
@@ -222,7 +247,31 @@
         let selectedWord = null
         let dataWord = null
 
-        document.getElementById('fileContentText').addEventListener('click', function(e) {
+        document.getElementById('analyzeWithAI').addEventListener('click',async function (e) {
+            e.preventDefault();
+            document.querySelector('button[name="action"][value="run_import"]').style.display = 'none';
+            document.querySelector('a.btn-info').style.display = 'none';
+            wordSettingsPanel.style.display = 'none';
+            const links = document.querySelectorAll('#fileContentText a.not-found')
+            for (const link of links) {
+                const word = link.dataset.word;
+                if (!word) continue;
+                try {
+                    const data = await analyze_word(word);
+                    link.style.color = 'gray';
+                    const span = link.nextElementSibling;
+                    span.dataset.pos = data.id;
+                    span.textContent = `(_,P=${data.id})`;
+                } catch (error) {
+                    console.error(`Ошибка при анализе слова "${word}":`, error);
+                }
+            }
+            alert("Анализ текста выполнен! Проверьте части речи")
+            document.querySelector('button[name="action"][value="run_import"]').style.display = '';
+            document.querySelector('a.btn-info').style.display = '';
+        });
+
+        document.getElementById('fileContentText').addEventListener('click', async function (e) {
             e.preventDefault();
             aiPartOfSpeech.textContent = ""
             aiSuggestion.style.display = 'none';
@@ -231,36 +280,38 @@
                 behavior: 'smooth'
             });
             if (e.target.classList.contains('not-found')) {
+                d = await analyze_word(e.target.dataset.word)
+
                 fetch("{% url 'analyze_word' %}", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "X-CSRFToken": "{{ csrf_token }}"
                     },
-                    body: JSON.stringify({ word: e.target.dataset.word })
+                    body: JSON.stringify({word: e.target.dataset.word})
                 })
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Ответ от сервера:", data);
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Ответ от сервера:", data);
 
-                    const select = document.getElementById('wordPartOfSpeech');
-                    const aiSuggestion = document.getElementById('aiSuggestion');
-                    const aiPartOfSpeech = document.getElementById('aiPartOfSpeech');
+                        const select = document.getElementById('wordPartOfSpeech');
+                        const aiSuggestion = document.getElementById('aiSuggestion');
+                        const aiPartOfSpeech = document.getElementById('aiPartOfSpeech');
 
-                    // Вставляем часть речи от нейросети
-                    aiPartOfSpeech.textContent = data.part_of_speech;
-                    aiSuggestion.style.display = 'block';
+                        // Вставляем часть речи от нейросети
+                        aiPartOfSpeech.textContent = data.part_of_speech;
+                        aiSuggestion.style.display = 'block';
 
-                    select.value = data.id;
+                        select.value = data.id;
 
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                });
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                    });
             }
             selectedWord = e.target
             const word = e.target.dataset.word;
-            dataWord = selectedWord.parentNode.querySelector(`span[data-word="${word}"]`);
+            dataWord = selectedWord.nextElementSibling;
             selectedWordSpan.textContent = word;
             wordSettingsPanel.style.display = 'block';
             // При открытии сбрасываем выбор части речи
@@ -276,13 +327,12 @@
                 alert('Пожалуйста, выберите часть речи.');
             }
             selectedWord.dataset.pos = partOfSpeech;
-            dataWord = selectedWord.parentNode.querySelector(`span[data-word="${word}"]`);
+            dataWord = selectedWord.nextElementSibling;
             dataWord.dataset.pos = partOfSpeech
             dataWord.innerText = `(_,P=${partOfSpeech})`;
-            selectedWord.style.color = 'black';
+            selectedWord.style.color = 'gray';
             collectWordsData()
             console.log(`Сохраняем: слово "${word}", часть речи "${partOfSpeech}"`);
-
         });
     });
 

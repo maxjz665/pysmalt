@@ -369,6 +369,7 @@ def import_form(request: HttpRequest):
                                "attrs": attrs})
 
 
+# Функция при передаче post-запроса анализирует текст (ищет в словаре совпадения) и выводит информацию по каждому слову
 def analyze_text(request):
     if request.method == "POST":
         start_time = time.time()
@@ -376,9 +377,9 @@ def analyze_text(request):
         data = json.loads(request.body)
         text = data.get("text", "")
 
-        sections = re.split(r"\n|\r\n", text)
-        sections = list(filter(None, sections))
-        lines = Parser.parseTextFile(sections)
+        sections = list(filter(None, re.split(r"\n|\r\n", text)))
+        parser = Parser()
+        lines = parser.parseTextFile(sections)
 
         res += f"<p>Found {len(sections)} lines<br>"
 
@@ -391,11 +392,9 @@ def analyze_text(request):
         word_index = 1
         for item in lines:
             try:
-                ret = Parser.encode_in_old_type(item)
+                ret = parser.encode_in_old_type(item)
             except Exception as e:
                 print("\n", str(e), "\n", e.__traceback__)
-                # if is_import_procedure:
-                #    parser.rollback_transaction()
                 break
             if isinstance(item, (list, tuple)) and len(item) > 0 and isinstance(item[0], str) and len(item[0]) > 0:
                 check_str = ret["ENCODED_WORD"]
@@ -403,26 +402,22 @@ def analyze_text(request):
                 if ret["WORD"] == check_str:
                     if "ID" in ret:
                         printed_word = f"{ret['WORD']}({ret['ID']},P={ret['PARAM_01']})"
-                        if ret['PARAM_01'] < 0:
-                            output += f"<span style='color:red'>{printed_word}</span>"
-                        else:
+                        if ret['PARAM_01'] < 0:     # если часть речи отсуствует(значение < 0)
+                            output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:red'>{ret['WORD']}</a>" \
+                                      f"<span data-word='{ret['WORD']}' data-id='' data-pos=''>(Х)</span>"
+                        else:      # обычные слова присутствующие в словаре
                             output += f"<a href='#' class='found' data-word='{ret['WORD']}' style='color:black'>{ret['WORD']}</a>" \
                                       f"<span data-word='{ret['WORD']}' data-id='{ret['ID']}' data-pos='{ret['PARAM_01']}'>({ret['ID']},P={ret['PARAM_01']})</span>"
-                    else:
+                    else:   # слова отсуствующие в словаре
                         output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:blueviolet'>{ret['WORD']}</a>" \
                                   f"<span data-word='{ret['WORD']}' data-id='' data-pos=''>(Х)</span>"
                 else:
-                    output += f"<span style='color:red'>{ret['WORD']}({check_str})</span>"
+                    output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:red'>{ret['WORD']}</a>" \
+                              f"<span data-word='{ret['WORD']}' data-id='' data-pos=''>(Х - {check_str})</span>"
 
-                output += f"[{chapter_index}:{paragraph_index}:{sentence_index}:{word_index}] "
-
-                # if is_import_procedure:
-                #    word_id = parser.save_word_in_db(ret, text_id, chapter_index, paragraph_index, sentence_index, word_index)
-                #    output += f"{{{word_id}}} "
-
+                output += f"[{chapter_index}:{paragraph_index}:{sentence_index}:{word_index}] "     # вывод индексов
                 section = 0
                 word_index += 1
-
             else:
                 section += 1
                 if section == 1:
@@ -453,8 +448,8 @@ def analyze_text(request):
         # Микросекунды
         fdiff = f"{int((diff - int(diff)) * 10_000_000):07d}"
         # Подсчёт total
-        total = Parser.miss + Parser.hit
-        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Miss: {Parser.miss}, Hit: {Parser.hit}, Total: {total} Not found: {Parser.notFound}</p>"
+        total = parser.miss + parser.hit
+        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Miss: {parser.miss}, Hit: {parser.hit}, Total: {total} Not found: {parser.notFound}</p>"
 
         return JsonResponse({"result": res})
     return JsonResponse({"error": "Invalid request"}, status=400)
@@ -481,7 +476,7 @@ stanza_pos_mapping = {
     ### деепричастия и т д добавить
 }
 
-
+# Функция анализирует текст с помощью станзы
 def analyze_word(request):
     if request.method == "POST":
         import json

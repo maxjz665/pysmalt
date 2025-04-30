@@ -12,19 +12,17 @@ class ParseException(Exception):
 
 
 class Parser:
-    foundWords = []
-    foundInitialForms = []
-
-    miss = 0
-    hit = 0
-    notFound = 0
-    stemmer = SnowballStemmer("russian")
-
     def __init__(self):
-        pass
+        self.foundWords = []
+        self.foundInitialForms = []
+        self.miss = 0
+        self.hit = 0
+        self.notFound = 0
+        self.stemmer = SnowballStemmer("russian")
 
-    @staticmethod
-    def parse_section(text):
+
+
+    def parse_section(self, text):
         # режем текст на предложения + знак окончания
         text = re.sub(r"^([.!?…]+)(?:\s+|$)", "", text)
         if len(text) == 0:  # если строка стала пустой, то пропускаем
@@ -66,13 +64,12 @@ class Parser:
                 # if ENCODER.is_mark(word): #нужна реализация енкодера
                 #   continue
 
-                word_base = Parser.stemmer.stem(word.lower())
+                word_base = self.stemmer.stem(word.lower())
                 ret.append([word, word_base])
 
         return ret
 
-    @staticmethod
-    def parseTextFile(sections):
+    def parseTextFile(self, sections):
         is_start = True
         ret = []
         for section in sections:
@@ -81,7 +78,7 @@ class Parser:
             else:
                 ret.append('')
                 ret.append('')
-            cur = Parser.parse_section(section)
+            cur = self.parse_section(section)
             if len(cur) > 0:
                 ret.extend(cur)
             else:
@@ -90,8 +87,8 @@ class Parser:
         # Вернем результат
         return ret
 
-    @staticmethod
-    def encode_in_old_type(value):
+
+    def encode_in_old_type(self, value):
         ret = {}
         if not isinstance(value, list) or len(value) < 2:
             return ret
@@ -120,26 +117,25 @@ class Parser:
         ret["ENCODED_WORD"] = ret["WORD"]  # Encoder.encode_word(ret["WORD"])
         ret["ENCODED_INITIAL_FORM"] = ret["INITIAL_FORM"]  # Encoder.encode_word(ret["INITIAL_FORM"])
 
-        Parser.serch_in_db(ret)
+        self.serch_in_db(ret)
 
         return ret
 
-    @staticmethod
-    def serch_in_db(ret):
-        #закодировать слова
+    def serch_in_db(self, ret):
+        # закодировать слова
         encodedWord = ret["ENCODED_WORD"];
         encodedInitialForm = ret["ENCODED_INITIAL_FORM"];
         param1 = None
         if "PARAM_01" in ret:
             param1 = ret["PARAM_01"]
 
-        if encodedWord in Parser.foundWords:
-            ret["ID"] = Parser.foundWords[encodedWord][0]
-            ret["PARAM_01"] = Parser.foundWords[encodedWord][1]
-            Parser.hit += 1
+        if encodedWord in self.foundWords:
+            ret["ID"] = self.foundWords[encodedWord][0]
+            ret["PARAM_01"] = self.foundWords[encodedWord][1]
+            self.hit += 1
             return
 
-        Parser.miss += 1
+        self.miss += 1
 
         word_value = encodedWord.strip()
 
@@ -148,16 +144,17 @@ class Parser:
         en_hi_word = word_value.upper()
 
         # Костыль для разных написаний "i"
-        en_i_word = Parser.get_other_small_i(word_value)
-        en_ii_word = Parser.get_other_big_i(word_value)
+        en_i_word = self.get_other_small_i(word_value)
+        en_ii_word = self.get_other_big_i(word_value)
 
-        en_lo_i_word = Parser.get_other_small_i(en_lo_word)
-        en_lo_ii_word = Parser.get_other_big_i(en_lo_word)
+        en_lo_i_word = self.get_other_small_i(en_lo_word)
+        en_lo_ii_word = self.get_other_big_i(en_lo_word)
 
-        en_hi_i_word = Parser.get_other_small_i(en_hi_word)
-        en_hi_ii_word = Parser.get_other_big_i(en_hi_word)
+        en_hi_i_word = self.get_other_small_i(en_hi_word)
+        en_hi_ii_word = self.get_other_big_i(en_hi_word)
 
-        word_variants = [word_value, en_lo_word, en_hi_word, en_i_word, en_ii_word, en_lo_i_word, en_lo_ii_word, en_hi_i_word, en_hi_ii_word]
+        word_variants = [word_value, en_lo_word, en_hi_word, en_i_word, en_ii_word, en_lo_i_word, en_lo_ii_word,
+                         en_hi_i_word, en_hi_ii_word]
         word_variants = list(filter(lambda x: x is not None, word_variants))
 
         # Поиск по полю "word"
@@ -169,7 +166,7 @@ class Parser:
         if word_matches:
             ret["ID"] = word_matches[0]['ID']
             ret["PARAM_01"] = word_matches[0]['param_01']
-            Parser.foundWords.append({encodedWord : [word_matches[0]['ID'], word_matches[0]['param_01']]})
+            self.foundWords.append({encodedWord: [word_matches[0]['ID'], word_matches[0]['param_01']]})
             return
 
         # Поиск по полю "modern"
@@ -181,7 +178,7 @@ class Parser:
         if modern_matches:
             ret["ID"] = modern_matches[0]['ID']
             ret["PARAM_01"] = modern_matches[0]['param_01']
-            Parser.foundWords.append({encodedWord : [modern_matches[0]['ID'], modern_matches[0]['param_01']]})
+            self.foundWords.append({encodedWord: [modern_matches[0]['ID'], modern_matches[0]['param_01']]})
             return
 
         # Поиск по полю "initial_form"
@@ -193,13 +190,13 @@ class Parser:
         if initial_form_matches:
             ret["ID"] = initial_form_matches[0]['ID']
             ret["PARAM_01"] = initial_form_matches[0]['param_01']
-            Parser.foundInitialForms.append({encodedInitialForm:[initial_form_matches[0]['ID'],
-                                                             initial_form_matches[0]['param_01']]})
+            self.foundInitialForms.append({encodedInitialForm: [initial_form_matches[0]['ID'],
+                                                                  initial_form_matches[0]['param_01']]})
             return
 
-        Parser.notFound +=1
+        self.notFound += 1
 
-    def get_other_small_i(word: str) -> str | None:
+    def get_other_small_i(self, word: str) -> str | None:
         """
         Заменяет кириллическую 'і' (U+0456) на латинскую 'i' (U+0069), если она есть.
         """
@@ -210,7 +207,7 @@ class Parser:
             return word.replace(cyrillic_i, latin_i)
         return None
 
-    def get_other_big_i(word: str) -> str | None:
+    def get_other_big_i(self, word: str) -> str | None:
         """
         Заменяет кириллическую 'І' (U+0406) на латинскую 'I' (U+0049), если она есть.
         """
