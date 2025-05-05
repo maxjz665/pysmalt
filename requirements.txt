@@ -9,3 +9,4 @@ asgiref~=3.8.1
 django-picklefield~=3.2  # для хранения дерева решения в БД
 nltk~=3.9.1
 stanza~=1.10.1
+prereform2modern~=1.0.0

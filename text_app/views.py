@@ -4,9 +4,11 @@
 import json
 import re
 import time
+import os
 from datetime import datetime, timedelta
 
 import stanza
+from prereform2modern import Processor
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
@@ -23,6 +25,10 @@ from text_app.models.tbl_author import TblAuthor
 from text_app.models.tbl_magazine import TblMagazine
 from text_app.models.parser import Parser
 from user_app.models import TblUser
+from text_app.models.stanza_analyzer import StanzaAnalyzer
+
+
+stanza_analyzer = StanzaAnalyzer(0)
 
 
 def index(request: HttpRequest):
@@ -349,6 +355,7 @@ def import_form(request: HttpRequest):
 
             words_json = request.POST.get('words_json')
             words = json.loads(words_json)
+            print(words)
             print(title, magazine, grm_file.name if grm_file else "Файл не загружен")#удалить
             # логика сохранения в бд отключена для отладки
             '''text_obj = TblText.save_text_in_db(title, author, magazine, magazine_no, publication_date, comment, url, background,
@@ -376,6 +383,10 @@ def analyze_text(request):
         res = ""
         data = json.loads(request.body)
         text = data.get("text", "")
+
+        mod_text = get_modern_word(text)
+        stanza_analyzer.analyze_text(mod_text)
+        #print(stanza_analyzer.text_doc.sentences)
 
         sections = list(filter(None, re.split(r"\n|\r\n", text)))
         parser = Parser()
@@ -454,27 +465,14 @@ def analyze_text(request):
         return JsonResponse({"result": res})
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-
-nlp = stanza.Pipeline(lang='ru', processors='tokenize,pos')
-
-stanza_pos_mapping = {
-    'ADJ': 1,
-    'ADP': 10,
-    'ADV': 7,
-    'AUX': 4,
-    'CCONJ': 11,
-    'INTJ': 13,
-    'NOUN': 0,
-    'NUM': 9,
-    'PART': 9,
-    'PRON': 3,
-    'PUNCT': 20,
-    'SCONJ': 11,
-    'SYM': 20,
-    'VERB': 4,
-    'X': 20  # неизвестная категория
-    ### деепричастия и т д добавить
-}
+def get_modern_word(word):
+    text_res, changes, s_json = Processor.process_text(
+        text=word,
+        show=False,
+        delimiters=False,
+        check_brackets=False
+    )
+    return text_res
 
 # Функция анализирует текст с помощью станзы
 def analyze_word(request):
@@ -486,11 +484,15 @@ def analyze_word(request):
         attrs = get_attrs()
 
         if word:
-            doc = nlp(word)
-            pos = doc.sentences[0].words[0].upos  # либо .upos для более общего типа
-
-            if pos in stanza_pos_mapping:
-                attr_data = list(filter(lambda x: x['id'] == stanza_pos_mapping[pos], attrs))[0]
+            mdrn_word = get_modern_word(word)
+            print(mdrn_word)
+            word_st = stanza_analyzer.analyze_word(mdrn_word)
+            pos = word_st.upos  # либо .upos для более общего типа
+            print(word_st)
+            print(word_st.xpos)
+            id_pos = stanza_analyzer.get_pos_id(word_st)
+            if id_pos >= 0:
+                attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
                 id = attr_data["id"]
                 pos = attr_data['name']
             else:
