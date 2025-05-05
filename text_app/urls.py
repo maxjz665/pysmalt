@@ -15,6 +15,7 @@ urlpatterns = [
     path('lists/<int:list_id>/edit', views.text_list_edit, name="text_app/text_list_edit"),
     path('lists/<int:list_id>/delete', views.text_list_delete, name="text_app/text_list_delete"),
     path('lists/new', views.text_list_create, name="text_app/text_list_create"),
+    path('entries_list/', views.entries_list, name="text_app/entries_list"),
     path('import/', views.import_form, name="text_app/import"),
     path('analyze/', views.analyze_text, name='analyze_text'),
     path('analyze_word/', views.analyze_word, name='analyze_word'),

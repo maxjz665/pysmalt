@@ -14,7 +14,9 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
+from django.core.paginator import Paginator
 
+from text_app.models.tbl_dict_word import TblDictWord
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
@@ -28,7 +30,7 @@ from user_app.models import TblUser
 from text_app.models.stanza_analyzer import StanzaAnalyzer
 
 
-stanza_analyzer = StanzaAnalyzer(0)
+#stanza_analyzer = StanzaAnalyzer(0)
 
 
 def index(request: HttpRequest):
@@ -502,3 +504,20 @@ def analyze_word(request):
             return JsonResponse({"part_of_speech": pos, "id": id})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+def entries_list(request: HttpRequest):
+    if not request.user.is_authenticated or not request.user.has_manager:
+        return render(request, "not_found.html", context={"message": "Недостаточно прав"})
+    query = request.GET.get("q", "")
+    dictwords = TblDictWord.objects.all()  # или как у тебя называется модель
+    if query:
+        dictwords = dictwords.filter(Q(word__icontains=query))
+    paginator = Paginator(dictwords, 50)  # 50 слов на страницу
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    attrs = get_attrs()
+    print(attrs)
+    return render(request, "text_app/entries_list.html",
+                  context={"dictwords": page_obj, "query": query, "attrs": attrs})
