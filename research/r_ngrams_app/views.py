@@ -433,5 +433,31 @@ def delete_item(request: HttpRequest, list_id: int):
     dataset_data.updated_at = datetime.now()
     dataset_data.save()
 
-    request.session['success_message'] = "Датасет успешно удален"
+    request.session['success_message'] = f"Датасет '{dataset_data.name}' успешно удален"
+    return redirect('r_ngrams_app/dataset_list')
+
+
+def restore_item(request: HttpRequest, list_id: int):
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except BaseModel.DoesNotExist:
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на удаление датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    if not request.user.is_authenticated or not (request.user != dataset_data.owner or request.user.has_admin):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на удаление датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    dataset_data.is_deleted = False
+    dataset_data.updated_by = request.user.id
+    dataset_data.updated_at = datetime.now()
+    dataset_data.save()
+
+    request.session['success_message'] = f"Датасет '{dataset_data.name}' успешно восстановлен"
     return redirect('r_ngrams_app/dataset_list')
