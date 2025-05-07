@@ -3,6 +3,7 @@
 """
 import asyncio
 import json
+from datetime import timezone, datetime
 
 from aiomqtt import Client
 from django.db.models import Q, ObjectDoesNotExist
@@ -10,6 +11,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 
 from research.r_ngrams_app.models.tbl_ngram_dataset import TblBigramDataset
+from shower.models import BaseModel
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -19,12 +21,13 @@ def dataset_list(request: HttpRequest) -> HttpResponse:
     """
     Получение списка датасетов
     """
+    success_message = request.session.pop('success_message', None)
     items = TblBigramDataset.objects.filter(is_deleted=False)
     if request.user.is_authenticated:
         items = items.filter(Q(is_public=True) | Q(owner__id=request.user.id))
     else:
         items = items.filter(is_public=True)
-    return render(request, "r_ngrams_app/dataset_list.html", context={"items": items})
+    return render(request, "r_ngrams_app/dataset_list.html", context={"items": items, 'success_message': success_message})
 
 
 def dataset_add_list(request: HttpRequest) -> HttpResponse:
@@ -313,3 +316,148 @@ def check_group(request, list_id: int) -> HttpResponse:
                                                                           'group_id': group_id, 'text_lists': text_lists,
                                                                           'block_size': block_size, 'texts': texts, "result": result,
                                                                           "block_result": block_result})
+
+
+def edit_item(request: HttpRequest, list_id: int):
+    """
+    GET - форма редактирования датасета
+    POST - внесение изменений в метаданные датасета
+    """
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except BaseModel.DoesNotExist:
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на редактирование датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    input_name = request.POST.get("input_name", dataset_data.name)
+    max_ngrams = request.POST.get("max_ngrams", dataset_data.max_ngrams)
+    min_occurrence = request.POST.get("min_occurrence", dataset_data.min_occurrence)
+    text_group = request.POST.get("text_group", dataset_data.text_group.id if dataset_data.text_group else 0)
+    ngram_size = request.POST.get("ngram_size", dataset_data.ngram_size)
+    is_use_initial = request.POST.get("is_use_initial", dataset_data.is_use_initial)
+    is_sentence_split = request.POST.get("is_sentence_split", dataset_data.is_sentence_split)
+    lists = TblTextListDescription.get_items(request.user).order_by("name").all()
+
+
+    if request.method == "GET":
+        return render(request, "r_ngrams_app/item_edit.html", context={"content": dataset_data,
+                                                                       "lists": lists, "input_name": input_name,
+                                                                       'max_ngrams': max_ngrams,
+                                                                       'min_occurrence': min_occurrence,
+                                                                       'text_group': int(text_group),
+                                                                       'is_use_initial': is_use_initial,
+                                                                       'ngram_size': ngram_size,
+                                                                       'is_sentence_split': is_sentence_split})
+
+    if not request.user.is_authenticated or not (request.user != dataset_data.owner or request.user.has_admin):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на редактирование датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    # проверка входных данных
+    error_msg = ""
+    if input_name == "":
+        error_msg = "Введите название датасета N-грамм"
+    try:
+        max_ngrams = int(max_ngrams)
+        if max_ngrams <= 0:
+            raise ValueError
+    except ValueError:
+        error_msg = "Максимальное число N-грамм в датасете должно быть целым положительным числом"
+
+    try:
+        min_occurrence = int(min_occurrence)
+        if min_occurrence < 0:
+            raise ValueError
+    except ValueError:
+        error_msg = "Минимальное количество встречаемости N-граммы должно быть целым неотрицательным числом"
+
+    try:
+        e_ngram_size = int(ngram_size)
+        if e_ngram_size <= 0:
+            raise ValueError
+    except ValueError:
+        error_msg = "Размер N-граммы должен быть целым положительным числом"
+
+    if error_msg:
+        return render(request, "r_ngrams_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                       'max_ngrams': max_ngrams,
+                                                                       'min_occurrence': min_occurrence,
+                                                                       'text_group': text_group,
+                                                                       'is_use_initial': is_use_initial,
+                                                                       'ngram_size': ngram_size,
+                                                                       'is_sentence_split': is_sentence_split,
+                      "error_message": error_msg})
+
+    # все ок, сохраняем и переходим на просмотр
+    dataset_data.name = input_name
+    dataset_data.max_ngrams = max_ngrams
+    dataset_data.min_occurrence = min_occurrence
+    dataset_data.text_group = None if int(text_group) == 0 else TblTextListDescription.get_item(request.user, text_group)
+    dataset_data.is_use_initial = (is_use_initial == "on")
+    dataset_data.ngram_size = ngram_size
+    dataset_data.is_sentence_split = (is_sentence_split == "on")
+    dataset_data.updated_by = request.user.id
+    dataset_data.updated_at = datetime.now()
+    dataset_data.save()
+
+    return redirect("r_ngrams_app/dataset_show", dataset_data.id)
+
+def delete_item(request: HttpRequest, list_id: int):
+    """
+    GET - удаление датасета
+    """
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except BaseModel.DoesNotExist:
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на удаление датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    if not request.user.is_authenticated or not (request.user != dataset_data.owner or request.user.has_admin):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на удаление датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    dataset_data.is_deleted = True
+    dataset_data.updated_by = request.user.id
+    dataset_data.updated_at = datetime.now()
+    dataset_data.save()
+
+    request.session['success_message'] = f"Датасет '{dataset_data.name}' успешно удален"
+    return redirect('r_ngrams_app/dataset_list')
+
+
+def restore_item(request: HttpRequest, list_id: int):
+    try:
+        dataset_data = TblBigramDataset.get_item(request.user, list_id)
+    except BaseModel.DoesNotExist:
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на удаление датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    if not request.user.is_authenticated or not (request.user != dataset_data.owner or request.user.has_admin):
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на удаление датасета N-грамм",
+            "return_url": "r_ngrams_app/dataset_list",
+            "return_name": "К списку датасетов"
+        })
+
+    dataset_data.is_deleted = False
+    dataset_data.updated_by = request.user.id
+    dataset_data.updated_at = datetime.now()
+    dataset_data.save()
+
+    request.session['success_message'] = f"Датасет '{dataset_data.name}' успешно восстановлен"
+    return redirect('r_ngrams_app/dataset_list')
