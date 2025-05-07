@@ -51,6 +51,10 @@ class TblDictWord(AbstractDictWord):
     class Meta:
         db_table = 'entries'
 
+    @classmethod
+    def get_word(cls, id):
+        return cls.objects.filter(id=id).first()
+
     """
     Поиск слов в entries (по полям WORD, MODERN и INITIAL_FORM
     """

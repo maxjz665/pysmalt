@@ -14,6 +14,9 @@
     {% if text_data.url %}
         <div><a class='btn btn-primary' href='{{ text_data.url }}' target='_blank'>Смотреть оригинал</a></div>
     {% endif %}
+    <div>
+        <button type="button" class="btn btn-secondary" onclick="location.href+='/synt_analysis'">Синтаксический анализ</button>
+    </div>
 </div>
     <a class="btn btn-primary" data-toggle="collapse" href="#collapsePaper" role="button" aria-expanded="false" aria-controls="collapsePaper">
 Параметры просмотра</a>

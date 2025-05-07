@@ -30,7 +30,7 @@ from user_app.models import TblUser
 from text_app.models.stanza_analyzer import StanzaAnalyzer
 
 
-#stanza_analyzer = StanzaAnalyzer(0)
+stanza_analyzer = StanzaAnalyzer(0)
 
 
 def index(request: HttpRequest):
@@ -292,22 +292,24 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
     item.delete()
     return redirect("text_app/text_lists")
 
+def paper_data_synt_analysis(request: HttpRequest, paper_id: int) -> HttpResponse:
+    """
+    Печать содержимого статьи
+    :return: содержимое статьи
+    """
+    use_old_type = request.GET.get("type", "old")
 
-# Получает список частей речи и их id
-def get_attrs():
-    menu_items = TblMenuItems.objects.all()
-    menu_params = TblMenuParams.objects.all()
-    attrs = []
-    i = 0
-    for item in menu_params[0]._meta.fields[3:26]:
-        item_id = int(getattr(menu_params[0], item.name))
-        attrs.append({
-            "id": i,
-            "name": menu_items[item_id].item_caption,
-        })
-        # print(menu_items[item_id].item_caption)
-        i += 1
-    return attrs
+    text_data = TblText.objects.filter(id=paper_id).get()
+    content = text_data.get_content()
+    #print(content)
+
+    if text_data is None or content is None:
+        return render(request, "not_found.html", context={"message": "Текст не найден",
+                                                          "return_url": "text_app/papers_list",
+                                                          "return_name": "К списку текстов"})
+
+    return render(request, "text_app/paper_data_synt_analysis.html",
+                  context={"type": use_old_type, "text_data": text_data, "content": content})
 
 
 def import_form(request: HttpRequest):
@@ -489,9 +491,8 @@ def analyze_word(request):
             mdrn_word = get_modern_word(word)
             print(mdrn_word)
             word_st = stanza_analyzer.analyze_word(mdrn_word)
-            pos = word_st.upos  # либо .upos для более общего типа
-            print(word_st)
-            print(word_st.xpos)
+            feats = stanza_analyzer.get_feats_description(word_st)
+            print(feats)
             id_pos = stanza_analyzer.get_pos_id(word_st)
             if id_pos >= 0:
                 attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
@@ -501,7 +502,7 @@ def analyze_word(request):
                 pos = "None"
                 id = "None"
 
-            return JsonResponse({"part_of_speech": pos, "id": id})
+            return JsonResponse({"part_of_speech": pos, "id": id, "feats": feats})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
@@ -518,6 +519,90 @@ def entries_list(request: HttpRequest):
     page_obj = paginator.get_page(page_number)
 
     attrs = get_attrs()
-    print(attrs)
     return render(request, "text_app/entries_list.html",
                   context={"dictwords": page_obj, "query": query, "attrs": attrs})
+
+
+def entries_list_edit(request, id):
+    dictword = TblDictWord.get_word(id)
+    attrs_data = get_all_attrs(0, [])
+    #print(attrs_data)
+    selected_attrs = []
+    get_dictword_attrs(dictword, attrs_data, selected_attrs, 0)
+    #print(selected_attrs)
+    attrs = get_attrs()
+    # Если GET-запрос, передаем данные для редактирования в форму
+    return render(request, 'text_app/entries_list_edit.html', {'dictword': dictword, 'attrs': attrs,
+                                                               'attrs_json': json.dumps(attrs_data, ensure_ascii=False),
+                                                               'selected_attrs': json.dumps(selected_attrs)})
+
+# Получает список частей речи и их id
+def get_attrs():
+    menu_items = TblMenuItems.objects.all()
+    menu_params = TblMenuParams.objects.all()
+    attrs = []
+    i = 0
+    for item in menu_params[0]._meta.fields[3:26]:
+        item_id = int(getattr(menu_params[0], item.name))
+        attrs.append({
+            "id": i,
+            "name": menu_items[item_id].item_caption,
+        })
+        # print(menu_items[item_id].item_caption)
+        i += 1
+    return attrs
+
+# Получение морфологии для слова
+def get_dictword_attrs(dictword, attrs_data, res, index):
+    params_data = dictword._meta.fields[3:22]
+    params_count = dictword.params_count
+    for attr in attrs_data:
+        if index == 1:
+            index += 1
+            param_id = getattr(dictword, params_data[index].name)
+        else:
+            param_id = getattr(dictword, params_data[index].name)
+        res.append({
+            "name": attr['name'],
+            "value": attr['values'][param_id]["name"]
+        })
+        if len(attr['values'][param_id]["values"]) != 0:
+            index =get_dictword_attrs(dictword, attr['values'][param_id]["values"], res, index+1)-1
+        if index >= params_count:
+            break
+        index += 1
+    return index
+
+
+
+# Получение всех атрибутов и признаков
+def get_all_attrs(index, data):
+    menu_items = TblMenuItems.objects.all()
+    menu_params = TblMenuParams.objects.all()
+    param_caption = menu_params[index].param_caption
+    #print(param_caption)
+    data.append({
+            "id": index,
+            "name": param_caption,
+            "values": [],
+    })
+    items_count = int(menu_params[index].items_count)
+    items_fields = menu_params[index]._meta.fields[3:3+items_count]
+    for items_field in items_fields:
+        item_id = int(getattr(menu_params[index], items_field.name))
+        item_caption = menu_items[item_id].item_caption
+        #print(item_caption)
+        values = list(filter(lambda item: item['name'] == param_caption, data))[0]["values"]
+        #print(values)
+        values.append({
+            "id": item_id,
+            "name": item_caption,
+            "values": [],
+        })
+        params_count = int(menu_items[item_id].params_count)
+        params_fields = menu_items[item_id]._meta.fields[3:3 + params_count]
+        for param_field in params_fields:
+            param_id = int(getattr(menu_items[item_id], param_field.name))
+            values_1 = list(filter(lambda item: item['name'] == item_caption, values))[0]["values"]
+            values_1 = get_all_attrs(param_id, values_1)
+    return data

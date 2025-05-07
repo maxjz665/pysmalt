@@ -1,0 +1,85 @@
+{% extends "index.html" %}
+
+{% load bib_item %}
+{% load update_variable %}
+
+{% block content %}
+<div style='display: flex'>
+    <div style="margin: 5px 20px"><div>{% bib_item text_data %}</div>
+        {% if text_data.comment %}[{{ text_data.comment }}]{% endif %}
+        </div>
+</div>
+<div id="Syntax">
+    <h3 style="margin-left: 20px; margin-top: 10px;">Синтаксический анализ предложения:</h3>
+    <hr style="margin: 10px 20px;">
+</div>
+    <p><a>
+    {% with current_chapter=0 %}
+    {% with current_paragraph=0 %}
+    {% with current_sentence=0 %}
+    {% for item in content %}
+        {% if current_chapter != item.chapter_index %}
+            </a></p><p><a class="sentence" href="#" id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'>
+            {% update_variable item.chapter_index as current_chapter %}
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_paragraph != item.paragraph_index %}
+            </a></p><p><a  class="sentence" href="#" id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'>
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_sentence != item.sentence_index %}
+            </a>|<a  class="sentence" href="#" id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'>
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        <span class="word">{{item.word}}</span>
+    {% endfor %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    </a></p>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const syntaxDiv = document.getElementById('Syntax');
+    const sentenceLinks = document.querySelectorAll('a.sentence');
+
+    function getSentenceText(aTag) {
+        const words = Array.from(aTag.querySelectorAll('.word'));
+        return words.map(w => w.textContent.trim()).join(' ');
+    }
+
+    function showSentenceText(aTag) {
+        const text = getSentenceText(aTag);
+
+        let outputDiv = document.getElementById('synt-text');
+        if (!outputDiv) {
+            outputDiv = document.createElement('div');
+            outputDiv.id = 'synt-text';
+            outputDiv.style.margin = '10px 20px';
+            outputDiv.style.fontStyle = 'italic';
+            outputDiv.style.color = 'darkslategray';
+            syntaxDiv.appendChild(outputDiv);
+        }
+
+        // Подсветка выбранного
+        sentenceLinks.forEach(link => link.classList.remove('selected'));
+        aTag.classList.add('selected');
+
+        outputDiv.textContent = text;
+    }
+
+    sentenceLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            showSentenceText(link);
+        });
+    });
+
+    // Автоматически отобразить первое предложение
+    if (sentenceLinks.length > 0) {
+        showSentenceText(sentenceLinks[0]);
+    }
+});
+</script>
+{% endblock %}
