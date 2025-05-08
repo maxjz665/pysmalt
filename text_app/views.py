@@ -478,6 +478,23 @@ def get_modern_word(word):
     )
     return text_res
 
+# Функция анализирует предложение с помощью станзы
+def analyze_sentence(request):
+    if request.method == "POST":
+        import json
+        data = json.loads(request.body)
+        print(data)
+        sentence = data.get('sentence', '')
+
+        if sentence:
+            mdrn_sentence = get_modern_word(sentence)
+            print(mdrn_sentence)
+            res = stanza_analyzer.analyze_sentence(mdrn_sentence)
+            print(res)
+            return JsonResponse(res, safe=False)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
 # Функция анализирует текст с помощью станзы
 def analyze_word(request):
     if request.method == "POST":

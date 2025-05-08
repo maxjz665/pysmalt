@@ -21,4 +21,5 @@ urlpatterns = [
     path('import/', views.import_form, name="text_app/import"),
     path('analyze/', views.analyze_text, name='analyze_text'),
     path('analyze_word/', views.analyze_word, name='analyze_word'),
+    path('analyze_sentence/', views.analyze_sentence, name='analyze_sentence'),
 ]

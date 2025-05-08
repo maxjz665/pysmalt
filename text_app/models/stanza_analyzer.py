@@ -62,6 +62,34 @@ class StanzaAnalyzer:
             data[feat_name] = feat_val
         return data
 
+    def get_member_of_sentence(self, deprel):
+        if deprel in ['nsubj', 'csubj', 'nsubj:pass', 'nsubj:outer', 'csubj:pass']:
+            return 'subject'  # Подлежащее
+        elif deprel in ['root', 'cop', 'aux', 'aux:pass', 'xcomp']:
+            return 'predicate'  # Сказуемое
+        elif deprel in ['obj', 'iobj', 'ccomp', 'obl', 'obl:agent', 'obl:tmod', 'nmod', 'appos']:
+            return 'object'  # Дополнение
+        elif deprel in ['advmod', 'obl:tmod', 'advcl']:
+            return 'adverbial'  # Обстоятельство
+        elif deprel in ['det', 'nummod', 'acl', 'amod']:
+            return 'attribute'  # Определение
+        else:
+            return 'other'
+
+    def analyze_sentence(self, sentence):
+        doc = self.nlp(sentence)
+        annotated_words = []
+
+        for sent in doc.sentences:
+            for word in sent.words:
+                annotated_words.append({
+                    'text': word.text,
+                    'deprel': word.deprel,
+                    'role': self.get_member_of_sentence(word.deprel)
+                })
+
+        return annotated_words
+
     def get_feats_description(self, word):
         feats = self.parse_attrs(word)
         res_data = []

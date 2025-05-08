@@ -39,7 +39,68 @@
     {% endwith %}
     {% endwith %}
     </a></p>
+<style>
+    .syntax-word {
+        padding: 0 3px;
+        margin: 0 1px;
+    }
+    .subject {
+        border-bottom: 1px solid black;
+    }
+    .predicate {
+        border-bottom: 3px double black;
+    }
+    .object {
+        border-bottom: 2px dashed black;
+    }
+    .adverbial {
+        background-image: repeating-linear-gradient(
+            to right,
+            black 0,
+            black 4px,
+            transparent 4px,
+            transparent 6px,
+            black 6px,
+            black 7px,
+            transparent 7px,
+            transparent 9px
+        );
+        background-size: 100% 2px;
+        background-repeat: repeat-x;
+        background-position: bottom;
+        background-origin: content-box;
+        padding-bottom: 2px;
+    }
+    .attribute {
+        text-decoration: underline;
+        text-decoration-style: wavy;
+        text-decoration-color: black;
+    }
+</style>
 <script>
+async function analyze_sentence(sentence) {
+            try {
+                const response = await fetch("{% url 'analyze_sentence' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({ sentence: sentence })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Ошибка HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error("Ошибка при анализе слова:", error);
+                return null;
+            }
+        }
+
 document.addEventListener('DOMContentLoaded', function () {
     const syntaxDiv = document.getElementById('Syntax');
     const sentenceLinks = document.querySelectorAll('a.sentence');
@@ -49,8 +110,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return words.map(w => w.textContent.trim()).join(' ');
     }
 
-    function showSentenceText(aTag) {
+    async function showSentenceText(aTag) {
         const text = getSentenceText(aTag);
+        dt = await analyze_sentence(text)
 
         let outputDiv = document.getElementById('synt-text');
         if (!outputDiv) {
@@ -61,12 +123,23 @@ document.addEventListener('DOMContentLoaded', function () {
             outputDiv.style.color = 'darkslategray';
             syntaxDiv.appendChild(outputDiv);
         }
+        if (!Array.isArray(dt)) {
+            outputDiv.textContent = "Ошибка анализа.";
+            return;
+        }
+
+        let html = dt.map(item => {
+            const cls = item.role;  // role уже subject, predicate и т.д.
+            const word = item.text;
+            return `<span class="syntax-word ${cls}">${word}</span>`;
+        }).join(" ");
 
         // Подсветка выбранного
         sentenceLinks.forEach(link => link.classList.remove('selected'));
         aTag.classList.add('selected');
 
-        outputDiv.textContent = text;
+        outputDiv.innerHTML = html;
+        dt = await analyze_sentence(text)
     }
 
     sentenceLinks.forEach(link => {
