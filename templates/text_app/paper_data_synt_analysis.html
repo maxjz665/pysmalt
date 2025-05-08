@@ -112,9 +112,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function showSentenceText(aTag) {
         const text = getSentenceText(aTag);
-        dt = await analyze_sentence(text)
 
         let outputDiv = document.getElementById('synt-text');
+
         if (!outputDiv) {
             outputDiv = document.createElement('div');
             outputDiv.id = 'synt-text';
@@ -123,11 +123,14 @@ document.addEventListener('DOMContentLoaded', function () {
             outputDiv.style.color = 'darkslategray';
             syntaxDiv.appendChild(outputDiv);
         }
+        outputDiv.innerHTML = "<div class=\"spinner-border  m-5\" role=\"status\">\n" +
+        "  <span class=\"sr-only\">Loading...</span>\n" +
+        "</div>";
+        dt = await analyze_sentence(text)
         if (!Array.isArray(dt)) {
             outputDiv.textContent = "Ошибка анализа.";
             return;
         }
-
         let html = dt.map(item => {
             const cls = item.role;  // role уже subject, predicate и т.д.
             const word = item.text;
@@ -139,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function () {
         aTag.classList.add('selected');
 
         outputDiv.innerHTML = html;
-        dt = await analyze_sentence(text)
     }
 
     sentenceLinks.forEach(link => {

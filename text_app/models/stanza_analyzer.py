@@ -76,11 +76,16 @@ class StanzaAnalyzer:
         else:
             return 'other'
 
+    def get_roles_of_sentence(self,sentence):
+        for i in range(0, len(sentence)):
+            print(sentence[i].id)
+
     def analyze_sentence(self, sentence):
         doc = self.nlp(sentence)
         annotated_words = []
 
         for sent in doc.sentences:
+            res = self.get_roles_of_sentence(sent.words)
             for word in sent.words:
                 annotated_words.append({
                     'text': word.text,
@@ -93,7 +98,7 @@ class StanzaAnalyzer:
     def get_feats_description(self, word):
         feats = self.parse_attrs(word)
         res_data = []
-        print(word.upos)
+        #print(word.upos)
         if word.upos == "SCONJ":
             res_data.append({
                 "name": "По синтаксической функции",

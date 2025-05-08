@@ -76,12 +76,14 @@
         }
     document.getElementById('ai-analyze-btn').addEventListener('click',async function () {
         const word = document.getElementById('word').value;
+        // Очистить предыдущие результаты
+        const resultList = document.getElementById('result-list');
+        resultList.innerHTML = "<div class=\"spinner-border  m-5\" role=\"status\">\n" +
+        "  <span class=\"sr-only\">Loading...</span>\n" +
+        "</div>";
         data = await analyze_word(word)
         if (data && data["feats"]) {
-            // Очистить предыдущие результаты
-            const resultList = document.getElementById('result-list');
             resultList.innerHTML = '';
-
             // Показать блок с результатами
             document.getElementById('ai-results').style.display = 'block';
 
@@ -95,6 +97,7 @@
                 resultList.appendChild(listItem);
             });
         } else {
+            resultList.innerHTML = 'Ошибка анализа';
             console.error("Ошибка: результаты анализа не получены.");
         }
     });

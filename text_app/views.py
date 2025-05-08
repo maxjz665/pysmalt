@@ -483,14 +483,20 @@ def analyze_sentence(request):
     if request.method == "POST":
         import json
         data = json.loads(request.body)
-        print(data)
+        #print(data)
         sentence = data.get('sentence', '')
 
         if sentence:
             mdrn_sentence = get_modern_word(sentence)
-            print(mdrn_sentence)
+            import torch
+            #model, example_texts, languages, punct, apply_te = torch.hub.load(repo_or_dir='snakers4/silero-models',
+            #                                                                  model='silero_te')
+
+            #output_text = apply_te(mdrn_sentence, lan='ru')
+            #print(output_text)
+            #print(mdrn_sentence)
             res = stanza_analyzer.analyze_sentence(mdrn_sentence)
-            print(res)
+            #print(res)
             return JsonResponse(res, safe=False)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
