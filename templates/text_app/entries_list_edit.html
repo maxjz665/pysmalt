@@ -18,6 +18,12 @@
                         <input class="form-control" id="modern" name="modern" value="{{ dictword.modern }}">
                     </div>
                 </div>
+                <div id="ai-results" class="form-row mb-3" style="display: none;">
+                    <div class="col-md-12">
+                        <h4>Результаты анализа:</h4>
+                        <ul id="result-list"></ul>
+                    </div>
+                </div>
                 <div class="form-row align-items-end">
                     <div class="form-group col-md-3">
                         <label for="part_of_speech">Атрибут:</label>
@@ -30,12 +36,6 @@
                     </div>
                     <div class="form-group col-md-3 d-flex align-items-end">
                         <button type="button" class="btn btn-secondary" id="ai-analyze-btn">Анализ с помощью ИИ</button>
-                    </div>
-                </div>
-                <div id="ai-results" class="form-row mb-3" style="display: none;">
-                    <div class="col-md-12">
-                        <h4>Результаты анализа:</h4>
-                        <ul id="result-list"></ul>
                     </div>
                 </div>
 
@@ -86,7 +86,7 @@
             resultList.innerHTML = '';
             // Показать блок с результатами
             document.getElementById('ai-results').style.display = 'block';
-            partOfSpeechSelect.value = data.id
+            //partOfSpeechSelect.value = data.id
             const listItem = document.createElement('li');
             listItem.innerHTML = `<strong>Часть речи:</strong> ${data["part_of_speech"]}`;
             resultList.appendChild(listItem);

@@ -165,7 +165,7 @@ class TblText(models.Model):
             )
             text.full_clean()  # Django built-in validation
             text.save()
-            return text
+            return text.id
 
         except ValidationError as ve:
             raise ve

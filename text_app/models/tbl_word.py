@@ -52,6 +52,9 @@ class TblWord(models.Model):
             if word_data["pos"]:
                 entry = TblDictWord(word=word_data["word"], param_01=word_data["pos"])
                 entry.save()
+            else:
+                entry = TblDictWord(word=word_data["word"])
+                entry.save()
         else:
             entry = TblDictWord.objects.filter(id=word_data["id"]).get()
         word = cls(

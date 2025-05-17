@@ -359,20 +359,14 @@ def import_form(request: HttpRequest):
 
             words_json = request.POST.get('words_json')
             words = json.loads(words_json)
-            print(words)
-            print(title, magazine, grm_file.name if grm_file else "Файл не загружен")#удалить
+
             # логика сохранения в бд отключена для отладки
-            '''text_obj = TblText.save_text_in_db(title, author, magazine, magazine_no, publication_date, comment, url, background,
+            text_id = TblText.save_text_in_db(title, author, magazine, magazine_no, publication_date, comment, url, background,
                                     category, text_type, author_verify, author_type, author2, author2_type, author3, author3_type,
                                     short_title, magazine_volume, magazine_section, pages, censorship, attributions,
-                                    status, origin_title)'''
-            i = 0#удалить
+                                    status, origin_title)
             for word in words:
-                #TblWord.save_word(TblText.objects.filter(id=331).get(), word) #логика сохранения в бд отключена для отладки
-                print(word)#удалить
-                i += 1#удалить
-                if i == 4:#удалить
-                    break#удалить
+                TblWord.save_word(TblText.objects.filter(id=text_id).get(), word)
             return redirect('home')
     else:
         return render(request, "text_app/import_form.html",
@@ -498,23 +492,23 @@ def analyze_sentence(request):
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-# Функция анализирует текст с помощью станзы
+# Функция анализирует слово с помощью станзы
 def analyze_word(request):
     if request.method == "POST":
         import json
         data = json.loads(request.body)
         word = data.get('word', '')
         base_mode = data.get('base', False)
-        print(base_mode)
+        #print(base_mode)
 
         attrs = get_attrs()
 
         if word:
             mdrn_word = get_modern_word(word)
-            print(mdrn_word)
+            #print(mdrn_word)
             word_st = stanza_analyzer.analyze_word(mdrn_word, base_mode)
             feats = stanza_analyzer.get_feats_description(word_st)
-            print(feats)
+            #print(feats)
             id_pos = stanza_analyzer.get_pos_id(word_st)
             if id_pos >= 0:
                 attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
