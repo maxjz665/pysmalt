@@ -5,6 +5,7 @@ from nltk.stem.snowball import SnowballStemmer
 from text_app.models.tbl_dict_word import TblDictWord
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_word import TblWord
+from prereform2modern import Processor
 
 
 class ParseException(Exception):
@@ -217,3 +218,13 @@ class Parser:
         if cyrillic_I in word:
             return word.replace(cyrillic_I, latin_I)
         return None
+
+    @staticmethod
+    def get_modern(word):
+        text_res, changes, s_json = Processor.process_text(
+            text=word,
+            show=False,
+            delimiters=False,
+            check_brackets=False
+        )
+        return text_res

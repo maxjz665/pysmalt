@@ -4,11 +4,7 @@
 import json
 import re
 import time
-import os
-from datetime import datetime, timedelta
 
-import stanza
-from prereform2modern import Processor
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
@@ -374,17 +370,18 @@ def import_form(request: HttpRequest):
                                "attrs": attrs})
 
 
-# Функция при передаче post-запроса анализирует текст (ищет в словаре совпадения) и выводит информацию по каждому слову
 def analyze_text(request):
+    """
+    Анализ текста (поиск совпадений в словаре) и вывод инфы по каждому слову
+    """
     if request.method == "POST":
         start_time = time.time()
         res = ""
         data = json.loads(request.body)
         text = data.get("text", "")
 
-        mod_text = get_modern_word(text)
+        mod_text = Parser.get_modern(text)
         stanza_analyzer.analyze_text(mod_text)
-        #print(stanza_analyzer.text_doc.sentences)
 
         sections = list(filter(None, re.split(r"\n|\r\n", text)))
         parser = Parser()
@@ -463,17 +460,12 @@ def analyze_text(request):
         return JsonResponse({"result": res})
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-def get_modern_word(word):
-    text_res, changes, s_json = Processor.process_text(
-        text=word,
-        show=False,
-        delimiters=False,
-        check_brackets=False
-    )
-    return text_res
 
 # Функция анализирует предложение с помощью станзы
 def analyze_sentence(request):
+    """
+    Анализ предложения с помощью Stanza
+    """
     if request.method == "POST":
         import json
         data = json.loads(request.body)
@@ -481,7 +473,7 @@ def analyze_sentence(request):
         sentence = data.get('sentence', '')
 
         if sentence:
-            mdrn_sentence = get_modern_word(sentence)
+            mdrn_sentence = Parser.get_modern(sentence)
             print(mdrn_sentence)
             output_text = stanza_analyzer.get_sentence_with_punct(mdrn_sentence)
             print(output_text)
@@ -504,7 +496,7 @@ def analyze_word(request):
         attrs = get_attrs()
 
         if word:
-            mdrn_word = get_modern_word(word)
+            mdrn_word = Parser.get_modern(word)
             #print(mdrn_word)
             word_st = stanza_analyzer.analyze_word(mdrn_word, base_mode)
             feats = stanza_analyzer.get_feats_description(word_st)
