@@ -530,6 +530,7 @@ def entries_list(request: HttpRequest):
     dictwords = TblDictWord.objects.all()  # или как у тебя называется модель
     if query:
         dictwords = dictwords.filter(Q(word__icontains=query))
+    dictwords = dictwords.order_by('id')
     paginator = Paginator(dictwords, 50)  # 50 слов на страницу
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -541,12 +542,35 @@ def entries_list(request: HttpRequest):
 
 def entries_list_edit(request, id):
     dictword = TblDictWord.get_word(id)
+    attrs = get_attrs()
+    if request.method == 'POST':
+        dictword.initial_form = request.POST.get('initial_form')
+        dictword.initial_form = request.POST.get('initial_form')
+        dictword.modern = request.POST.get('modern')
+        dictword.param_01 = request.POST.get('pos')
+        feats = {}
+        for key, value in request.POST.items():
+            if key.startswith('param_'):
+                param_id = key.split('_')[1]
+                feats[param_id] = value
+        print(feats)
+        for key, value in feats.items():
+            try:
+                index = int(key)
+                field_name = f'param_{index:02}'
+                if hasattr(dictword, field_name):
+                    setattr(dictword, field_name, value)
+                else:
+                    print(f'Поле {field_name} не найдено в модели')
+            except (ValueError, TypeError) as e:
+                print(f'Ошибка при обработке key={key}: {e}')
+        dictword.save()
+        return redirect("text_app/entries_list")
     attrs_data = get_all_attrs(0, [])
     #print(attrs_data)
     selected_attrs = []
     get_dictword_attrs(dictword, attrs_data, selected_attrs, 0)
-    #print(selected_attrs)
-    attrs = get_attrs()
+    print(selected_attrs)
     # Если GET-запрос, передаем данные для редактирования в форму
     return render(request, 'text_app/entries_list_edit.html', {'dictword': dictword, 'attrs': attrs,
                                                                'attrs_json': json.dumps(attrs_data, ensure_ascii=False),
@@ -579,6 +603,7 @@ def get_dictword_attrs(dictword, attrs_data, res, index):
         else:
             param_id = getattr(dictword, params_data[index].name)
         res.append({
+            "id": param_id,
             "name": attr['name'],
             "value": attr['values'][param_id]["name"]
         })

@@ -128,7 +128,7 @@
         }
 
         const select = document.createElement('select');
-        select.name = `param_${param.id}`;
+        select.name = `param_${param.id + 2}`;
         select.className = "form-control";
 
         const selectId = `select_${param.id}_${Math.random().toString(36).substr(2, 5)}`;
@@ -137,14 +137,16 @@
 
         const selectedValue = getSelectedValueByName(param.name);
 
+        let i = 0
         param.values.forEach(option => {
             const opt = document.createElement('option');
-            opt.value = option.id;
+            opt.value = i;
             opt.textContent = option.name;
             if (option.name === selectedValue) {
                 opt.selected = true;
             }
             select.appendChild(opt);
+            i++
         });
 
         wrapper.appendChild(label);
