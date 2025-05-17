@@ -92,22 +92,6 @@ class TblDictWord(AbstractDictWord):
                     .order_by('-sgnn', '-cnt')
             )
 
-    '''@classmethod
-    def get_best_match(cls, word_variants):
-        result = (
-            cls.objects
-                .filter(word__in=word_variants)
-                .exclude(param_01__in=[16, 19, 22])
-                .values('param_01')
-                .annotate(
-                ID=Min('id'),
-                cnt=Count('id'),
-                sgnn=Sign(F('param_01') + Value(1), output_field=IntegerField())
-            )
-                .order_by('-sgnn', '-cnt')
-        )
-        return result'''
-
 
 class TblDictWord2(AbstractDictWord):
     class Meta:

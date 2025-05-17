@@ -60,7 +60,7 @@
                         "Content-Type": "application/json",
                         "X-CSRFToken": "{{ csrf_token }}"
                     },
-                    body: JSON.stringify({ word: word })
+                    body: JSON.stringify({ word: word, base: true })
                 });
 
                 if (!response.ok) {
@@ -86,7 +86,7 @@
             resultList.innerHTML = '';
             // Показать блок с результатами
             document.getElementById('ai-results').style.display = 'block';
-
+            partOfSpeechSelect.value = data.id
             const listItem = document.createElement('li');
             listItem.innerHTML = `<strong>Часть речи:</strong> ${data["part_of_speech"]}`;
             resultList.appendChild(listItem);

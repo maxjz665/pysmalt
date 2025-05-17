@@ -30,7 +30,7 @@ from user_app.models import TblUser
 from text_app.models.stanza_analyzer import StanzaAnalyzer
 
 
-stanza_analyzer = StanzaAnalyzer(1)
+stanza_analyzer = StanzaAnalyzer()
 
 
 def index(request: HttpRequest):
@@ -504,13 +504,15 @@ def analyze_word(request):
         import json
         data = json.loads(request.body)
         word = data.get('word', '')
+        base_mode = data.get('base', False)
+        print(base_mode)
 
         attrs = get_attrs()
 
         if word:
             mdrn_word = get_modern_word(word)
             print(mdrn_word)
-            word_st = stanza_analyzer.analyze_word(mdrn_word)
+            word_st = stanza_analyzer.analyze_word(mdrn_word, base_mode)
             feats = stanza_analyzer.get_feats_description(word_st)
             print(feats)
             id_pos = stanza_analyzer.get_pos_id(word_st)

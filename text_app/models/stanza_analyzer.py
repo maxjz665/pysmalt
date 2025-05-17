@@ -14,7 +14,7 @@ class StanzaAnalyzer:
         'NOUN': 0,
         'NUM': 9,
         'PART': 9,
-        'PROPN': 3,
+        'PRON': 3,
         'PUNCT': 20,
         'SCONJ': 11,
         'SYM': 20,
@@ -22,17 +22,20 @@ class StanzaAnalyzer:
         'X': 20
     }
 
-    def __init__(self, mode=0):
-        if mode == 0:
-            self.nlp = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse')
-        if mode == 1:
-            self.nlp = stanza.Pipeline(lang='ru', processors='tokenize, pos',
+    def __init__(self):
+        #базовая станза
+        self.nlp_base = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse')
+        #дообученная станза (feats не полные)
+        self.nlp_tr = stanza.Pipeline(lang='ru', processors='tokenize, pos',
                                        tokenize_model_path=os.getcwd() + "/text_app/stanza_models/99,99tok.pt",
                                        pos_model_path=os.getcwd() + "/text_app/stanza_models/94,48dualpos.pt")
         self.text_doc = None
 
-    def analyze_text(self, text):
-        self.text_doc = self.nlp(text)
+    def analyze_text(self, text, base_mode=False):
+        if base_mode:
+            self.text_doc = self.nlp_base(text)
+        else:
+            self.text_doc = self.nlp_tr(text)
         return self.text_doc
 
     def search_word(self, s_word):
@@ -43,12 +46,15 @@ class StanzaAnalyzer:
         return None
 
 
-    def analyze_word(self, word):
+    def analyze_word(self, word, base_mode=False):
         if self.text_doc:
             res = self.search_word(word)
             if res:
                 return res
-        doc = self.nlp(word)
+        if base_mode:
+            doc = self.nlp_base(word)
+        else:
+            doc = self.nlp_tr(word)
         return doc.sentences[0].words[0]
 
     def parse_attrs(self, word):
@@ -248,7 +254,7 @@ class StanzaAnalyzer:
 
 
     def analyze_sentence(self, sentence):
-        doc = self.nlp(sentence)
+        doc = self.nlp_base(sentence)
         annotated_words = []
         res = []
         for sent in doc.sentences:
