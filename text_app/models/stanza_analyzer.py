@@ -1,5 +1,5 @@
 import os
-
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import stanza
 
 
@@ -27,8 +27,8 @@ class StanzaAnalyzer:
             self.nlp = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse')
         if mode == 1:
             self.nlp = stanza.Pipeline(lang='ru', processors='tokenize, pos',
-                                       tokenize_model_path=os.getcwd() + "/text_app/stanza_models/99,983.pt",
-                                       pos_model_path=os.getcwd() + "/text_app/stanza_models/79,18wfext.pt")
+                                       tokenize_model_path=os.getcwd() + "/text_app/stanza_models/99,99tok.pt",
+                                       pos_model_path=os.getcwd() + "/text_app/stanza_models/94,48dualpos.pt")
         self.text_doc = None
 
     def analyze_text(self, text):
@@ -41,6 +41,7 @@ class StanzaAnalyzer:
                 if word.text == s_word:
                     return word
         return None
+
 
     def analyze_word(self, word):
         if self.text_doc:
@@ -62,12 +63,55 @@ class StanzaAnalyzer:
             data[feat_name] = feat_val
         return data
 
-    def get_member_of_sentence(self, deprel):
-        if deprel in ['nsubj', 'csubj', 'nsubj:pass', 'nsubj:outer', 'csubj:pass']:
+
+    def get_sentence_with_punct(self, text):
+        local_dir = os.getcwd() + "/text_app/sbert_model"
+        tokenizer = AutoTokenizer.from_pretrained("kontur-ai/sbert_punc_case_ru", cache_dir=local_dir)
+        model = AutoModelForTokenClassification.from_pretrained("kontur-ai/sbert_punc_case_ru", cache_dir=local_dir)
+        classifier = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="first")
+
+        def process_token(token, label):
+            if "UPPER" in label:
+                token = token.capitalize()
+            if "TOTAL" in label:
+                token = token.upper()
+
+            punct_map = {
+                "PERIOD": ".",
+                "COMMA": ",",
+                "QUESTION": "?",
+                "TIRE": " —",
+                "DVOETOCHIE": ":",
+                "VOSKL": "!",
+                "PERIODCOMMA": ";",
+                "DEFIS": "-",
+                "MNOGOTOCHIE": "...",
+                "QUESTIONVOSKL": "?!",
+            }
+
+            for suffix, punct in punct_map.items():
+                if suffix in label:
+                    return token + punct
+            return token
+
+        preds = classifier(text)
+        output = ""
+        for item in preds:
+            output += " " + process_token(item['word'].strip(), item['entity_group'])
+        return output
+
+    def get_member_of_sentence(self, pos, deprel):
+        if deprel == 'obj':
+            #print(pos)
+            if pos == "ADV":
+                return 'adverbial'
+            else:
+                return 'object'
+        elif deprel in ['nsubj', 'csubj', 'nsubj:pass', 'nsubj:outer', 'csubj:pass']:
             return 'subject'  # Подлежащее
         elif deprel in ['root', 'cop', 'aux', 'aux:pass', 'xcomp']:
             return 'predicate'  # Сказуемое
-        elif deprel in ['obj', 'iobj', 'ccomp', 'obl', 'obl:agent', 'obl:tmod', 'nmod', 'appos']:
+        elif deprel in ['iobj', 'ccomp', 'obl', 'obl:agent', 'obl:tmod', 'nmod', 'appos']:
             return 'object'  # Дополнение
         elif deprel in ['advmod', 'obl:tmod', 'advcl']:
             return 'adverbial'  # Обстоятельство
@@ -76,24 +120,151 @@ class StanzaAnalyzer:
         else:
             return 'other'
 
+    def get_syntax_roles(self, tokens):
+        """
+        Определяет только subject и predicate.
+        """
+
+        roles = {}
+
+        subject_deprels = {"nsubj", "nsubj:pass", "csubj", "csubj:pass", "expl"}
+
+        id_to_token = {tok.id: tok for tok in tokens}
+
+        # 1. Подлежащее
+        for tok in tokens:
+            if tok.deprel in subject_deprels:
+                roles[tok.id] = "subject"
+
+        # 2. Сказуемое
+        root = next((tok for tok in tokens if tok.head == 0), None)
+        if root:
+            if root.upos in {"VERB", "AUX"}:
+                roles[root.id] = "predicate"
+            else:
+                # Ищем глагол-связку (copula)
+                copulas = [tok for tok in tokens if tok.deprel == "cop" and tok.head == root.id]
+                if copulas:
+                    for cop in copulas:
+                        roles[cop.id] = "predicate"
+                    roles[root.id] = "predicate"  # можно обе части как предикат
+                else:
+                    # root без явного глагола — все равно играющее роль сказуемого
+                    roles[root.id] = "predicate"
+
+        # Результат
+        result = []
+        for tok in tokens:
+            result.append({
+                "text": tok.text,
+                "upos": tok.upos,
+                "deprel": tok.deprel,
+                "role": roles.get(tok.id, "other")
+            })
+
+        return result
+
+    '''def get_syntax_roles(self, tokens):
+        """
+        Принимает список токенов с полями:
+            id, head, deprel, form/text, upos
+        Возвращает список слов с пометками ролей: subject, predicate, object, adverbial, attribute
+        """
+
+        roles = {}
+
+        # Карта соответствия dependency -> синтаксическая роль
+        dep_to_role = {
+            "nsubj": "subject",
+            "nsubj:pass": "subject",
+            "root": "predicate",
+            "obj": "object",
+            "iobj": "object",
+            "obl": "adverbial",
+            "advmod": "adverbial",
+            "amod": "attribute",
+            "nmod": "attribute",
+            "acl": "attribute",
+            "det": "attribute",
+            "case": "attribute",
+            "xcomp": "object",
+            "ccomp": "object",
+        }
+
+        id_to_token = {tok.id: tok for tok in tokens}
+        print(id_to_token)
+        children = {tok.id: [] for tok in tokens}
+        for tok in tokens:
+            if tok.head != 0:
+                children[tok.head].append(tok.id)
+
+        def annotate_recursive(token_id, inherited_role=None):
+            token = id_to_token[token_id]
+            role = dep_to_role.get(token.deprel, inherited_role)
+            roles[token_id] = role or "other"
+
+            for child_id in children.get(token_id, []):
+                child = id_to_token[child_id]
+                if child.deprel == "case":
+                    # Предлог получает роль от головы
+                    roles[child_id] = role
+                else:
+                    annotate_recursive(child_id, role)
+
+        # Найдём корень
+        root = next(tok for tok in tokens if tok.head == 0)
+        annotate_recursive(root.id, "predicate")
+
+        # Собираем результат
+        result = []
+        for tok in tokens:
+            result.append({
+                "text": tok.text if hasattr(tok, "text") else tok.form,
+                "upos": tok.upos,
+                "deprel": tok.deprel,
+                "role": roles.get(tok.id, "other")
+            })
+
+        return result'''
+
+
     def get_roles_of_sentence(self,sentence):
+        annotated_words = []
+        print(sentence)
         for i in range(0, len(sentence)):
-            print(sentence[i].id)
+            if sentence[i].deprel == "root":
+                annotated_words.append({
+                    'text': sentence[i].text,
+                    'deprel': sentence[i].deprel,
+                    'role': "predicate"
+                })
+            else:
+                annotated_words.append({
+                    'text': sentence[i].text,
+                    'deprel': sentence[i].deprel,
+                    'role': "other"
+                })
+        return annotated_words
+
 
     def analyze_sentence(self, sentence):
         doc = self.nlp(sentence)
         annotated_words = []
-
+        res = []
         for sent in doc.sentences:
-            res = self.get_roles_of_sentence(sent.words)
+            #res = self.get_roles_of_sentence(sent.words)
+            res += self.get_syntax_roles(sent.words)
+            print(res)
             for word in sent.words:
+                if word.upos == 'PUNCT':
+                    continue
                 annotated_words.append({
                     'text': word.text,
                     'deprel': word.deprel,
-                    'role': self.get_member_of_sentence(word.deprel)
+                    'role': self.get_member_of_sentence(word.upos, word.deprel)
                 })
-
-        return annotated_words
+        return res
+        #return annotated_words
 
     def get_feats_description(self, word):
         feats = self.parse_attrs(word)

@@ -30,7 +30,7 @@ from user_app.models import TblUser
 from text_app.models.stanza_analyzer import StanzaAnalyzer
 
 
-stanza_analyzer = StanzaAnalyzer(0)
+stanza_analyzer = StanzaAnalyzer(1)
 
 
 def index(request: HttpRequest):
@@ -488,15 +488,12 @@ def analyze_sentence(request):
 
         if sentence:
             mdrn_sentence = get_modern_word(sentence)
-            import torch
-            #model, example_texts, languages, punct, apply_te = torch.hub.load(repo_or_dir='snakers4/silero-models',
-            #                                                                  model='silero_te')
-
-            #output_text = apply_te(mdrn_sentence, lan='ru')
-            #print(output_text)
+            print(mdrn_sentence)
+            output_text = stanza_analyzer.get_sentence_with_punct(mdrn_sentence)
+            print(output_text)
             #print(mdrn_sentence)
-            res = stanza_analyzer.analyze_sentence(mdrn_sentence)
-            #print(res)
+            res = stanza_analyzer.analyze_sentence(output_text)
+            print(res)
             return JsonResponse(res, safe=False)
 
     return JsonResponse({"error": "Invalid request"}, status=400)

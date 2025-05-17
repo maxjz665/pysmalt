@@ -10,3 +10,4 @@ django-picklefield~=3.2  # для хранения дерева решения �
 nltk~=3.9.1
 stanza~=1.10.1
 prereform2modern~=1.0.0
+transformers~=4.51.3
