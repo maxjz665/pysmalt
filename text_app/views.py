@@ -290,20 +290,16 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
 
 def paper_data_synt_analysis(request: HttpRequest, paper_id: int) -> HttpResponse:
     """
-    Печать содержимого статьи
-    :return: содержимое статьи
+    Отображение содержимого статьи в режиме синтаксического анализа
     """
     use_old_type = request.GET.get("type", "old")
-
     text_data = TblText.objects.filter(id=paper_id).get()
     content = text_data.get_content()
-    #print(content)
 
     if text_data is None or content is None:
         return render(request, "not_found.html", context={"message": "Текст не найден",
                                                           "return_url": "text_app/papers_list",
                                                           "return_name": "К списку текстов"})
-
     return render(request, "text_app/paper_data_synt_analysis.html",
                   context={"type": use_old_type, "text_data": text_data, "content": content})
 

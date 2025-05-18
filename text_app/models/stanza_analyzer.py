@@ -1,5 +1,4 @@
 import os
-from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import stanza
 
 
@@ -23,14 +22,15 @@ class StanzaAnalyzer:
     }
 
     def __init__(self):
-        # базовая станза
+        # базовая станза (используется для нахождения признаков и синтаксических свойств)
         self.nlp_base = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse')
-        # дообученная станза (feats не полные)
+        # дообученная станза (feats не полные, отсутствие синтаксиса)
         self.nlp_tr = stanza.Pipeline(lang='ru', processors='tokenize, pos',
                                       tokenize_model_path=os.getcwd() + "/text_app/stanza_models/99,99tok.pt",
                                       pos_model_path=os.getcwd() + "/text_app/stanza_models/94,48dualpos.pt")
         self.text_doc = None
 
+    # Анализ текста (по умолчанию используется дообученная модель)
     def analyze_text(self, text, base_mode=False):
         if base_mode:
             self.text_doc = self.nlp_base(text)
@@ -38,6 +38,7 @@ class StanzaAnalyzer:
             self.text_doc = self.nlp_tr(text)
         return self.text_doc
 
+    # Поиск слова в сохраненных разборах
     def search_word(self, s_word):
         for sentence in self.text_doc.sentences:
             for word in sentence.words:
@@ -45,6 +46,7 @@ class StanzaAnalyzer:
                     return word
         return None
 
+    # Функция возвращает разбор слова (по умолчанию используется дообученная модель)
     def analyze_word(self, word, base_mode=False):
         if self.text_doc:
             res = self.search_word(word)
@@ -56,6 +58,7 @@ class StanzaAnalyzer:
             doc = self.nlp_tr(word)
         return doc.sentences[0].words[0]
 
+    #функция формирует признаки в виде словаря
     def parse_attrs(self, word):
         if not word.feats or word.feats == "":
             return None
@@ -68,54 +71,17 @@ class StanzaAnalyzer:
             data[feat_name] = feat_val
         return data
 
-    def get_sentence_with_punct(self, text):
-        local_dir = os.getcwd() + "/text_app/sbert_model"
-        tokenizer = AutoTokenizer.from_pretrained("kontur-ai/sbert_punc_case_ru", cache_dir=local_dir)
-        model = AutoModelForTokenClassification.from_pretrained("kontur-ai/sbert_punc_case_ru", cache_dir=local_dir)
-        classifier = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="first")
-
-        def process_token(token, label):
-            if "UPPER" in label:
-                token = token.capitalize()
-            if "TOTAL" in label:
-                token = token.upper()
-
-            punct_map = {
-                "PERIOD": ".",
-                "COMMA": ",",
-                "QUESTION": "?",
-                "TIRE": " —",
-                "DVOETOCHIE": ":",
-                "VOSKL": "!",
-                "PERIODCOMMA": ";",
-                "DEFIS": "-",
-                "MNOGOTOCHIE": "...",
-                "QUESTIONVOSKL": "?!",
-            }
-
-            for suffix, punct in punct_map.items():
-                if suffix in label:
-                    return token + punct
-            return token
-
-        preds = classifier(text)
-        output = ""
-        for item in preds:
-            output += " " + process_token(item['word'].strip(), item['entity_group'])
-        return output
-
-
+    # Функция размечает синтаксис для предложения
     def analyze_sentence(self, sentence):
         doc = self.nlp_base(sentence)
         res = []
         for sent in doc.sentences:
-            # res = self.get_roles_of_sentence(sent.words)
             tree = DependencyTree(sent)
-            print(tree)
-            tree.print_tree()
+            #tree.print_tree()   #для отладки
             res += DependencyTree.classify_annotated_words(tree)
         return res
 
+    # Перекодировка признаков UD в смалтовские
     def get_feats_description(self, word):
         feats = self.parse_attrs(word)
         res_data = []
@@ -419,6 +385,7 @@ class StanzaAnalyzer:
                     })
         return res_data
 
+    # Перекодировка частей речи UD в смалтовские
     def get_pos_id(self, word):
         pos = word.upos
         if pos in self.stanza_pos_mapping:
@@ -434,6 +401,7 @@ class StanzaAnalyzer:
             return -1
 
 
+#Класс узла синтаксических зависимостей
 class DependencyNode:
     def __init__(self, id_, text, lemma, upos, deprel, head, feats):
         self.id = id_
@@ -452,6 +420,7 @@ class DependencyNode:
         return f"{self.text} ({self.deprel})"
 
 
+#Класс дерева синтаксических зависимостей
 class DependencyTree:
     def __init__(self, sentence):
         self.nodes = {}
@@ -479,7 +448,7 @@ class DependencyTree:
                 if head_node:
                     head_node.add_child(node)
 
-    @staticmethod
+    @staticmethod       #feats в виде словаря(для доступа во время анализа синтаксиса)
     def parse_feats(feats_str):
         if not feats_str:
             return {}
@@ -494,6 +463,7 @@ class DependencyTree:
     def get_roots(self):
         return self.roots
 
+    #печать дерева с отсутпами(для проверки и отладки)
     def print_tree(self, node=None, level=0):
         if node is None:
             for root in self.roots:
@@ -503,7 +473,7 @@ class DependencyTree:
             for child in node.children:
                 self.print_tree(child, level + 1)
 
-    @staticmethod
+    @staticmethod       #Обход синтаксического дерева, распределение связей между 5 синтаксическими ролями (требует доработки)
     def classify_annotated_words(tree):
         annotated_words = []
         found_subject = False
@@ -613,10 +583,6 @@ class DependencyTree:
                     else:
                         annotate_node(child, 'other')
                 elif child.deprel == 'mark':
-                    # Тут можешь заменить на 'marker' если хочешь явно видеть союзы
-                    #if node.id in node_roles:
-                    #    annotate_node(child, node_roles[node.id])
-                    #else:
                     annotate_node(child, 'other')
                 else:
                     traverse(child, node)
