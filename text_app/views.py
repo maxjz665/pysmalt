@@ -317,7 +317,7 @@ def import_form(request: HttpRequest):
     author_types = TblAuthorTypes.objects.all()
     authors = TblAuthor.objects.all()
     magazines = TblMagazine.objects.all()
-    attrs = get_attrs()
+    attrs = TblDictWord.get_attrs()
 
     if request.method == 'POST':
         if request.POST.get('action') == 'run_import':
@@ -487,7 +487,7 @@ def analyze_word(request):
         data = json.loads(request.body)
         word = data.get('word', '')
         base_mode = data.get('base', False)
-        attrs = get_attrs()
+        attrs = TblDictWord.get_attrs()
 
         if word:
             mdrn_word = Parser.get_modern(word)
@@ -521,7 +521,7 @@ def entries_list(request: HttpRequest):
     paginator = Paginator(dictwords, 50)  # 50 слов на страницу
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    attrs = get_attrs()
+    attrs = TblDictWord.get_attrs()
     return render(request, "text_app/entries_list.html",
                   context={"dictwords": page_obj, "query": query, "attrs": attrs})
 
@@ -531,7 +531,7 @@ def entries_list_edit(request, id):
     Форма редактирования разборов
     """
     dictword = TblDictWord.get_word(id)
-    attrs = get_attrs()
+    attrs = TblDictWord.get_attrs()
     if request.method == 'POST':
         dictword.initial_form = request.POST.get('initial_form')
         dictword.initial_form = request.POST.get('initial_form')
@@ -554,82 +554,10 @@ def entries_list_edit(request, id):
                 print(f'Ошибка при обработке key={key}: {e}')
         dictword.save()
         return redirect("text_app/entries_list")
-    attrs_data = get_all_attrs(0, [])
+    attrs_data = TblDictWord.get_all_attrs(0, [])
     selected_attrs = []
-    get_dictword_attrs(dictword, attrs_data, selected_attrs, 0)
+    TblDictWord.get_dictword_attrs(dictword, attrs_data, selected_attrs, 0)
     # Если GET-запрос, передаем данные для редактирования в форму
     return render(request, 'text_app/entries_list_edit.html', {'dictword': dictword, 'attrs': attrs,
                                                                'attrs_json': json.dumps(attrs_data, ensure_ascii=False),
                                                                'selected_attrs': json.dumps(selected_attrs)})
-
-# Получает список частей речи и их id
-def get_attrs():
-    menu_items = TblMenuItems.objects.all()
-    menu_params = TblMenuParams.objects.all()
-    attrs = []
-    i = 0
-    for item in menu_params[0]._meta.fields[3:26]:
-        item_id = int(getattr(menu_params[0], item.name))
-        attrs.append({
-            "id": i,
-            "name": menu_items[item_id].item_caption,
-        })
-        # print(menu_items[item_id].item_caption)
-        i += 1
-    return attrs
-
-# Получение морфологии для слова
-def get_dictword_attrs(dictword, attrs_data, res, index):
-    params_data = dictword._meta.fields[3:22]
-    params_count = dictword.params_count
-    for attr in attrs_data:
-        if index == 1:
-            index += 1
-            param_id = getattr(dictword, params_data[index].name)
-        else:
-            param_id = getattr(dictword, params_data[index].name)
-        res.append({
-            "id": param_id,
-            "name": attr['name'],
-            "value": attr['values'][param_id]["name"]
-        })
-        if len(attr['values'][param_id]["values"]) != 0:
-            index =get_dictword_attrs(dictword, attr['values'][param_id]["values"], res, index+1)-1
-        if index >= params_count:
-            break
-        index += 1
-    return index
-
-
-
-# Получение всех атрибутов и признаков
-def get_all_attrs(index, data):
-    menu_items = TblMenuItems.objects.all()
-    menu_params = TblMenuParams.objects.all()
-    param_caption = menu_params[index].param_caption
-    #print(param_caption)
-    data.append({
-            "id": index,
-            "name": param_caption,
-            "values": [],
-    })
-    items_count = int(menu_params[index].items_count)
-    items_fields = menu_params[index]._meta.fields[3:3+items_count]
-    for items_field in items_fields:
-        item_id = int(getattr(menu_params[index], items_field.name))
-        item_caption = menu_items[item_id].item_caption
-        #print(item_caption)
-        values = list(filter(lambda item: item['name'] == param_caption, data))[0]["values"]
-        #print(values)
-        values.append({
-            "id": item_id,
-            "name": item_caption,
-            "values": [],
-        })
-        params_count = int(menu_items[item_id].params_count)
-        params_fields = menu_items[item_id]._meta.fields[3:3 + params_count]
-        for param_field in params_fields:
-            param_id = int(getattr(menu_items[item_id], param_field.name))
-            values_1 = list(filter(lambda item: item['name'] == item_caption, values))[0]["values"]
-            values_1 = get_all_attrs(param_id, values_1)
-    return data
