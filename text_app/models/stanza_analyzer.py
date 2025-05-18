@@ -23,12 +23,12 @@ class StanzaAnalyzer:
     }
 
     def __init__(self):
-        #базовая станза
+        # базовая станза
         self.nlp_base = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse')
-        #дообученная станза (feats не полные)
+        # дообученная станза (feats не полные)
         self.nlp_tr = stanza.Pipeline(lang='ru', processors='tokenize, pos',
-                                       tokenize_model_path=os.getcwd() + "/text_app/stanza_models/99,99tok.pt",
-                                       pos_model_path=os.getcwd() + "/text_app/stanza_models/94,48dualpos.pt")
+                                      tokenize_model_path=os.getcwd() + "/text_app/stanza_models/99,99tok.pt",
+                                      pos_model_path=os.getcwd() + "/text_app/stanza_models/94,48dualpos.pt")
         self.text_doc = None
 
     def analyze_text(self, text, base_mode=False):
@@ -44,7 +44,6 @@ class StanzaAnalyzer:
                 if word.text == s_word:
                     return word
         return None
-
 
     def analyze_word(self, word, base_mode=False):
         if self.text_doc:
@@ -68,7 +67,6 @@ class StanzaAnalyzer:
             feat_val = spl_feat[1]
             data[feat_name] = feat_val
         return data
-
 
     def get_sentence_with_punct(self, text):
         local_dir = os.getcwd() + "/text_app/sbert_model"
@@ -106,176 +104,22 @@ class StanzaAnalyzer:
             output += " " + process_token(item['word'].strip(), item['entity_group'])
         return output
 
-    def get_member_of_sentence(self, pos, deprel):
-        if deprel == 'obj':
-            #print(pos)
-            if pos == "ADV":
-                return 'adverbial'
-            else:
-                return 'object'
-        elif deprel in ['nsubj', 'csubj', 'nsubj:pass', 'nsubj:outer', 'csubj:pass']:
-            return 'subject'  # Подлежащее
-        elif deprel in ['root', 'cop', 'aux', 'aux:pass', 'xcomp']:
-            return 'predicate'  # Сказуемое
-        elif deprel in ['iobj', 'ccomp', 'obl', 'obl:agent', 'obl:tmod', 'nmod', 'appos']:
-            return 'object'  # Дополнение
-        elif deprel in ['advmod', 'obl:tmod', 'advcl']:
-            return 'adverbial'  # Обстоятельство
-        elif deprel in ['det', 'nummod', 'acl', 'amod']:
-            return 'attribute'  # Определение
-        else:
-            return 'other'
-
-    def get_syntax_roles(self, tokens):
-        """
-        Определяет только subject и predicate.
-        """
-
-        roles = {}
-
-        subject_deprels = {"nsubj", "nsubj:pass", "csubj", "csubj:pass", "expl"}
-
-        id_to_token = {tok.id: tok for tok in tokens}
-
-        # 1. Подлежащее
-        for tok in tokens:
-            if tok.deprel in subject_deprels:
-                roles[tok.id] = "subject"
-
-        # 2. Сказуемое
-        root = next((tok for tok in tokens if tok.head == 0), None)
-        if root:
-            if root.upos in {"VERB", "AUX"}:
-                roles[root.id] = "predicate"
-            else:
-                # Ищем глагол-связку (copula)
-                copulas = [tok for tok in tokens if tok.deprel == "cop" and tok.head == root.id]
-                if copulas:
-                    for cop in copulas:
-                        roles[cop.id] = "predicate"
-                    roles[root.id] = "predicate"  # можно обе части как предикат
-                else:
-                    # root без явного глагола — все равно играющее роль сказуемого
-                    roles[root.id] = "predicate"
-
-        # Результат
-        result = []
-        for tok in tokens:
-            result.append({
-                "text": tok.text,
-                "upos": tok.upos,
-                "deprel": tok.deprel,
-                "role": roles.get(tok.id, "other")
-            })
-
-        return result
-
-    '''def get_syntax_roles(self, tokens):
-        """
-        Принимает список токенов с полями:
-            id, head, deprel, form/text, upos
-        Возвращает список слов с пометками ролей: subject, predicate, object, adverbial, attribute
-        """
-
-        roles = {}
-
-        # Карта соответствия dependency -> синтаксическая роль
-        dep_to_role = {
-            "nsubj": "subject",
-            "nsubj:pass": "subject",
-            "root": "predicate",
-            "obj": "object",
-            "iobj": "object",
-            "obl": "adverbial",
-            "advmod": "adverbial",
-            "amod": "attribute",
-            "nmod": "attribute",
-            "acl": "attribute",
-            "det": "attribute",
-            "case": "attribute",
-            "xcomp": "object",
-            "ccomp": "object",
-        }
-
-        id_to_token = {tok.id: tok for tok in tokens}
-        print(id_to_token)
-        children = {tok.id: [] for tok in tokens}
-        for tok in tokens:
-            if tok.head != 0:
-                children[tok.head].append(tok.id)
-
-        def annotate_recursive(token_id, inherited_role=None):
-            token = id_to_token[token_id]
-            role = dep_to_role.get(token.deprel, inherited_role)
-            roles[token_id] = role or "other"
-
-            for child_id in children.get(token_id, []):
-                child = id_to_token[child_id]
-                if child.deprel == "case":
-                    # Предлог получает роль от головы
-                    roles[child_id] = role
-                else:
-                    annotate_recursive(child_id, role)
-
-        # Найдём корень
-        root = next(tok for tok in tokens if tok.head == 0)
-        annotate_recursive(root.id, "predicate")
-
-        # Собираем результат
-        result = []
-        for tok in tokens:
-            result.append({
-                "text": tok.text if hasattr(tok, "text") else tok.form,
-                "upos": tok.upos,
-                "deprel": tok.deprel,
-                "role": roles.get(tok.id, "other")
-            })
-
-        return result'''
-
-
-    def get_roles_of_sentence(self,sentence):
-        annotated_words = []
-        print(sentence)
-        for i in range(0, len(sentence)):
-            if sentence[i].deprel == "root":
-                annotated_words.append({
-                    'text': sentence[i].text,
-                    'deprel': sentence[i].deprel,
-                    'role': "predicate"
-                })
-            else:
-                annotated_words.append({
-                    'text': sentence[i].text,
-                    'deprel': sentence[i].deprel,
-                    'role': "other"
-                })
-        return annotated_words
-
 
     def analyze_sentence(self, sentence):
         doc = self.nlp_base(sentence)
-        annotated_words = []
         res = []
         for sent in doc.sentences:
-            #res = self.get_roles_of_sentence(sent.words)
-            res += self.get_syntax_roles(sent.words)
-            print(res)
-            for word in sent.words:
-                if word.upos == 'PUNCT':
-                    continue
-                annotated_words.append({
-                    'text': word.text,
-                    'deprel': word.deprel,
-                    'role': self.get_member_of_sentence(word.upos, word.deprel)
-                })
+            # res = self.get_roles_of_sentence(sent.words)
+            tree = DependencyTree(sent)
+            print(tree)
+            tree.print_tree()
+            res += DependencyTree.classify_annotated_words(tree)
         return res
-        #return annotated_words
 
     def get_feats_description(self, word):
         feats = self.parse_attrs(word)
         res_data = []
-        #print(word.upos)
+        # print(word.upos)
         if word.upos == "SCONJ":
             res_data.append({
                 "name": "По синтаксической функции",
@@ -588,3 +432,203 @@ class StanzaAnalyzer:
             return self.stanza_pos_mapping[pos]
         else:
             return -1
+
+
+class DependencyNode:
+    def __init__(self, id_, text, lemma, upos, deprel, head, feats):
+        self.id = id_
+        self.text = text
+        self.lemma = lemma
+        self.upos = upos
+        self.deprel = deprel
+        self.head = head  # id головного слова
+        self.feats = feats
+        self.children = []  # дочерние узлы
+
+    def add_child(self, node):
+        self.children.append(node)
+
+    def __repr__(self):
+        return f"{self.text} ({self.deprel})"
+
+
+class DependencyTree:
+    def __init__(self, sentence):
+        self.nodes = {}
+        self.roots = []
+
+        # Создаём узлы
+        for word in sentence.words:
+            node = DependencyNode(
+                id_=word.id,
+                text=word.text,
+                lemma=word.lemma,
+                upos=word.upos,
+                deprel=word.deprel,
+                head=word.head,
+                feats=self.parse_feats(word.feats)
+            )
+            self.nodes[word.id] = node
+
+        # Связываем узлы
+        for node in self.nodes.values():
+            if node.head == 0:
+                self.roots.append(node)
+            else:
+                head_node = self.nodes.get(node.head)
+                if head_node:
+                    head_node.add_child(node)
+
+    @staticmethod
+    def parse_feats(feats_str):
+        if not feats_str:
+            return {}
+        feats_dict = {}
+        for feat in feats_str.split('|'):
+            if '=' in feat:
+                key, value = feat.split('=')
+                feats_dict[key] = value
+        return feats_dict
+
+
+    def get_roots(self):
+        return self.roots
+
+    def print_tree(self, node=None, level=0):
+        if node is None:
+            for root in self.roots:
+                self.print_tree(root, level)
+        else:
+            print("  " * level + f"{node.text} ({node.deprel})")
+            for child in node.children:
+                self.print_tree(child, level + 1)
+
+    @staticmethod
+    def classify_annotated_words(tree):
+        annotated_words = []
+        found_subject = False
+        node_roles = {}
+        visited_ids = set()
+
+        def annotate_node(node, role):
+            annotated_words.append({
+                'id': node.id,
+                'text': node.text,
+                'head': node.head,
+                'deprel': node.deprel,
+                'role': role
+            })
+            node_roles[node.id] = role
+            visited_ids.add(node.id)
+
+        def traverse(node, parent=None):
+            nonlocal found_subject
+
+            if node.id in visited_ids:
+                return
+
+            role = None
+
+            if node.deprel in ['nsubj', 'nsubj:pass']:
+                role = 'subject'
+                found_subject = True
+            elif node.deprel in ['conj', 'flat', 'flat:name']:
+                parent_role = node_roles.get(node.head)
+                if parent_role:
+                    role = parent_role
+                else:
+                    role = 'other'
+            elif node.deprel in ['root', 'conj', 'aux:pass'] and node.upos in ['VERB', 'AUX', 'ADJ']:
+                role = 'predicate'
+            elif node.deprel == 'root' and not found_subject and node.upos in ['NOUN', 'PRON']:
+                role = 'subject'
+                found_subject = True
+            elif node.deprel == 'ccomp':
+                role = 'predicate'  # вложенное сказуемое (придаточное)
+            elif node.deprel == 'cop':
+                role = 'predicate'  # глагол связка
+            elif node.deprel == 'xcomp':
+                verbform = node.feats.get('VerbForm') if node.feats else None
+
+                if verbform == 'Inf':
+                    # инфинитив — скорее всего часть составного сказуемого
+                    parent_role = node_roles.get(node.head)
+                    if parent_role in ['attribute']:
+                        role = 'attribute'
+                    else:
+                        role = 'predicate'
+                elif verbform == 'Part':
+                    role = 'attribute'
+                elif verbform == 'Conv':
+                    # деепричастие — это обстоятельство образа действия
+                    role = 'adverbial'
+                else:
+                    # по умолчанию — если непонятно
+                    role = 'adverbial'
+            elif node.deprel in ['obj', 'iobj']:
+                role = 'object'
+            elif node.deprel == 'obl':
+                head_node = tree.nodes.get(node.head)
+                case_child = next((c for c in node.children if c.deprel == 'case'), None)
+                case_text = case_child.text.lower() if case_child else ""
+
+                if case_text in ['в', 'на', 'под', 'при', 'между']:
+                    role = 'adverbial'  # место
+                elif case_text in ['с', 'без', 'от', 'до', 'для', 'из']:
+                    role = 'adverbial'  # образ действия, причины
+                elif head_node and head_node.upos == 'VERB':
+                    if node.upos in ['NOUN', 'PRON']:
+                        role = 'object'
+                    elif node.upos == 'ADJ':
+                        role = 'attribute'
+                elif head_node and head_node.upos in ['NOUN', 'PRON', 'ADJ']:
+                    role = 'attribute'
+                else:
+                    role = 'adverbial'
+            elif node.deprel in ['advmod', 'advcl']:
+                role = 'adverbial'
+            elif node.deprel in ['amod', 'nmod', 'det', 'nummod', 'acl', 'nummod:gov', 'fixed']:
+                role = 'attribute'
+            elif node.deprel == 'appos':
+                parent_role = node_roles.get(node.head)
+                if parent_role in ['subject']:
+                    role = 'subject'
+                    found_subject = True
+                else:
+                    role = 'attribute'
+            elif node.deprel == 'case':
+                # case обрабатываем отдельно ниже
+                role = None
+            else:
+                # Для всех прочих ролей - other
+                role = 'other'
+
+            if role:
+                annotate_node(node, role)
+
+            for child in node.children:
+                if child.deprel == 'case':
+                    if node.id in node_roles:
+                        annotate_node(child, node_roles[node.id])
+                    else:
+                        annotate_node(child, 'other')
+                elif child.deprel == 'mark':
+                    # Тут можешь заменить на 'marker' если хочешь явно видеть союзы
+                    #if node.id in node_roles:
+                    #    annotate_node(child, node_roles[node.id])
+                    #else:
+                    annotate_node(child, 'other')
+                else:
+                    traverse(child, node)
+
+        for root in tree.get_roots():
+            traverse(root)
+
+        # Обработка узлов, не попавших в обход
+        for node in tree.nodes.values():
+            if node.id not in visited_ids:
+                inherited_role = node_roles.get(node.head, 'other')
+                annotate_node(node, inherited_role)
+
+        annotated_words.sort(key=lambda x: x['id'])
+        return annotated_words

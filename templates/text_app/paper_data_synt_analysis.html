@@ -9,6 +9,19 @@
         {% if text_data.comment %}[{{ text_data.comment }}]{% endif %}
         </div>
 </div>
+<div id="edit-role-modal" style="display: none; position: absolute; background: white; border: 1px solid black; padding: 10px; z-index: 1000;">
+    <label for="role-select">Изменить роль:</label>
+    <select id="role-select">
+        <option value="subject">Подлежащее</option>
+        <option value="predicate">Сказуемое</option>
+        <option value="object">Дополнение</option>
+        <option value="adverbial">Обстоятельство</option>
+        <option value="attribute">Определение</option>
+        <option value="other">Другое</option>
+    </select>
+    <button id="apply-role-btn">OK</button>
+    <button id="cancel-role-btn">Отмена</button>
+</div>
 <div id="Syntax">
     <h3 style="margin-left: 20px; margin-top: 10px;">Синтаксический анализ предложения:</h3>
     <hr style="margin: 10px 20px;">
@@ -155,6 +168,47 @@ document.addEventListener('DOMContentLoaded', function () {
     if (sentenceLinks.length > 0) {
         showSentenceText(sentenceLinks[0]);
     }
+});
+
+let selectedWordSpan = null;
+
+document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('syntax-word')) {
+        selectedWordSpan = e.target;
+
+        const rect = e.target.getBoundingClientRect();
+        const modal = document.getElementById('edit-role-modal');
+        const select = document.getElementById('role-select');
+
+        // Предустановить текущую роль
+        for (let option of select.options) {
+            if (e.target.classList.contains(option.value)) {
+                select.value = option.value;
+                break;
+            }
+        }
+
+        modal.style.left = `${rect.left + window.scrollX}px`;
+        modal.style.top = `${rect.bottom + window.scrollY}px`;
+        modal.style.display = 'block';
+    }
+});
+
+document.getElementById('apply-role-btn').addEventListener('click', function () {
+    if (!selectedWordSpan) return;
+    const select = document.getElementById('role-select');
+    const newRole = select.value;
+
+    // Заменить CSS класс
+    selectedWordSpan.className = 'syntax-word ' + newRole;
+
+    document.getElementById('edit-role-modal').style.display = 'none';
+    selectedWordSpan = null;
+});
+
+document.getElementById('cancel-role-btn').addEventListener('click', function () {
+    document.getElementById('edit-role-modal').style.display = 'none';
+    selectedWordSpan = null;
 });
 </script>
 {% endblock %}

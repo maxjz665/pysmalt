@@ -142,6 +142,7 @@
             const opt = document.createElement('option');
             opt.value = i;
             opt.textContent = option.name;
+            opt.setAttribute('data-param-id', option.id);
             if (option.name === selectedValue) {
                 opt.selected = true;
             }
@@ -169,7 +170,9 @@
         // При изменении — убрать потомков и добавить новые
         select.addEventListener('change', () => {
             removeDescendants(selectId);
-            const selected = param.values.find(v => v.id == select.value);
+            const selectedIndex = select.selectedIndex;
+            const selectedParamId = select.options[selectedIndex].dataset.paramId;
+            const selected = param.values.find(v => v.id == selectedParamId);
             if (selected && selected.values && selected.values.length > 0) {
                 selected.values.forEach(childParam => {
                     createField(childParam, selectId, wrapper, level + 1);

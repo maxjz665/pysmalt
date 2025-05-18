@@ -475,7 +475,8 @@ def analyze_sentence(request):
         if sentence:
             mdrn_sentence = Parser.get_modern(sentence)
             print(mdrn_sentence)
-            output_text = stanza_analyzer.get_sentence_with_punct(mdrn_sentence)
+            #output_text = stanza_analyzer.get_sentence_with_punct(mdrn_sentence)
+            output_text = mdrn_sentence
             print(output_text)
             #print(mdrn_sentence)
             res = stanza_analyzer.analyze_sentence(output_text)
