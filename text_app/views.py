@@ -461,7 +461,6 @@ def analyze_text(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
-# Функция анализирует предложение с помощью станзы
 def analyze_sentence(request):
     """
     Анализ предложения с помощью Stanza
@@ -469,39 +468,31 @@ def analyze_sentence(request):
     if request.method == "POST":
         import json
         data = json.loads(request.body)
-        #print(data)
         sentence = data.get('sentence', '')
 
         if sentence:
             mdrn_sentence = Parser.get_modern(sentence)
-            print(mdrn_sentence)
-            #output_text = stanza_analyzer.get_sentence_with_punct(mdrn_sentence)
-            output_text = mdrn_sentence
-            print(output_text)
-            #print(mdrn_sentence)
-            res = stanza_analyzer.analyze_sentence(output_text)
-            print(res)
+            res = stanza_analyzer.analyze_sentence(mdrn_sentence)
             return JsonResponse(res, safe=False)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-# Функция анализирует слово с помощью станзы
+
 def analyze_word(request):
+    """
+    Анализ слова с помощью Stanza
+    """
     if request.method == "POST":
         import json
         data = json.loads(request.body)
         word = data.get('word', '')
         base_mode = data.get('base', False)
-        #print(base_mode)
-
         attrs = get_attrs()
 
         if word:
             mdrn_word = Parser.get_modern(word)
-            #print(mdrn_word)
             word_st = stanza_analyzer.analyze_word(mdrn_word, base_mode)
             feats = stanza_analyzer.get_feats_description(word_st)
-            #print(feats)
             id_pos = stanza_analyzer.get_pos_id(word_st)
             if id_pos >= 0:
                 attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
@@ -517,23 +508,28 @@ def analyze_word(request):
 
 
 def entries_list(request: HttpRequest):
+    """
+    Вывод списка словарных слов
+    """
     if not request.user.is_authenticated or not request.user.has_manager:
         return render(request, "not_found.html", context={"message": "Недостаточно прав"})
     query = request.GET.get("q", "")
-    dictwords = TblDictWord.objects.all()  # или как у тебя называется модель
+    dictwords = TblDictWord.objects.all()
     if query:
         dictwords = dictwords.filter(Q(word__icontains=query))
     dictwords = dictwords.order_by('id')
     paginator = Paginator(dictwords, 50)  # 50 слов на страницу
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-
     attrs = get_attrs()
     return render(request, "text_app/entries_list.html",
                   context={"dictwords": page_obj, "query": query, "attrs": attrs})
 
 
 def entries_list_edit(request, id):
+    """
+    Форма редактирования разборов
+    """
     dictword = TblDictWord.get_word(id)
     attrs = get_attrs()
     if request.method == 'POST':
@@ -546,7 +542,6 @@ def entries_list_edit(request, id):
             if key.startswith('param_'):
                 param_id = key.split('_')[1]
                 feats[param_id] = value
-        print(feats)
         for key, value in feats.items():
             try:
                 index = int(key)
@@ -560,10 +555,8 @@ def entries_list_edit(request, id):
         dictword.save()
         return redirect("text_app/entries_list")
     attrs_data = get_all_attrs(0, [])
-    #print(attrs_data)
     selected_attrs = []
     get_dictword_attrs(dictword, attrs_data, selected_attrs, 0)
-    print(selected_attrs)
     # Если GET-запрос, передаем данные для редактирования в форму
     return render(request, 'text_app/entries_list_edit.html', {'dictword': dictword, 'attrs': attrs,
                                                                'attrs_json': json.dumps(attrs_data, ensure_ascii=False),
