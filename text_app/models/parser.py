@@ -155,8 +155,10 @@ class Parser:
         en_hi_ii_word = self.get_other_big_i(en_hi_word)
 
         word_variants = [word_value, en_lo_word, en_hi_word, en_i_word, en_ii_word, en_lo_i_word, en_lo_ii_word,
-                         en_hi_i_word, en_hi_ii_word]
+                         en_hi_i_word, en_hi_ii_word, Parser.get_modern(word_value)]
+
         word_variants = list(filter(lambda x: x is not None, word_variants))
+
 
         # Поиск по полю "word"
         if param1:
@@ -219,10 +221,10 @@ class Parser:
             return word.replace(cyrillic_I, latin_I)
         return None
 
-    @staticmethod
-    def get_modern(word):
+    @staticmethod       #преобразование в современное написание
+    def get_modern(text):
         text_res, changes, s_json = Processor.process_text(
-            text=word,
+            text=text,
             show=False,
             delimiters=False,
             check_brackets=False
