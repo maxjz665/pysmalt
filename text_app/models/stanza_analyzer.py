@@ -11,7 +11,7 @@ class StanzaAnalyzer:
         'CCONJ': 11,
         'INTJ': 13,
         'NOUN': 0,
-        'NUM': 9,
+        'NUM': 2,
         'PART': 9,
         'PRON': 3,
         'PUNCT': 20,
@@ -389,6 +389,11 @@ class StanzaAnalyzer:
     def get_pos_id(self, word):
         pos = word.upos
         if pos in self.stanza_pos_mapping:
+            if pos == "X":
+                attrs = self.parse_attrs(word)
+                if attrs and 'Abbr' in attrs:
+                    if attrs['Abbr'] == "Yes":  # Сокращенное слово
+                        return 21
             if pos == "VERB":
                 attrs = self.parse_attrs(word)
                 if attrs and 'VerbForm' in attrs:

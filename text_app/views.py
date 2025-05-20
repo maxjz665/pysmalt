@@ -352,7 +352,7 @@ def import_form(request: HttpRequest):
             words_json = request.POST.get('words_json')
             words = json.loads(words_json)
 
-            # логика сохранения в бд отключена для отладки
+            # логику сохранения в бд можно отключить для отладки
             text_id = TblText.save_text_in_db(title, author, magazine, magazine_no, publication_date, comment, url, background,
                                     category, text_type, author_verify, author_type, author2, author2_type, author3, author3_type,
                                     short_title, magazine_volume, magazine_section, pages, censorship, attributions,
@@ -376,8 +376,9 @@ def analyze_text(request):
         data = json.loads(request.body)
         text = data.get("text", "")
 
-        mod_text = Parser.get_modern(text)
-        stanza_analyzer.analyze_text(mod_text)
+        #mod_text = Parser.get_modern(text)
+        #stanza_analyzer.analyze_text(mod_text)
+        stanza_analyzer.analyze_text(text)
 
         sections = list(filter(None, re.split(r"\n|\r\n", text)))
         parser = Parser()
@@ -400,7 +401,6 @@ def analyze_text(request):
                 break
             if isinstance(item, (list, tuple)) and len(item) > 0 and isinstance(item[0], str) and len(item[0]) > 0:
                 check_str = ret["ENCODED_WORD"]
-
                 if ret["WORD"] == check_str:
                     if "ID" in ret:
                         printed_word = f"{ret['WORD']}({ret['ID']},P={ret['PARAM_01']})"
@@ -486,18 +486,34 @@ def analyze_word(request):
         attrs = TblDictWord.get_attrs()
 
         if word:
-            mdrn_word = Parser.get_modern(word)
+            if base_mode:
+                mdrn_word = Parser.get_modern(word)
+            else:
+                mdrn_word = word
             word_st = stanza_analyzer.analyze_word(mdrn_word, base_mode)
-            feats = stanza_analyzer.get_feats_description(word_st)
             id_pos = stanza_analyzer.get_pos_id(word_st)
             if id_pos >= 0:
+                if id_pos == 4 and not base_mode: #доп проверка причастий и деепричастий
+                    word_st = stanza_analyzer.analyze_word(Parser.get_modern(word), True)
+                    id_pos = stanza_analyzer.get_pos_id(word_st)
                 attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
                 id = attr_data["id"]
                 pos = attr_data['name']
             else:
-                pos = "None"
-                id = "None"
-
+                if not base_mode:   #если был не базовый режим с совр написанием, пробуем еще раз с современным(если не удалось определить тег)
+                    word_st = stanza_analyzer.analyze_word(Parser.get_modern(word), True)
+                    id_pos = stanza_analyzer.get_pos_id(word_st)
+                    if id_pos >= 0:
+                        attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
+                        id = attr_data["id"]
+                        pos = attr_data['name']
+                    else:
+                        pos = "None"
+                        id = "None"
+                else:
+                    pos = "None"
+                    id = "None"
+            feats = stanza_analyzer.get_feats_description(word_st)
             return JsonResponse({"part_of_speech": pos, "id": id, "feats": feats})
 
     return JsonResponse({"error": "Invalid request"}, status=400)

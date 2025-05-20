@@ -250,6 +250,7 @@
             document.getElementById("fileContentText").style.pointerEvents = "auto";
             document.querySelector('button[name="action"][value="run_import"]').style.display = '';
             document.querySelector('a.btn-info').style.display = '';
+            collectWordsData()
         });
 
         document.getElementById('fileContentText').addEventListener('click', async function (e) {
