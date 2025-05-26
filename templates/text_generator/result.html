@@ -1,0 +1,64 @@
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center" style="margin: 5pt;">
+        <h2 class="mb-0">Результат генерации</h2>
+        {% if codes|length > 1 %}
+            <button class="btn btn-outline-secondary" onclick="copyAllCodesToClipboard()">Копировать все коды</button>
+        {% endif %}
+    </div>
+    
+    {% for item in codes %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col">
+                        <p class="mb-1">Исходный текст: <a href="{% url 'text_app/papers_data' item.base_text_item.text.id %}">
+                            {{ item.base_text_item.text.title }}</a></p>
+                        <p class="mb-0">Вставляемый текст: <a href="{% url 'text_app/papers_data' item.other_text_item.text.id %}">
+                            {{ item.other_text_item.text.title }}</a></p>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h4 class="mb-0">Код</h4>
+                            <button class="btn btn-secondary" onclick="copyCode('code-{{ forloop.counter }}')">Копировать код</button>
+                        </div>
+                        <p id="code-{{ forloop.counter }}" class="mb-0" style="word-break: break-word; font-weight: 500;">{{ item.code }}</p>
+                    </div>
+                </div>
+
+                {% if action == 'generate_text' and item.generated_text %}
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h4 class="mb-0">Текст</h4>
+                                <div class="btn-group">
+                                    <form method="post" action="" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="export_text">
+                                        <input type="hidden" name="code" value="{{ item.code }}">
+                                        <input type="hidden" name="base_text_id" value="{{ item.base_text_item.text.id }}">
+                                        <input type="hidden" name="other_text_id" value="{{ item.other_text_item.text.id }}">
+                                        <button type="submit" class="btn btn-primary">Экспорт текста</button>
+                                    </form>
+                                    <form method="post" action="" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="export_parsing">
+                                        <input type="hidden" name="code" value="{{ item.code }}">
+                                        <input type="hidden" name="base_text_id" value="{{ item.base_text_item.text.id }}">
+                                        <input type="hidden" name="other_text_id" value="{{ item.other_text_item.text.id }}">
+                                        <button type="submit" class="btn btn-info">Экспорт разбора</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <pre style="white-space: pre-wrap; word-break: break-word; padding: 1rem; border-radius: 0.25rem; margin: 0;">{% for word in item.generated_text %}{% if word.start_paragraph %}<br><br>{% endif %}<span {% if word.highlight %}style="background-color: Khaki; font-weight: bold;"{% endif %}>{{ word.word }}</span>{% if not forloop.last %} {% endif %}{% endfor %}</pre>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -86,6 +86,22 @@ class TblTextListDescription(models.Model):
                     raise TblTextListDescription.DoesNotExist
         return ret
 
+    @classmethod
+    def get_text_by_id(cls, user, text_id: int):
+        """
+        Получение текста по ID из любого списка текстов, доступного пользователю
+        """
+        try:
+            # Получаем все доступные пользователю списки
+            available_lists = cls.get_items(user=user, exclude_deleted=True)
+            # Ищем текст в элементах этих списков
+            return TblTextListItems.objects.filter(
+                list__in=available_lists,
+                text_id=text_id
+            ).first()
+        except Exception:
+            return None
+
 class TblTextListItems(models.Model):
     """
     Модель связи списка текстов с текстом

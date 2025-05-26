@@ -161,6 +161,7 @@ class TblBigramDataset(BaseModel):
             start_pos = i * block_size // 2
             result.append({'start': start_pos, "end": start_pos + block_size, "ngrams": self.extract_ngrams(text_id, text_data[start_pos:start_pos + block_size])})
 
+        # последний блок в тексте
         start_pos = max(0, len(text_data) - block_size)
         result.append({'start': start_pos, 'end': len(text_data), 'ngrams': self.extract_ngrams(text_id, text_data[start_pos:])})
         return result
@@ -168,6 +169,11 @@ class TblBigramDataset(BaseModel):
     def check_group(self, text_id: int, text_content, block_size, group):
         """
         Сравнение спектра текста и группы
+
+        :param text_id идентификатор рассматриваемого текста
+        :param text_content содержимое текста
+        :param block_size размер блока
+        :param group список текстов для сравнения
         """
         # получаем спектры исходного текста
         target_ngrams, target_block_ngrams, target_len = self.check_text(text_id, text_content, block_size)
@@ -175,29 +181,39 @@ class TblBigramDataset(BaseModel):
         # получаем спектры для текстов из группы
         group_ngrams = []
         for item in group:
+            if item['text_id'] == text_id:
+                continue
             text_ngrams, block_ngrams, text_len = self.check_text(item['text_id'], item['content'], block_size)
             group_ngrams.append({"text_id": item['text_id'], "text_ngrams": text_ngrams, "block_ngrams": block_ngrams, "text_len": text_len})
 
 
         # выполняем расчет дистанции для каждого текста из группы с исходным текстом
         min_distance = None
+        min_iid = None  # идентификатор текста с мин расстоянием
         sum_distance = 0
         max_distance = 0
+        max_iid = None  # идентификатор текста с максимумом расстояния
         for item in group_ngrams:
             distance = self._calc_distance(target_ngrams, target_len, item['text_ngrams'], item["text_len"])
             if min_distance is None or distance < min_distance:
+                min_iid = item['text_id']
                 min_distance = distance
             sum_distance += distance
             if distance > max_distance:
                 max_distance = distance
+                max_iid = item['text_id']
 
 
         # расчет дистанции для блока текста
         ret_block_ngrams = []
         for target_block in target_block_ngrams:
             min_block = None
+            min_id = None
+            min_part = None
             sum_block = 0
             max_block = 0
+            max_id = None
+            max_part = None
             block_count = 0
 
             for item in group_ngrams:
@@ -206,25 +222,38 @@ class TblBigramDataset(BaseModel):
                     distance = self._calc_distance(target_block["ngrams"], block_size, item_block["ngrams"], block_size)
                     if min_block is None or distance < min_block:
                         min_block = distance
+                        min_id = item["text_id"]
+                        min_part = f"{item_block['start']}-{item_block['end']}"
                     sum_block += distance
-                    max_block = max(max_block, distance)
-            ret_block_ngrams.append({"start": target_block["start"], "end": target_block["end"], "min": min_block, "avg": sum_block / block_count, "max": max_block})
+                    if distance > max_block:
+                        max_block = distance
+                        max_id = item["text_id"]
+                        max_part = f"{item_block['start']}-{item_block['end']}"
+            ret_block_ngrams.append({"start": target_block["start"], "end": target_block["end"], "min": min_block,
+                                     "min_id": min_id, "min_part": min_part, "avg": sum_block / block_count, "max": max_block, "max_id": max_id,
+                                     "max_part": max_part})
 
-        return {"min": min_distance, "avg": sum_distance / len(group_ngrams), "max": max_distance, "ngrams": target_ngrams}, {"ngrams": target_block_ngrams, "result": ret_block_ngrams}
+        return {"min": min_distance, "min_id": min_iid, "avg": sum_distance / len(group_ngrams), "max": max_distance,
+                "max_id": max_iid, "ngrams": target_ngrams}, {"ngrams": target_block_ngrams, "result": ret_block_ngrams}
 
     @staticmethod
     def _calc_distance(target_ngrams: list, total_target: int, other_ngrams: list, total_other: int):
         """
-        Расчет манхэттенского расстояния между спектрами
+        Расчет манхеттенского расстояния между спектрами
+
+        :param target_ngrams исходный список n-грамм
+        :param total_target размер исходного блока
+        :param other_ngrams конечный список n-грамм
+        :param total_other размер конечного блока
         """
         dist_vector = {}
         for item in target_ngrams:
-            dist_vector[item.dict_pos] = item.value / total_target
+            dist_vector[item.dict_pos] = item.value
 
         for item in other_ngrams:
             if item.dict_pos in dist_vector:
-                dist_vector[item.dict_pos] = abs(dist_vector[item.dict_pos] - item.value / total_other)
+                dist_vector[item.dict_pos] = dist_vector[item.dict_pos] - item.value
             else:
-                dist_vector[item.dict_pos] = item.value / total_other
+                dist_vector[item.dict_pos] = item.value
 
-        return sum(dist_vector.values())
+        return sum(abs(x) for x in dist_vector.values())

@@ -1,0 +1,20 @@
+[
+    {
+        "model": "text_app.TblAuthor",
+        "pk": 44,
+        "fields": {
+            "name": "Иванов И. И.",
+            "origin_name": "",
+            "real_name": ""
+        }
+    },
+    {
+        "model": "text_app.TblAuthor",
+        "pk": 45,
+        "fields": {
+            "name": "Петров А. А.",
+            "origin_name": "",
+            "real_name": ""
+        }
+    }
+]

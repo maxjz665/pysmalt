@@ -1,0 +1,10 @@
+[
+    {
+        "model": "text_app.TblMagazine",
+        "pk": 20,
+        "fields": {
+            "title": "журнал ",
+            "origin_title": ""
+        }
+    }
+]

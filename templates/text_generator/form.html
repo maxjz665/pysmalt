@@ -1,0 +1,268 @@
+{% extends "index.html" %}
+
+{% block content %}
+<h2 style="margin: 5pt;">Генератор текстов</h2>
+<p style="margin: 5pt;">Данная форма позволяет создать новый текст на базе существующего.</p>
+
+<div class="btn-group" role="group" aria-label="Вариант генерации">
+    <a type="button" class="btn btn-secondary {% if mode == 'byPars' %}active{% endif %}" href="?mode=byPars">По параметрам</a>
+    <a type="button" class="btn btn-secondary {% if mode == 'byCode' %}active{% endif %}" href="?mode=byCode">По коду</a>
+</div>
+
+{% if messages %}
+    <div class="alert alert-danger">
+        {% for message in messages %}
+            {{ message }}
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" id="generator-form">
+    {% csrf_token %}
+    <div class="card" style="margin: 5pt;">
+        <div class='form-row' style="margin: 5pt;"> Используемые списки текстов </div>
+        <div class='form-row'>
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Список "Основной текст":</div>
+                        </div>
+                        <select class="form-control" id="base_textlist" name="base_textlist">
+                            {% for textlist in text_lists %}
+                            <option value="{{ textlist.id }}">{{ textlist.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Список "Вставляемый текст":</div>
+                        </div>
+                        <select class="form-control" id="other_textlist" name="other_textlist">
+                            {% for textlist in text_lists %}
+                            <option value="{{ textlist.id }}">{{ textlist.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" style="margin-bottom: 15px">
+                <div class="input-group col">
+                    <div class="custom-control custom-checkbox" style="margin-top: 6px;">
+                        <input type="checkbox" class="custom-control-input" id="random_texts" name="random_texts" checked>
+                        <label class="custom-control-label" for="random_texts">Случайные тексты</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Скрытый блок для выбора текстов -->
+        <div class='form-row' id="hiddenRow" style="display: none;">
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Основной текст:</div>
+                        </div>
+                        <select class="form-control" id="base_text" name="base_text">
+                            <!-- Заполняется через JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Вставляемый текст:</div>
+                        </div>
+                        <select class="form-control" id="other_text" name="other_text">
+                            <!-- Заполняется через JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class='form-row' style="margin: 5pt;"> Настройки генератора </div>
+        <div class='form-row'>
+            <div class="col-md-2">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Число кодов:</div>
+                        </div>
+                        <input type="number" class="form-control" id="code_count" name="code_count" min="1" max="20" value="1" step="1">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Доля вставок:</div>
+                        </div>
+                        <input type="number" class="form-control" id="percent_of_inserts" name="percent_of_inserts" min="0.01" max="0.95" value="0.20" step="0.01">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group row">
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">Размер заменяемого фрагмента:</div>
+                        </div>
+                        <input type="number" class="form-control" id="fragment_size" name="fragment_size" min="5" value="10" step="1">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5" style="margin-bottom: 15px">
+                <div class="form-check">
+                    <div class="custom-control custom-checkbox" style="margin-top: 6px;">
+                        <input type="checkbox" class="custom-control-input" id="bind_borders" name="bind_borders">
+                        <label class="custom-control-label" for="bind_borders">Делать привязку к границам предложений</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class='form-row'>
+            <div class="col">
+                <button class="btn btn-primary" type="button" onclick="generateCode('generate_key')">Создать код</button>
+                <button class="btn btn-danger" type="button" onclick="generateCode('generate_text')">Создать текст</button>
+                <button class="btn btn-primary" type="reset" onclick="resetForm()">Сбросить</button>
+                <a href="{% url 'text_generator_help' %}" class="btn btn-info">Справка</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Добавляем div для результатов -->
+<div id="generation-results"></div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+function resetForm() {
+    document.getElementById('generator-form').reset();
+    document.getElementById('generation-results').innerHTML = '';
+    const hiddenRow = document.getElementById('hiddenRow');
+    hiddenRow.style.display = 'none';
+}
+
+function copyCode(elementId) {
+    const codeElement = document.getElementById(elementId);
+    if (!codeElement) {
+        alert('Элемент с ID ' + elementId + ' не найден');
+        return;
+    }
+
+    const textToCopy = codeElement.textContent;
+    const textArea = document.createElement('textarea');
+    textArea.value = textToCopy;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        const button = document.querySelector(`button[onclick="copyCode('${elementId}')"]`);
+        const originalText = button.textContent;
+        button.textContent = 'Скопировано!';
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 2000);
+    } catch (err) {
+        console.error('Ошибка при копировании:', err);
+        alert('Не удалось скопировать код');
+    } finally {
+        document.body.removeChild(textArea);
+    }
+}
+
+function copyAllCodesToClipboard() {
+    const codeElements = document.querySelectorAll('[id^="code-"]');
+    const allCodes = Array.from(codeElements).map(el => el.textContent).join('\n'); // Используем \n для переноса строки
+    const textArea = document.createElement('textarea');
+    textArea.value = allCodes;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    alert('Все коды скопированы');
+}
+
+function generateCode(action) {
+    const form = document.getElementById('generator-form');
+    const formData = new FormData(form);
+    formData.append('action', action);
+
+    // Показываем спиннер
+    document.getElementById("generation-results").innerHTML = 
+        `<div class="spinner-border m-5" role="status">
+            <span class="sr-only">Loading...</span>
+         </div>`;
+
+    fetch('{% url "text_generator_form" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        document.getElementById("generation-results").innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById("generation-results").innerHTML = 
+            `<div class="alert alert-danger">Ошибка при генерации: ${error}</div>`;
+    });
+}
+
+// Функция загрузки текстов при выборе списка
+function loadTexts(listId, targetId) {
+    fetch(`{% url "text_generator_texts" %}?list_id=${listId}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById(targetId);
+            select.innerHTML = data.texts.map(text => 
+                `<option value="${text.id}">${text.title}</option>`
+            ).join('');
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const randomTexts = document.getElementById('random_texts');
+    const hiddenRow = document.getElementById('hiddenRow');
+    const baseTextlist = document.getElementById('base_textlist');
+    const otherTextlist = document.getElementById('other_textlist');
+
+    // Обработчик изменения галочки "Случайные тексты"
+    randomTexts.addEventListener('change', function() {
+        if (this.checked) {
+            hiddenRow.style.display = 'none';
+        } else {
+            hiddenRow.style.display = 'flex';
+            // Загружаем тексты для обоих списков
+            loadTexts(baseTextlist.value, 'base_text');
+            loadTexts(otherTextlist.value, 'other_text');
+        }
+    });
+
+    // Обработчики изменения списков текстов
+    baseTextlist.addEventListener('change', function() {
+        if (!randomTexts.checked) {
+            loadTexts(this.value, 'base_text');
+        }
+    });
+
+    otherTextlist.addEventListener('change', function() {
+        if (!randomTexts.checked) {
+            loadTexts(this.value, 'other_text');
+        }
+    });
+});
+</script>
+{% endblock %}

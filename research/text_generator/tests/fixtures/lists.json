@@ -1,0 +1,22 @@
+[
+    {
+        "model": "text_app.TblTextListDescription",
+        "pk": 1,
+        "fields": {
+            "name": "Список 1",
+            "owner": 1,
+            "public": 1,
+            "is_deleted": 0
+        }
+    },
+    {
+        "model": "text_app.TblTextListDescription",
+        "pk": 2,
+        "fields": {
+            "name": "Список 2",
+            "owner": 1,
+            "public": 1,
+            "is_deleted": 0
+        }
+    }
+]

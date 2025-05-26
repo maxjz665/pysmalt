@@ -46,6 +46,14 @@
                         {% else %}
                             <button type="submit" class="btn btn-success mb-2" name="action" id="action-pub" value="publish">Опубликовать</button>
                         {% endif %}
+                        {% if user.is_admin or user == content.owner %}
+                            <a href="{% url 'r_ngrams_app/edit_item' content.id %}" class="btn btn-warning">Редактировать</a>
+                            {% if content.is_deleted %}
+                                <a href="{% url 'r_ngrams_app/restore_item' content.id %}" class="btn btn-danger">Восстановить</a>
+                            {% else %}
+                                <a href="{% url 'r_ngrams_app/delete_item' content.id %}" class="btn btn-danger">Удалить</a>
+                            {% endif %}
+                        {% endif %}
                     </div>
                 </div>
             </form>
