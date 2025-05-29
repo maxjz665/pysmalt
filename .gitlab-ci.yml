@@ -69,7 +69,7 @@ pytest:
       - pip install -r test-requirements.txt
       - pip install pytest-cov
     script:
-      - coverage run -m pytest --junitxml=report.xml || EXIT_CODE=$?
+      - coverage run -m pytest --junitxml=report.xml
       - coverage report
       - coverage xml
       - exit $EXIT_CODE
@@ -77,6 +77,8 @@ pytest:
     coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
     artifacts:
       when: always
+      paths:
+        - ./text_app/stanza_models/ru
       reports:
         junit: report.xml
         coverage_report:
