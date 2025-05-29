@@ -1,0 +1,4 @@
+<option value='' selected>Не задано</option>
+{% for type in author_types %}
+    <option value='{{ type.id }}'>{{ type.name }}</option>
+{% endfor %}

@@ -1,0 +1,208 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h2>Редактирование разбора</h2>
+    <div class="card card-body">
+            <form method="post" enctype="multipart/form-data">
+                <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <label for="word">Слово из словаря:</label>
+                        <input class="form-control" id="word" name="word" value="{{ dictword.word }}" readonly>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="initial_form">Начальная форма:</label>
+                        <input class="form-control" id="initial_form" name="initial_form" value="{{ dictword.initial_form }}">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="modern">Современное написание:</label>
+                        <input class="form-control" id="modern" name="modern" value="{{ dictword.modern }}">
+                    </div>
+                </div>
+                <div id="ai-results" class="form-row mb-3" style="display: none;">
+                    <div class="col-md-12">
+                        <h4>Результаты анализа:</h4>
+                        <ul id="result-list"></ul>
+                    </div>
+                </div>
+                <div class="form-row align-items-end">
+                    <div class="form-group col-md-3">
+                        <label for="part_of_speech">Атрибут:</label>
+                        <select id="part_of_speech" name="pos" class="form-control">
+                            <option value=''>Не задано</option>
+                            {% for attr in attrs %}
+                                <option value='{{ attr.id }}' {% if dictword.param_01 == attr.id %}selected{% endif %}>{{ attr.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-secondary" id="ai-analyze-btn">Анализ с помощью ИИ</button>
+                    </div>
+                </div>
+
+                <div id="dynamic-fields">
+
+                </div>
+
+                <button type="submit" class="btn btn-primary mb-2">Сохранить</button>
+                {% csrf_token %}
+            </form>
+</div>
+<script>
+    const attrs = {{ attrs_json|safe }}[0]['values'];
+    const selectedValues = {{ selected_attrs|safe }};
+    const partOfSpeechSelect = document.getElementById('part_of_speech');
+    const dynamicFieldsContainer = document.getElementById('dynamic-fields');
+    async function analyze_word(word) {
+            try {
+                const response = await fetch("{% url 'analyze_word' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({ word: word, base: true })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Ошибка HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error("Ошибка при анализе слова:", error);
+                return null;
+            }
+        }
+    document.getElementById('ai-analyze-btn').addEventListener('click',async function () {
+        const word = document.getElementById('word').value;
+        // Очистить предыдущие результаты
+        const resultList = document.getElementById('result-list');
+        resultList.innerHTML = "<div class=\"spinner-border  m-5\" role=\"status\">\n" +
+        "  <span class=\"sr-only\">Loading...</span>\n" +
+        "</div>";
+        data = await analyze_word(word)
+        if (data && data["feats"]) {
+            resultList.innerHTML = '';
+            // Показать блок с результатами
+            document.getElementById('ai-results').style.display = 'block';
+            //partOfSpeechSelect.value = data.id
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `<strong>Часть речи:</strong> ${data["part_of_speech"]}`;
+            resultList.appendChild(listItem);
+            // Пройти по результатам и добавить их в список
+            data["feats"].forEach(feat => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<strong>${feat.name}:</strong> ${feat.value}`;
+                resultList.appendChild(listItem);
+            });
+        } else {
+            resultList.innerHTML = 'Ошибка анализа';
+            console.error("Ошибка: результаты анализа не получены.");
+        }
+    });
+
+    function getSelectedValueByName(name) {
+        const found = selectedValues.find(item => item.name === name);
+        return found ? found.value : null;
+    }
+
+    function removeDescendants(parentId) {
+        const children = [...dynamicFieldsContainer.children].filter(child => child.dataset.parent === parentId);
+        children.forEach(child => {
+            removeDescendants(child.querySelector('select').id); // рекурсивно удаляем потомков
+            child.remove(); // удаляем сам элемент
+        });
+    }
+
+    function createField(param, parentSelectId = null, insertAfterEl = null, level = 0) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'form-group col-md-3';
+        wrapper.style.marginLeft = `${level * 50}px`;
+
+        const label = document.createElement('label');
+        label.innerText = param.name + ":";
+
+        if (param.name === "Начальная форма") {
+            wrapper.style.display = 'none';
+        }
+
+        const select = document.createElement('select');
+        select.name = `param_${param.id + 2}`;
+        select.className = "form-control";
+
+        const selectId = `select_${param.id}_${Math.random().toString(36).substr(2, 5)}`;
+        select.id = selectId;
+        wrapper.dataset.parent = parentSelectId || 'root';
+
+        const selectedValue = getSelectedValueByName(param.name);
+
+        let i = 0
+        param.values.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = option.name;
+            opt.setAttribute('data-param-id', option.id);
+            if (option.name === selectedValue) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+            i++
+        });
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(select);
+
+        if (insertAfterEl) {
+            dynamicFieldsContainer.insertBefore(wrapper, insertAfterEl.nextSibling);
+        } else {
+            dynamicFieldsContainer.appendChild(wrapper);
+        }
+
+        // Найти выбранный объект по ID
+        let selectedOption = param.values.find(v => v.name === selectedValue);
+        if (selectedOption && selectedOption.values && selectedOption.values.length > 0) {
+            selectedOption.values.forEach(childParam => {
+                createField(childParam, selectId, wrapper, level + 1);
+            });
+        }
+
+        // При изменении — убрать потомков и добавить новые
+        select.addEventListener('change', () => {
+            removeDescendants(selectId);
+            const selectedIndex = select.selectedIndex;
+            const selectedParamId = select.options[selectedIndex].dataset.paramId;
+            const selected = param.values.find(v => v.id == selectedParamId);
+            if (selected && selected.values && selected.values.length > 0) {
+                selected.values.forEach(childParam => {
+                    createField(childParam, selectId, wrapper, level + 1);
+                });
+            }
+        });
+    }
+
+    function renderFields(attrId) {
+        dynamicFieldsContainer.innerHTML = '';  // Очистить форму
+        const selectedAttr = attrs[attrId];
+        if (!selectedAttr || !selectedAttr.values) return;
+        selectedAttr.values.forEach(param => {
+            createField(param, 0);  // уровень вложенности = 0
+        });
+    }
+    function triggerAllSelects() {
+        const selects = dynamicFieldsContainer.querySelectorAll('select');
+        selects.forEach(select => {
+            const event = new Event('change');
+            select.dispatchEvent(event);
+        });
+    }
+
+    partOfSpeechSelect.addEventListener('change', function () {
+        renderFields(this.value);
+        setTimeout(triggerAllSelects, 0);
+    });
+
+    // начальная отрисовка
+    renderFields({{ dictword.param_01 }});
+</script>
+{% endblock content %}

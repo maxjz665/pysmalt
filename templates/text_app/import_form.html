@@ -1,0 +1,322 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h2>Импорт текстов</h2>
+<div class="card card-body">
+    <form method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="inputType">Набор атрибутов:</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="inputType" id="oldType" value="old" checked>
+                <label class="form-check-label" for="oldType">Старый набор</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="inputType" id="newType" value="new" disabled>
+                <label class="form-check-label" for="newType">Новый набор</label>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="textType">Анонимность статьи</label>
+                <select class="form-control" id="textType" name="textType">
+                    <option value='0' selected>Анонимный</option>";
+                    <option value='1'>Подписанный</option>
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="authorVerify">Авторство статьи</label>
+                <select class="form-control" id="authorVerify" name="authorVerify">
+                    <option value='0' selected>Dubia</option>
+                    <option value='1'>Эталон</option>
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="category">Видимость статьи</label>
+                <select class="form-control" id="category" name="category">
+                    <option value='0' selected>Статья доступна</option>
+                    <option value='1'>Статья скрыта</option>
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="status">Статус статьи</label>
+                <select class="form-control" id="status" name="status">
+                    <option value='0' selected>Новая статья</option>
+                    <option value='1'>Статья на редактировании</option>
+                    <option value='2'>Статья проверена</option>
+                    <option value='3'>Статья с ошибками</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-col col-md-4 card">
+                <div class="form-group">
+                    <label for="authorType">Тип подписи</label>
+                    <select class="form-control" id="authorType" name="authorType">
+                        {% include "text_app/components/author_type_as_option.html" with author_types=author_types %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inputAuthor">Основной автор</label>
+                    <select class="form-control" id="inputAuthor" name="inputAuthor">
+                        {% include "text_app/components/author_as_option.html" with authors=authors %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-col col-md-4 card">
+                <div class="form-group">
+                    <label for="author2Type">Тип подписи</label>
+                    <select class="form-control" id="author2Type" name="author2Type">
+                        {% include "text_app/components/author_type_as_option.html" with author_types=author_types %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inputAuthor2">Соавтор 1</label>
+                    <select class="form-control" id="inputAuthor2" name="inputAuthor2">
+                         {% include "text_app/components/author_as_option.html" with authors=authors %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-col col-md-4 card">
+                <div class="form-group">
+                    <label for="author3Type">Тип подписи</label>
+                    <select class="form-control" id="author3Type" name="author3Type">
+                        {% include "text_app/components/author_type_as_option.html" with author_types=author_types %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inputAuthor3">Соавтор 2</label>
+                    <select class="form-control" id="inputAuthor3" name="inputAuthor3">
+                        {% include "text_app/components/author_as_option.html" with authors=authors %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div  class="form-group">
+            <label for="inputName">Полное название (современный вариант надписи)</label>
+            <input type="text" class="form-control" name="inputName" id="inputName" placeholder="Введите название произведения в современной орфографии" value="" required>
+        </div>
+
+        <div  class="form-group">
+            <label for="originTitle">Полное название (оригинальный вариант надписи)</label>
+            <input type="text" class="form-control" name="originTitle" id="originTitle" placeholder="Введите название произведения в дореволюционной орфографии" value="">
+        </div>
+
+        <div  class="form-group">
+            <label for="shortTitle">Краткое название</label>
+            <input type="text" class="form-control" name="shortTitle" id="shortTitle" placeholder="Введите краткое название или оставьте пустым" value="">
+        </div>
+
+        <div class="form-row">
+        <div class="form-group col-md-9">
+            <label for="inputJournal">Журнал</label>
+            <select class="form-control" id="inputJournal" name="inputJournal">
+                {% include "text_app/components/magazine_as_option.html" with magazines=magazines %}
+            </select>
+        </div>
+
+            <div class="form-group col-md-3">
+                <label for="inputJournalNo">Номер издания</label>
+                <input type="text" class="form-control" id="inputJournalNo" placeholder="Введите номер издания" name="inputJournalNo" value="" required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="magazineVolume">Том издания</label>
+                <input type="text" class="form-control" id="magazineVolume" placeholder="Введите том издания или оставьте пустым" name="magazineVolume" value="">
+            </div>
+
+            <div class="form-group col-md-3">
+                <label for="magazineSection">Рубрика (раздел) издания</label>
+                <input type="text" class="form-control" id="magazineSection" placeholder="Введите рубрику (раздел) издания или оставьте пустым" name="magazineSection" value="">
+            </div>
+
+            <div class="form-group col-md-3">
+                <label for="inputDate">Дата издания</label>
+                <input type="date" class="form-control" id="inputDate" placeholder="Введите дату издания" name="inputDate" value="">
+            </div>
+
+            <div class="form-group col-md-3">
+                <label for="pages">Страницы</label>
+                <input type="text" class="form-control" id="pages" placeholder="Введите номера страниц или оставьте пустым" name="pages" value="">
+            </div>
+        </div>
+        <div  class="form-group">
+            <label for="censorship">Цензурное разрешение</label>
+            <input type="text" class="form-control" name="censorship" id="censorship" placeholder="Статус цензурного разрешения" value="">
+        </div>
+
+
+        <div class="form-group">
+            <label for="inputUrl">Путь до оригинала текста</label>
+            <input type="text" class="form-control" id="inputUrl" placeholder="ведите путь до html файла с текстом (../Texts/???.htm)" name="inputUrl" value="">
+        </div>
+
+        <div  class="form-group">
+            <label for="comment">Комментарий</label>
+            <input type="text" class="form-control" name="comment" id="comment" placeholder="Здесь может быть комментарий к тексту" value="">
+        </div>
+
+        <div  class="form-group">
+            <label for="attributions">Результат атрибуции</label>
+            <input type="text" class="form-control" name="attributions" id="attributions" placeholder="Здесь описываются результаты атрибуции текста" value="">
+        </div>
+        <div class="form-group">
+            <label for="grmFile">Файл с текстом (*.txt)</label>
+            <input type="file" class="form-control-file" id="grmFile" data-url="{% url 'analyze_text' %}" data-token="{{ csrf_token }}" accept=".txt" name="grmFile" required onChange="analyze_text(event)">
+        </div>
+        <input type="hidden" name="words_json" id="wordsJson">
+        <div id="fileContentPreview" class="mt-3 card card-body" style="display: none;" data-url="{% url 'analyze_word' %}" data-token="{{ csrf_token }}">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Предварительный анализ текста</h5>
+                <button id="analyzeWithAI" class="btn btn-secondary mb-2">Анализ с помощью ИИ</button>
+            </div>
+            <div id="fileContentText"></div>
+            <div id="wordSettingsPanel" class="card card-body mt-3" style="display: none;">
+                <h5>Настройка слова</h5>
+                <p><strong>Слово:</strong> <span id="selectedWord">-</span></p>
+                <p id="aiSuggestion" style="color: steelblue; font-style: italic; display: none;">
+                    Часть речи определена ИИ: <span id="aiPartOfSpeech"></span>
+                </p>
+                <div class="form-group">
+                    <label for="wordPartOfSpeech">Атрибут</label>
+                    <select id="wordPartOfSpeech" class="form-control">
+                        {% include "text_app/components/attrs_as_option.html" with attrs=attrs %}
+                    </select>
+                </div>
+                <button id="saveWordSettings" class="btn btn-success">Сохранить</button>
+            </div>
+        </div>
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary mb-2" name="action" value="run_import">Импорт текста</button>
+        <a href="" class="btn btn-info mb-2">Справка</a>
+    </form>
+</div>
+   {% load static %}
+    <script src="{% static 'js/import.js' %}"></script>
+    <script>
+    async function analyze_word(word) {
+        try {
+            const response = await fetch("{% url 'analyze_word' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ word: word, base: false })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error("Ошибка при анализе слова:", error);
+            return null;
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        const wordSettingsPanel = document.getElementById('wordSettingsPanel');
+        const selectedWordSpan = document.getElementById('selectedWord');
+        const wordPartOfSpeechSelect = document.getElementById('wordPartOfSpeech');
+        const saveButton = document.getElementById('saveWordSettings');
+        let selectedWord = null
+        let dataWord = null
+
+        document.getElementById('analyzeWithAI').addEventListener('click',async function (e) {
+            e.preventDefault();
+            document.querySelector('button[name="action"][value="run_import"]').style.display = 'none';
+            document.querySelector('a.btn-info').style.display = 'none';
+            document.getElementById("fileContentText").style.pointerEvents = "none";
+            document.getElementById('wordSettingsPanel').style.display = 'none';
+            const links = document.querySelectorAll('#fileContentText a.not-found')
+            for (const link of links) {
+                const word = link.dataset.word;
+                if (!word) continue;
+                try {
+                    const data = await analyze_word(word);
+                    link.style.color = 'gray';
+                    const span = link.nextElementSibling;
+                    span.dataset.pos = data.id;
+                    span.textContent = `(_,P=${data.id})`;
+                } catch (error) {
+                    console.error(`Ошибка при анализе слова "${word}":`, error);
+                }
+            }
+            alert("Анализ текста выполнен! Проверьте части речи")
+            document.getElementById("fileContentText").style.pointerEvents = "auto";
+            document.querySelector('button[name="action"][value="run_import"]').style.display = '';
+            document.querySelector('a.btn-info').style.display = '';
+            collectWordsData()
+        });
+
+        document.getElementById('fileContentText').addEventListener('click', async function (e) {
+            e.preventDefault();
+            aiPartOfSpeech.textContent = ""
+            aiSuggestion.style.display = 'none';
+            window.scrollBy({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+            if (e.target.classList.contains('not-found') && !e.target.nextElementSibling.dataset.pos) {
+                d = await analyze_word(e.target.dataset.word)
+
+                fetch("{% url 'analyze_word' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({word: e.target.dataset.word})
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Ответ от сервера:", data);
+
+                        const select = document.getElementById('wordPartOfSpeech');
+                        const aiSuggestion = document.getElementById('aiSuggestion');
+                        const aiPartOfSpeech = document.getElementById('aiPartOfSpeech');
+
+                        // Вставляем часть речи от нейросети
+                        aiPartOfSpeech.textContent = data.part_of_speech;
+                        aiSuggestion.style.display = 'block';
+
+                        select.value = data.id;
+
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                    });
+            }
+            selectedWord = e.target
+            const word = e.target.dataset.word;
+            dataWord = e.target.nextElementSibling;
+            document.getElementById('selectedWord').textContent = word;
+            wordSettingsPanel.style.display = 'block';
+            // При открытии сбрасываем выбор части речи
+            if (dataWord.dataset.hasOwnProperty("pos"))
+                document.getElementById('wordPartOfSpeech').value = dataWord.dataset.pos;
+            saveButton.dataset.word = word;
+        });
+        saveButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const word = document.getElementById('selectedWord').textContent;
+            const partOfSpeech = document.getElementById('wordPartOfSpeech').value;
+            if (!partOfSpeech) {
+                alert('Пожалуйста, выберите часть речи.');
+            }
+            selectedWord.dataset.pos = partOfSpeech;
+            dataWord = selectedWord.nextElementSibling;
+            dataWord.dataset.pos = partOfSpeech
+            dataWord.innerText = `(_,P=${partOfSpeech})`;
+            selectedWord.style.color = 'gray';
+            collectWordsData()
+            console.log(`Сохраняем: слово "${word}", часть речи "${partOfSpeech}"`);
+        });
+    });
+
+    </script>
+{% endblock content %}
