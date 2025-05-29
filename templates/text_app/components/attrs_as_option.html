@@ -1,0 +1,4 @@
+<option value='' selected>Не задано</option>
+{% for attr in attrs %}
+    <option value='{{ attr.id }}'>{{ attr.name }}</option>
+{% endfor %}

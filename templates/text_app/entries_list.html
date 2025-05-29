@@ -1,0 +1,65 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h2>Редактирование разборов</h2>
+<form method="get" class="mb-4">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Поиск слова..." value="{{ request.GET.q }}">
+        <button class="btn btn-primary" type="submit">Поиск</button>
+    </div>
+</form>
+<div class="card">
+    <div class="word-list">
+        {% for dictword in dictwords %}
+            <div class="card mb-2 px-3 py-2">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div class="word-info">
+                        <strong>ID:</strong> {{ dictword.id }} |
+                        <strong>Слово:</strong> {{ dictword.word }} |
+                        <strong>Начальная форма:</strong> {{ dictword.initial_form }} |
+                        <strong>Современное:</strong> {{ dictword.modern }} |
+                        <strong>Часть речи:</strong> {{ dictword.param_01 }} (
+                        {% for attr in attrs %}
+                            {% if attr.id == dictword.param_01 %}
+                                {{ attr.name }}
+                            {% endif %}
+                        {% endfor %}
+                        )
+                    </div>
+                    <a href="{% url 'text_app/entries_list_edit' dictword.id %}" class="btn btn-sm btn-outline-secondary ms-3">
+                        Изменить
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Пагинация -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if dictwords.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ dictwords.previous_page_number }}">Предыдущая</a>
+                </li>
+            {% endif %}
+
+            {% for num in dictwords.paginator.page_range %}
+                {% if num >= dictwords.number|add:'-2' and num <= dictwords.number|add:'2' %}
+                    {% if dictwords.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if dictwords.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ dictwords.next_page_number }}">Следующая</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+{% endblock content %}

@@ -2,9 +2,12 @@ import time
 
 from django.conf import settings
 from django.contrib.auth import login, logout
+from django.contrib.auth.models import User, Group
 from django.db import OperationalError
 from django.http import HttpRequest
 from django.shortcuts import render, redirect
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 
 from user_app.forms.user_creation_form import UserCreationForm
 from user_app.forms.user_login_form import UserLoginForm

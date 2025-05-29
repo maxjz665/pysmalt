@@ -1,18 +1,32 @@
 """
 Контроллер обработки запросов на работу с текстами
 """
+import json
+import re
+import time
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
+from django.core.paginator import Paginator
 
+from text_app.models.tbl_dict_word import TblDictWord
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
-from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_word import TblWord
+from text_app.models.tbl_textlist import TblTextListDescription
+from text_app.models.tbl_author_types import TblAuthorTypes
+from text_app.models.tbl_author import TblAuthor
+from text_app.models.tbl_magazine import TblMagazine
+from text_app.models.parser import Parser
 from user_app.models import TblUser
+from text_app.models.stanza_analyzer import StanzaAnalyzer
+
+
+stanza_analyzer = StanzaAnalyzer()
 
 
 def index(request: HttpRequest):
@@ -47,7 +61,8 @@ def list_papers(request: HttpRequest):
     text_lists = text_lists.order_by('name').all()
 
     return render(request, "text_app/list_papers.html", context={'texts': texts, "view": view,
-                                                                 "link": "text_app/papers_data", 'text_lists': text_lists})
+                                                                 "link": "text_app/papers_data",
+                                                                 'text_lists': text_lists})
 
 
 def list_attrs(request: HttpRequest):
@@ -272,3 +287,289 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
 
     item.delete()
     return redirect("text_app/text_lists")
+
+def paper_data_synt_analysis(request: HttpRequest, paper_id: int) -> HttpResponse:
+    """
+    Отображение содержимого статьи в режиме синтаксического анализа
+    """
+    use_old_type = request.GET.get("type", "old")
+    text_data = TblText.objects.filter(id=paper_id).get()
+    content = text_data.get_content()
+
+    if text_data is None or content is None:
+        return render(request, "not_found.html", context={"message": "Текст не найден",
+                                                          "return_url": "text_app/papers_list",
+                                                          "return_name": "К списку текстов"})
+    return render(request, "text_app/paper_data_synt_analysis.html",
+                  context={"type": use_old_type, "text_data": text_data, "content": content})
+
+
+def import_form(request: HttpRequest):
+    """
+    Форма загрузки текстов
+    """
+    if not request.user.is_authenticated or not request.user.has_manager:
+        return render(request, "not_found.html", context={"message": "Недостаточно прав"})
+    author_types = TblAuthorTypes.objects.all()
+    authors = TblAuthor.objects.all()
+    magazines = TblMagazine.objects.all()
+    attrs = TblDictWord.get_attrs()
+
+    if request.method == 'POST':
+        if request.POST.get('action') == 'run_import':
+            def get_or_none(key):
+                value = request.POST.get(key)
+                return value if value and value.strip() else None
+
+            # Получаем данные из формы
+            title = get_or_none('inputName')
+            author = get_or_none('inputAuthor')
+            magazine = get_or_none('inputJournal')
+            magazine_no = get_or_none('inputJournalNo')
+            publication_date = get_or_none('inputDate')
+            comment = get_or_none('comment')
+            url = get_or_none('inputUrl')
+            background = None
+            category = get_or_none('category')
+            text_type = get_or_none('textType')
+            author_verify = get_or_none('authorVerify')
+            author_type = get_or_none('authorType')
+            author2 = get_or_none('inputAuthor2')
+            author2_type = get_or_none('author2Type')
+            author3 = get_or_none('inputAuthor3')
+            author3_type = get_or_none('author3Type')
+            short_title = get_or_none('shortTitle')
+            magazine_volume = get_or_none('magazineVolume')
+            magazine_section = get_or_none('magazineSection')
+            pages = get_or_none('pages')
+            censorship = get_or_none('censorship')
+            attributions = get_or_none('attributions')
+            status = get_or_none('status')
+            origin_title = get_or_none('originTitle')
+
+            grm_file = request.FILES.get('grmFile')  # Файл .txt
+
+            words_json = request.POST.get('words_json')
+            words = json.loads(words_json)
+
+            # логику сохранения в бд можно отключить для отладки
+            text_id = TblText.save_text_in_db(title, author, magazine, magazine_no, publication_date, comment, url, background,
+                                    category, text_type, author_verify, author_type, author2, author2_type, author3, author3_type,
+                                    short_title, magazine_volume, magazine_section, pages, censorship, attributions,
+                                    status, origin_title)
+            for word in words:
+                TblWord.save_word(TblText.objects.filter(id=text_id).get(), word)
+            return redirect('home')
+    else:
+        return render(request, "text_app/import_form.html",
+                      context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines,
+                               "attrs": attrs})
+
+
+def analyze_text(request):
+    """
+    Анализ текста (поиск совпадений в словаре) и вывод инфы по каждому слову
+    """
+    if request.method == "POST":
+        start_time = time.time()
+        res = ""
+        data = json.loads(request.body)
+        text = data.get("text", "")
+
+        #mod_text = Parser.get_modern(text)
+        #stanza_analyzer.analyze_text(mod_text)
+        stanza_analyzer.analyze_text(text)
+
+        sections = list(filter(None, re.split(r"\n|\r\n", text)))
+        parser = Parser()
+        lines = parser.parseTextFile(sections)
+
+        res += f"<p>Found {len(sections)} lines<br>"
+
+        output = ""
+
+        section = 0
+        chapter_index = 1
+        paragraph_index = 1
+        sentence_index = 1
+        word_index = 1
+        for item in lines:
+            try:
+                ret = parser.encode_in_old_type(item)
+            except Exception as e:
+                print("\n", str(e), "\n", e.__traceback__)
+                break
+            if isinstance(item, (list, tuple)) and len(item) > 0 and isinstance(item[0], str) and len(item[0]) > 0:
+                check_str = ret["ENCODED_WORD"]
+                if ret["WORD"] == check_str:
+                    if "ID" in ret:
+                        printed_word = f"{ret['WORD']}({ret['ID']},P={ret['PARAM_01']})"
+                        if ret['PARAM_01'] < 0:     # если часть речи отсуствует(значение < 0)
+                            output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:red'>{ret['WORD']}</a>" \
+                                      f"<span data-word='{ret['WORD']}' data-id='' data-pos=''>(Х)</span>"
+                        else:      # обычные слова присутствующие в словаре
+                            output += f"<a href='#' class='found' data-word='{ret['WORD']}' style='color:black'>{ret['WORD']}</a>" \
+                                      f"<span data-word='{ret['WORD']}' data-id='{ret['ID']}' data-pos='{ret['PARAM_01']}'>({ret['ID']},P={ret['PARAM_01']})</span>"
+                    else:   # слова отсуствующие в словаре
+                        output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:blueviolet'>{ret['WORD']}</a>" \
+                                  f"<span data-word='{ret['WORD']}' data-id='' data-pos=''>(Х)</span>"
+                else:
+                    output += f"<a href='#' class='not-found' data-word='{ret['WORD']}' style='color:red'>{ret['WORD']}</a>" \
+                              f"<span data-word='{ret['WORD']}' data-id='' data-pos=''>(Х - {check_str})</span>"
+
+                output += f"[{chapter_index}:{paragraph_index}:{sentence_index}:{word_index}] "     # вывод индексов
+                section = 0
+                word_index += 1
+            else:
+                section += 1
+                if section == 1:
+                    output += "| "
+                    word_index = 1
+                    sentence_index += 1
+                elif section == 2:
+                    output += "<br/>"
+                    word_index = 1
+                    sentence_index = 1
+                    paragraph_index += 1
+                else:
+                    if word_index != 1 or sentence_index != 1 or paragraph_index != 1:
+                        output += "</p><p>"
+                        word_index = 1
+                        sentence_index = 1
+                        paragraph_index = 1
+                        chapter_index += 1
+
+        res += output + "</p>"
+
+        # Разница во времени
+        diff = time.time() - start_time  # в секундах, с дробной частью
+        # Вычисляем минуты и секунды
+        diff_minutes = int(diff // 60)
+        diff_seconds = int(diff % 60)
+        date = f"{diff_minutes:02}:{diff_seconds:02}"
+        # Микросекунды
+        fdiff = f"{int((diff - int(diff)) * 10_000_000):07d}"
+        # Подсчёт total
+        total = parser.miss + parser.hit
+        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Miss: {parser.miss}, Hit: {parser.hit}, Total: {total} Not found: {parser.notFound}</p>"
+
+        return JsonResponse({"result": res})
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+def analyze_sentence(request):
+    """
+    Анализ предложения с помощью Stanza
+    """
+    if request.method == "POST":
+        import json
+        data = json.loads(request.body)
+        sentence = data.get('sentence', '')
+
+        if sentence:
+            mdrn_sentence = Parser.get_modern(sentence)
+            res = stanza_analyzer.analyze_sentence(mdrn_sentence)
+            return JsonResponse(res, safe=False)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+def analyze_word(request):
+    """
+    Анализ слова с помощью Stanza
+    """
+    if request.method == "POST":
+        import json
+        data = json.loads(request.body)
+        word = data.get('word', '')
+        base_mode = data.get('base', False)
+        attrs = TblDictWord.get_attrs()
+
+        if word:
+            if base_mode:
+                mdrn_word = Parser.get_modern(word)
+            else:
+                mdrn_word = word
+            word_st = stanza_analyzer.analyze_word(mdrn_word, base_mode)
+            id_pos = stanza_analyzer.get_pos_id(word_st)
+            if id_pos >= 0:
+                if id_pos == 4 and not base_mode: #доп проверка причастий и деепричастий
+                    word_st = stanza_analyzer.analyze_word(Parser.get_modern(word), True)
+                    id_pos = stanza_analyzer.get_pos_id(word_st)
+                attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
+                id = attr_data["id"]
+                pos = attr_data['name']
+            else:
+                if not base_mode:   #если был не базовый режим с совр написанием, пробуем еще раз с современным(если не удалось определить тег)
+                    word_st = stanza_analyzer.analyze_word(Parser.get_modern(word), True)
+                    id_pos = stanza_analyzer.get_pos_id(word_st)
+                    if id_pos >= 0:
+                        attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
+                        id = attr_data["id"]
+                        pos = attr_data['name']
+                    else:
+                        pos = "None"
+                        id = "None"
+                else:
+                    pos = "None"
+                    id = "None"
+            feats = stanza_analyzer.get_feats_description(word_st)
+            return JsonResponse({"part_of_speech": pos, "id": id, "feats": feats})
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+def entries_list(request: HttpRequest):
+    """
+    Вывод списка словарных слов
+    """
+    if not request.user.is_authenticated or not request.user.has_manager:
+        return render(request, "not_found.html", context={"message": "Недостаточно прав"})
+    query = request.GET.get("q", "")
+    dictwords = TblDictWord.objects.all()
+    if query:
+        dictwords = dictwords.filter(Q(word__icontains=query))
+    dictwords = dictwords.order_by('id')
+    paginator = Paginator(dictwords, 50)  # 50 слов на страницу
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    attrs = TblDictWord.get_attrs()
+    return render(request, "text_app/entries_list.html",
+                  context={"dictwords": page_obj, "query": query, "attrs": attrs})
+
+
+def entries_list_edit(request, id):
+    """
+    Форма редактирования разборов
+    """
+    dictword = TblDictWord.get_word(id)
+    attrs = TblDictWord.get_attrs()
+    if request.method == 'POST':
+        dictword.initial_form = request.POST.get('initial_form')
+        dictword.initial_form = request.POST.get('initial_form')
+        dictword.modern = request.POST.get('modern')
+        dictword.param_01 = request.POST.get('pos')
+        feats = {}
+        for key, value in request.POST.items():
+            if key.startswith('param_'):
+                param_id = key.split('_')[1]
+                feats[param_id] = value
+        for key, value in feats.items():
+            try:
+                index = int(key)
+                field_name = f'param_{index:02}'
+                if hasattr(dictword, field_name):
+                    setattr(dictword, field_name, value)
+                else:
+                    print(f'Поле {field_name} не найдено в модели')
+            except (ValueError, TypeError) as e:
+                print(f'Ошибка при обработке key={key}: {e}')
+        dictword.save()
+        return redirect("text_app/entries_list")
+    attrs_data = TblDictWord.get_all_attrs(0, [])
+    selected_attrs = []
+    TblDictWord.get_dictword_attrs(dictword, attrs_data, selected_attrs, 0)
+    # Если GET-запрос, передаем данные для редактирования в форму
+    return render(request, 'text_app/entries_list_edit.html', {'dictword': dictword, 'attrs': attrs,
+                                                               'attrs_json': json.dumps(attrs_data, ensure_ascii=False),
+                                                               'selected_attrs': json.dumps(selected_attrs)})

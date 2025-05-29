@@ -1,3 +1,4 @@
+{% load auth_extras %}
 <div class="collapse navbar-collapse" id="navbarSupportedContent">
     <ul class="navbar-nav mr-auto">
         <li class="nav-item"><a class="nav-link" href="{% url 'text_app/papers_list' %}">Статьи</a></li>
@@ -13,6 +14,17 @@
                 <a class="dropdown-item" href="{% url 'hetco_app_form' %}">Метрики Хетсо</a>
             </div>
         </li>
+        {% if user.is_authenticated %}
+            {% if user|has_level:"LEVEL_MANAGER" %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#"  role="button" aria-haspopup="true" aria-expanded="false">Управление</a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="{% url 'text_app/import' %}">Импорт текстов</a>
+                    <a class="dropdown-item" href="{% url 'text_app/entries_list' %}">Редактор разборов</a>
+                </div>
+            </li>
+            {% endif %}
+        {% endif %}
         <li class="nav-item"><a class="nav-link" href="{% url 'text_app/text_lists' %}">Списки текстов</a> </li>
         <li class="nav-item"><a class="nav-link" href="help.html">Справка</a></li>
     </ul>

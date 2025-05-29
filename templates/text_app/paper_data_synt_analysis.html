@@ -1,0 +1,214 @@
+{% extends "index.html" %}
+
+{% load bib_item %}
+{% load update_variable %}
+
+{% block content %}
+<div style='display: flex'>
+    <div style="margin: 5px 20px"><div>{% bib_item text_data %}</div>
+        {% if text_data.comment %}[{{ text_data.comment }}]{% endif %}
+        </div>
+</div>
+<div id="edit-role-modal" style="display: none; position: absolute; background: white; border: 1px solid black; padding: 10px; z-index: 1000;">
+    <label for="role-select">Изменить роль:</label>
+    <select id="role-select">
+        <option value="subject">Подлежащее</option>
+        <option value="predicate">Сказуемое</option>
+        <option value="object">Дополнение</option>
+        <option value="adverbial">Обстоятельство</option>
+        <option value="attribute">Определение</option>
+        <option value="other">Другое</option>
+    </select>
+    <button id="apply-role-btn" class="btn btn-success">OK</button>
+    <button id="cancel-role-btn" class="btn btn-danger">Отмена</button>
+</div>
+<div id="Syntax">
+    <h3 style="margin-left: 20px; margin-top: 10px;">Синтаксический анализ предложения:</h3>
+    <hr style="margin: 10px 20px;">
+</div>
+    <p><a>
+    {% with current_chapter=0 %}
+    {% with current_paragraph=0 %}
+    {% with current_sentence=0 %}
+    {% for item in content %}
+        {% if current_chapter != item.chapter_index %}
+            </a></p><p><a class="sentence" href="#" id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'>
+            {% update_variable item.chapter_index as current_chapter %}
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_paragraph != item.paragraph_index %}
+            </a></p><p><a  class="sentence" href="#" id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'>
+            {% update_variable item.paragraph_index as current_paragraph %}
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        {% if current_sentence != item.sentence_index %}
+            </a>|<a  class="sentence" href="#" id='sen{{ item.chapter_index }}-{{ item.paragraph_index }}-{{ item.sentence_index }}'>
+            {% update_variable item.sentence_index as current_sentence %}
+        {% endif %}
+        <span class="word">{{item.word}}</span>
+    {% endfor %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    </a></p>
+<style>
+    .syntax-word {
+        padding: 0 3px;
+        margin: 0 1px;
+    }
+    .subject {
+        border-bottom: 1px solid black;
+    }
+    .predicate {
+        border-bottom: 3px double black;
+    }
+    .object {
+        border-bottom: 2px dashed black;
+    }
+    .adverbial {
+        background-image: repeating-linear-gradient(
+            to right,
+            black 0,
+            black 4px,
+            transparent 4px,
+            transparent 6px,
+            black 6px,
+            black 7px,
+            transparent 7px,
+            transparent 9px
+        );
+        background-size: 100% 2px;
+        background-repeat: repeat-x;
+        background-position: bottom;
+        background-origin: content-box;
+        padding-bottom: 2px;
+    }
+    .attribute {
+        text-decoration: underline;
+        text-decoration-style: wavy;
+        text-decoration-color: black;
+    }
+</style>
+<script>
+async function analyze_sentence(sentence) {
+            try {
+                const response = await fetch("{% url 'analyze_sentence' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({ sentence: sentence })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Ошибка HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error("Ошибка при анализе слова:", error);
+                return null;
+            }
+        }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const syntaxDiv = document.getElementById('Syntax');
+    const sentenceLinks = document.querySelectorAll('a.sentence');
+
+    function getSentenceText(aTag) {
+        const words = Array.from(aTag.querySelectorAll('.word'));
+        return words.map(w => w.textContent.trim()).join(' ');
+    }
+
+    async function showSentenceText(aTag) {
+        const text = getSentenceText(aTag);
+
+        let outputDiv = document.getElementById('synt-text');
+
+        if (!outputDiv) {
+            outputDiv = document.createElement('div');
+            outputDiv.id = 'synt-text';
+            outputDiv.style.margin = '10px 20px';
+            outputDiv.style.fontStyle = 'italic';
+            outputDiv.style.color = 'darkslategray';
+            syntaxDiv.appendChild(outputDiv);
+        }
+        outputDiv.innerHTML = "<div class=\"spinner-border  m-5\" role=\"status\">\n" +
+        "  <span class=\"sr-only\">Loading...</span>\n" +
+        "</div>";
+        dt = await analyze_sentence(text)
+        if (!Array.isArray(dt)) {
+            outputDiv.textContent = "Ошибка анализа.";
+            return;
+        }
+        let html = dt.map(item => {
+            const cls = item.role;  // role уже subject, predicate и т.д.
+            const word = item.text;
+            return `<span class="syntax-word ${cls}">${word}</span>`;
+        }).join(" ");
+
+        // Подсветка выбранного
+        sentenceLinks.forEach(link => link.classList.remove('selected'));
+        aTag.classList.add('selected');
+
+        outputDiv.innerHTML = html;
+    }
+
+    sentenceLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            showSentenceText(link);
+        });
+    });
+
+    // Автоматически отобразить первое предложение
+    if (sentenceLinks.length > 0) {
+        showSentenceText(sentenceLinks[0]);
+    }
+});
+
+let selectedWordSpan = null;
+
+document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('syntax-word')) {
+        selectedWordSpan = e.target;
+
+        const rect = e.target.getBoundingClientRect();
+        const modal = document.getElementById('edit-role-modal');
+        const select = document.getElementById('role-select');
+
+        // Предустановить текущую роль
+        for (let option of select.options) {
+            if (e.target.classList.contains(option.value)) {
+                select.value = option.value;
+                break;
+            }
+        }
+
+        modal.style.left = `${rect.left + window.scrollX}px`;
+        modal.style.top = `${rect.bottom + window.scrollY}px`;
+        modal.style.display = 'block';
+    }
+});
+
+document.getElementById('apply-role-btn').addEventListener('click', function () {
+    if (!selectedWordSpan) return;
+    const select = document.getElementById('role-select');
+    const newRole = select.value;
+
+    // Заменить CSS класс
+    selectedWordSpan.className = 'syntax-word ' + newRole;
+
+    document.getElementById('edit-role-modal').style.display = 'none';
+    selectedWordSpan = null;
+});
+
+document.getElementById('cancel-role-btn').addEventListener('click', function () {
+    document.getElementById('edit-role-modal').style.display = 'none';
+    selectedWordSpan = null;
+});
+</script>
+{% endblock %}
