@@ -1,5 +1,6 @@
-import os
 import stanza
+
+from shower import settings
 
 
 class StanzaAnalyzer:
@@ -23,12 +24,12 @@ class StanzaAnalyzer:
 
     def __init__(self):
         # базовая станза (используется для нахождения признаков и синтаксических свойств)
-        self.nlp_base = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse', model_dir=os.getcwd() + "/text_app/stanza_models/")
+        self.nlp_base = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse', model_dir=str(settings.BASE_DIR) + "/text_app/stanza_models/")
         # дообученная станза (feats не полные, отсутствие синтаксиса)
         self.nlp_tr = stanza.Pipeline(lang='ru', processors='tokenize, pos',
-                                      tokenize_model_path=os.getcwd() + "/text_app/stanza_models/99,99tok.pt",
-                                      pos_model_path=os.getcwd() + "/text_app/stanza_models/94,48dualpos.pt",
-                                      model_dir=os.getcwd() + "/text_app/stanza_models/")
+                                      tokenize_model_path=str(settings.BASE_DIR) + "/text_app/stanza_models/99,99tok.pt",
+                                      pos_model_path=str(settings.BASE_DIR) + "/text_app/stanza_models/94,48dualpos.pt",
+                                      model_dir=str(settings.BASE_DIR) + "/text_app/stanza_models/")
         self.text_doc = None
 
     # Анализ текста (по умолчанию используется дообученная модель)
