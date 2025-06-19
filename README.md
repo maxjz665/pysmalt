@@ -64,3 +64,48 @@ python manage.py migrate --fake-initial
 ```shell
 python manage.py test --settings=shower.settings.test
 ```
+
+### Консоль отладки Django
+Для консоли необходимо установить дополнительно пакет https://django-debug-toolbar.readthedocs.io/en/stable/
+```shell
+pip install django-debug-toolbar
+```
+и добавить настройки для консоли
+```python
+from shower.settings.base import MIDDLEWARE, INSTALLED_APPS
+
+# цепляем профилирование для консоли джанго
+MIDDLEWARE = [
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
+    *MIDDLEWARE,
+]
+
+# добавляем консоль джанго в список установленных приложений
+INSTALLED_APPS = [
+    *INSTALLED_APPS,
+    "debug_toolbar",
+]
+
+# логирование работы БД
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        }
+    },
+}
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+# нужно для отображения консоли джанго
+INTERNAL_IPS = ["127.0.0.1"]
+```

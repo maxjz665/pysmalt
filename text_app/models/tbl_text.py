@@ -83,7 +83,8 @@ class TblText(models.Model):
         if include_list:
             texts = texts.filter(id__in=include_list)
 
-        return texts
+        # подключение авторов и журналов для ускорения запроса
+        return texts.select_related('magazine').select_related('author')
 
     @staticmethod
     def get_text(user=AnonymousUser, text_id: int = None):
@@ -104,7 +105,7 @@ class TblText(models.Model):
         return TblWord.objects.filter(text_id=self.id).order_by("chapter_index",
                                                                 "paragraph_index",
                                                                 "sentence_index",
-                                                                "word_index").all()
+                                                                "word_index").select_related('dictword').all()
 
     @classmethod
     def save_text_in_db(

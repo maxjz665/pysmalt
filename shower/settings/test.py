@@ -30,6 +30,9 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'user_app.TblUser'
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
 # задержка выдачи ответа при неверном логине/пароле
 LOGIN_DELAY_SECONDS = 5
 
