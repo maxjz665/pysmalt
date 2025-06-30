@@ -347,8 +347,6 @@ def import_form(request: HttpRequest):
             status = get_or_none('status')
             origin_title = get_or_none('originTitle')
 
-            grm_file = request.FILES.get('grmFile')  # Файл .txt
-
             words_json = request.POST.get('words_json')
             words = json.loads(words_json)
 
