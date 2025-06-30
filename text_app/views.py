@@ -288,6 +288,7 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
     item.delete()
     return redirect("text_app/text_lists")
 
+
 def paper_data_synt_analysis(request: HttpRequest, paper_id: int) -> HttpResponse:
     """
     Отображение содержимого статьи в режиме синтаксического анализа
@@ -357,7 +358,8 @@ def import_form(request: HttpRequest):
                                     status, origin_title)
             for word in words:
                 TblWord.save_word(TblText.objects.filter(id=text_id).get(), word)
-            return redirect('home')
+            return redirect('text_app/papers_data', text_id)
+        return render(request, "not_found.html", context={"message": "Неизвестный тип запроса: " + request.POST.get('action')})
     else:
         return render(request, "text_app/import_form.html",
                       context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines,
