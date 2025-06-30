@@ -451,7 +451,7 @@ def analyze_text(request):
         fdiff = f"{int((diff - int(diff)) * 10_000_000):07d}"
         # Подсчёт total
         total = parser.miss + parser.hit
-        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Miss: {parser.miss}, Hit: {parser.hit}, Total: {total} Not found: {parser.notFound}</p>"
+        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Уникальных слов: {parser.miss}, повторений: {parser.hit}, Всего: {total} Не найдено: {parser.notFound}</p>"
 
         return JsonResponse({"result": res})
     return JsonResponse({"error": "Invalid request"}, status=400)

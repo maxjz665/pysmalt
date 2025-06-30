@@ -14,7 +14,7 @@ class ParseException(Exception):
 
 class Parser:
     def __init__(self):
-        self.foundWords = []
+        self.foundWords = {}
         self.foundInitialForms = []
         self.miss = 0
         self.hit = 0
@@ -124,8 +124,8 @@ class Parser:
 
     def serch_in_db(self, ret):
         # закодировать слова
-        encodedWord = ret["ENCODED_WORD"];
-        encodedInitialForm = ret["ENCODED_INITIAL_FORM"];
+        encodedWord = ret["ENCODED_WORD"]
+        encodedInitialForm = ret["ENCODED_INITIAL_FORM"]
         param1 = None
         if "PARAM_01" in ret:
             param1 = ret["PARAM_01"]
@@ -169,7 +169,7 @@ class Parser:
         if word_matches:
             ret["ID"] = word_matches[0]['ID']
             ret["PARAM_01"] = word_matches[0]['param_01']
-            self.foundWords.append({encodedWord: [word_matches[0]['ID'], word_matches[0]['param_01']]})
+            self.foundWords[encodedWord] = [word_matches[0]['ID'], word_matches[0]['param_01']]
             return
 
         # Поиск по полю "modern"
@@ -181,7 +181,7 @@ class Parser:
         if modern_matches:
             ret["ID"] = modern_matches[0]['ID']
             ret["PARAM_01"] = modern_matches[0]['param_01']
-            self.foundWords.append({encodedWord: [modern_matches[0]['ID'], modern_matches[0]['param_01']]})
+            self.foundWords[encodedWord] = [modern_matches[0]['ID'], modern_matches[0]['param_01']]
             return
 
         # Поиск по полю "initial_form"
