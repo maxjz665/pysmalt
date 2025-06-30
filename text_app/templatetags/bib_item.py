@@ -22,19 +22,20 @@ def bib_item(value: TblText, url: str = None, *args, **kwargs):
     text_data = value
 
     if text_data.idkey is None:
-        ret = "[] "
+        ret = f"[{text_data.id}]&nbsp;"
     else:
-        ret = f"[{text_data.idkey}] "
+        ret = f"[{text_data.idkey}]&nbsp;"
     if text_data.author is not None:
         ret += text_data.author.name
         if text_data.author.name[-1] == '.':
             ret += " "
         else:
             ret += ". "
+        ret += "&nbsp;"
 
     # печать названия.
     if url is not None and len(url) > 0:
-        ret += f' <a href="{reverse(url, args=args)}">{text_data.title}</a>'
+        ret += f'<a href="{reverse(url, args=args)}">{text_data.title}</a>'
     else:
         ret += text_data.title
 
