@@ -288,6 +288,7 @@ def text_list_delete(request: HttpRequest, list_id: int) -> HttpResponse:
     item.delete()
     return redirect("text_app/text_lists")
 
+
 def paper_data_synt_analysis(request: HttpRequest, paper_id: int) -> HttpResponse:
     """
     Отображение содержимого статьи в режиме синтаксического анализа
@@ -347,8 +348,6 @@ def import_form(request: HttpRequest):
             status = get_or_none('status')
             origin_title = get_or_none('originTitle')
 
-            grm_file = request.FILES.get('grmFile')  # Файл .txt
-
             words_json = request.POST.get('words_json')
             words = json.loads(words_json)
 
@@ -359,7 +358,8 @@ def import_form(request: HttpRequest):
                                     status, origin_title)
             for word in words:
                 TblWord.save_word(TblText.objects.filter(id=text_id).get(), word)
-            return redirect('home')
+            return redirect('text_app/papers_data', text_id)
+        return render(request, "not_found.html", context={"message": "Неизвестный тип запроса: " + request.POST.get('action')})
     else:
         return render(request, "text_app/import_form.html",
                       context={"type": 'old', "author_types": author_types, "authors": authors, "magazines": magazines,
@@ -451,7 +451,7 @@ def analyze_text(request):
         fdiff = f"{int((diff - int(diff)) * 10_000_000):07d}"
         # Подсчёт total
         total = parser.miss + parser.hit
-        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Miss: {parser.miss}, Hit: {parser.hit}, Total: {total} Not found: {parser.notFound}</p>"
+        res += f"<p>Время работы (мин:сек): {date}.{fdiff}<br>Уникальных слов: {parser.miss}, повторений: {parser.hit}, Всего: {total} Не найдено: {parser.notFound}</p>"
 
         return JsonResponse({"result": res})
     return JsonResponse({"error": "Invalid request"}, status=400)

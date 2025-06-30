@@ -108,10 +108,24 @@ class TblText(models.Model):
                                                                 "word_index").select_related('dictword').all()
 
     @classmethod
+    def get_short_name(cls, name: str) -> str:
+        """
+        Получение краткого названия из первых трех согласных букв
+        """
+        passed_signs = "цкнгшщзхфвпрлджчсмтб" # не берем Й как неинформативное
+        ret = ""
+        for sign in name.lower():
+            if sign in passed_signs:
+                ret += sign
+                if len(ret) > 2:
+                    break
+        return ret
+
+    @classmethod
     def save_text_in_db(
             cls,
             title, author, magazine, magazine_no, publication_date, comment, url, background,
-            category, text_type, author_verify, author_type, author2, author2_type, author3,
+            text_category, text_type, author_verify, author_type, author2, author2_type, author3,
             author3_type, short_title, magazine_volume, magazine_section, pages, censorship, attributions,
             status, origin_title,
     ) -> int:
@@ -146,7 +160,7 @@ class TblText(models.Model):
                 inuse1=1,
                 inuse2=0,
                 syntax=0,
-                category=int(category) if category is not None else 0,
+                category=int(text_category) if text_category is not None else 0,
                 text_type=int(text_type) if text_type is not None else 0,
                 author_verify=int(author_verify) if author_verify is not None else 0,
                 author_type=int(author_type) if author_type else None,
@@ -162,11 +176,16 @@ class TblText(models.Model):
                 censorship=censorship[:1000] if censorship else None,
                 attributions=attributions[:1000] if attributions else None,
                 status=int(status) if status is not None else 0,
-                idkey=None,  # Можно сгенерировать hash от названия, например
             )
             text.full_clean()  # Django built-in validation
             text.save()
-            return text.id
+            text_id = text.id
+            text.idkey = (((cls.get_short_name(magazine_obj.title) + "-") if magazine_obj is not None else "") +
+                          ((str(public_date.year) + "-") if public_date else "") +
+                          ((str(magazine_no) + "-") if magazine_no is not None else "") +
+                          cls.get_short_name(text.title) + "-" + str(text_id))
+            text.save()
+            return text_id
 
         except ValidationError as ve:
             raise ve
