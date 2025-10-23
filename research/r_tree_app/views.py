@@ -32,7 +32,7 @@ def tree_list(request: HttpRequest) -> HttpResponse:
 
 def add_list(request: HttpRequest) -> HttpResponse:
     """
-    Форма добавления/добавление нового дерева решений
+    GET Форма добавления/ POST добавление нового дерева решений
     """
     if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
         return render(request, "not_found.html", context={"message": "Нет прав на добавление дерева решений",
@@ -43,13 +43,17 @@ def add_list(request: HttpRequest) -> HttpResponse:
     first_list = request.POST.get("first_list", 0)
     second_list = request.POST.get("second_list", 0)
     block_size = request.POST.get("block_size", 200)
+    sector_size = request.POST.get("sector_size", 0)
+    many_sectors = request.POST.get("many_sectors", False)
     lists = TblTextListDescription.get_items(request.user).order_by("name").all()
 
     if request.method == "GET":
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
-                                                                    'block_size': block_size})
+                                                                    'block_size': block_size,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors})
     err_msg = ""
 
     if input_name == "":
@@ -58,6 +62,12 @@ def add_list(request: HttpRequest) -> HttpResponse:
         err_msg = "Выберите списки текстов"
     if first_list == second_list:
         err_msg = "Списки текстов должны различаться"
+    try:
+        sector_size = int(sector_size)
+        if sector_size < 0 or sector_size > 100:
+            raise ValueError
+    except ValueError:
+        err_msg = "Размер сектора должен быть в пределах 0-100"
     try:
         block_size = int(block_size)
         if block_size <= 0:
@@ -70,10 +80,13 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors,
                                                                     "error_message": err_msg})
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
+                                  sector_size=sector_size, many_sectors=(many_sectors == "on"),
                                   first_list=TblTextListDescription.get_item(request.user, first_list),
                                   second_list=TblTextListDescription.get_item(request.user, second_list),
                                   created_by=request.user.id, updated_by=request.user.id)
@@ -84,6 +97,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors,
                                                                     "error_message": e})
 
 

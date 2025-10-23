@@ -18,6 +18,9 @@
         <div class="row">
         <div class="col card">
             <div class="card-body">
+                <div>Размер блока: {{ content.block_size }}</div>
+                <div>Использование разделителей: {% if content.sector_size > 0 %}cектор={{ content.sector_size }}%,
+                    {% if content.many_sectors %}n=1, 2, ...{% else %}n=1{% endif %}{% else %}Не используются{% endif %}</div>
             {% if content.build_at %}
                 <div>Сборка: {{ content.build_at }}</div>
             {% else %}

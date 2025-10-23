@@ -15,13 +15,17 @@
     <form method="post" enctype="multipart/form-data">
     <div class="container">
     <div class="row">
-    <div class="form-group col-lg-10">
-        <label for="input_name">Название дерева решений</label>
-        <input type="text" class="form-control" name="input_name" id="input_name" placeholder="Введите название дерева решений" value="{{ input_name }}">
-    </div>
+        <div class="form-group col-lg-7">
+            <label for="input_name">Название дерева решений</label>
+            <input type="text" class="form-control" name="input_name" id="input_name" placeholder="Введите название дерева решений" value="{{ input_name }}">
+        </div>
+        <div class="form-group col-lg-5">
+            <label for="block_size">Размер блока</label>
+            <input type="text" class="form-control" name="block_size" id="block_size" placeholder="Введите размер блока" value="{{ block_size }}">
+        </div>
     </div>
     <div class="row">
-    <div class="form-group mb-2 col-lg-5">
+    <div class="form-group mb-2 col-lg-6">
         <label for="first_list">Список текстов первой группы</label>
          <select class="form-control selectpicker" data-live-search="true" id="first_list" name="first_list" style="width: 90%">
              {% for item in lists %}
@@ -33,7 +37,7 @@
         {% endif %}
     </div>
         
-    <div class="form-group mb-2 col-lg-5">
+    <div class="form-group mb-2 col-lg-6">
         <label for="second_list">Список текстов второй группы</label>
          <select class="form-control selectpicker" data-live-search="true" id="second_list" name="second_list" style="width: 90%">
              {% for item in lists %}
@@ -45,11 +49,24 @@
         {% endif %}
     </div>
     </div>
-        
-    <div class="row">
-        <div class="form-group col-lg-3">
-            <label for="block_size">Размер блока</label>
-            <input type="text" class="form-control" name="block_size" id="block_size" placeholder="Введите размер блока" value="{{ block_size }}">
+
+    <div class="card">
+        <div class="card-header">
+            Настройка двумерных разделителей (n&middot;&alpha;&middot;x<sub>1</sub> &plusmn; (1 - n&middot;&alpha;&middot;x<sub>2</sub>); n=1, 2, &hellip;)
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="form-group col-lg-6">
+                    <label for="sector_size">Размер сектора разделителя &alpha; в процентах (0-100)</label>
+                    <input type="text" class="form-control" name="sector_size" id="sector_size" placeholder="Введите размер сектора или 0 если сектора не используются" value="{{ sector_size }}">
+                </div>
+                <div class="form-check col-lg-6">
+                    <input class="form-check-input" type="checkbox" id="many_sectors" name="many_sectors" {% if many_sectors %}checked{% endif %}>
+                    <label class="form-check-label" for="many_sectors">
+                        Несколько разделителей (1 &le; n &le; 100/&alpha;)
+                    </label>
+                </div>
+            </div>
         </div>
     </div>
 
