@@ -46,7 +46,7 @@ class TreeWorkerHandler(object):
                 return
 
     @staticmethod
-    def _generate_table(text_list: TblTextListDescription, block_size: int, dict_size: int) -> []:
+    def _generate_table(text_list: TblTextListDescription, block_size: int, dict_size: int) -> list:
         """
         Генерация таблицы признаков по блокам текстов
         :param text_list: список текстов
@@ -80,15 +80,62 @@ class TreeWorkerHandler(object):
         return ret
 
     @staticmethod
-    def _generate_features(pos):
+    def _generate_features(pos, sector_size: float, many_sectors: bool) -> list:
         """
-        Построение пар часть речи - часть речи
+        Построение пар "часть_речи-часть_речи" и "часть-часть(доля)=часть-часть(доля)"
         """
         ret = []
         for item1 in pos:
             for item2 in pos:
                 ret.append(item1 + "-" + item2)
+        if 0 < sector_size < 100:
+            # у нас разделитель - дополняем таблицу пар комбинациями часть-часть(доля)=часть-часть(доля)
+            origin_size = len(ret)
+            if many_sectors:
+                n = 1.0
+                while n * sector_size < 100:
+                    ret.extend(TreeWorkerHandler._generate_subfeatures(ret, origin_size, n * sector_size))
+                    n += 1.0
+            else:
+                ret.extend(TreeWorkerHandler._generate_subfeatures(ret, origin_size, sector_size))
         return ret
+
+    @staticmethod
+    def _generate_subfeatures(items: list, origin_size: int, sector_size: float) -> list:
+        pos_ret = []
+        neg_ret = []
+        for i in range(origin_size):
+            for j in range(origin_size):
+                pos_ret.append(items[i] + f"({sector_size / 100}) + " + items[j] + f"({(100 - sector_size) / 100})")
+                neg_ret.append(items[i] + f"({sector_size / 100}) - " + items[j] + f"({(100 - sector_size) / 100})")
+        return [*pos_ret, *neg_ret]
+
+    def _generate_slice(self, table: list, sector_size: float, many_sectors: bool) -> list:
+        ret = []
+        for item in table:
+            ret_row = [*item]
+            if many_sectors:
+                n = 1.0
+                while n * sector_size < 100:
+                    ret_row.append(*self._generate_subslice(item, n * sector_size))
+                    n += 1.0
+            else:
+                ret_row.append(*self._generate_subslice(item, sector_size))
+            ret.append(ret_row)
+        return ret
+
+    @staticmethod
+    def _generate_subslice(record: list, sector_size: float) -> list:
+        """
+        Генерация записей с поворотами, т.е. (sector_size*x + (100-sector_size)*y)/100 и (sector_size*x - (100-sector_size)*y)/100
+        """
+        pos_ret = []
+        neg_ret = []
+        for i in record:
+            for j in record:
+                pos_ret.append((sector_size * i + (100 - sector_size) * j) / 100)
+                neg_ret.append((sector_size * i - (100 - sector_size) * j) / 100)
+        return [*pos_ret, *neg_ret]
 
     @sync_to_async
     def build_tree(self, params):
@@ -110,15 +157,21 @@ class TreeWorkerHandler(object):
 
         # перестраиваем дерево решений
         pos = get_pos()
-        table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len(pos))
-        table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len(pos))
-        features = self._generate_features(pos)
+        len_pos = len(pos)
+        table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len_pos)
+        table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len_pos)
+        features = self._generate_features(pos, tree_data.sector_size, tree_data.many_sectors)
         logging.error(f"project: %s: table1: %s, table2: %s", params['project_id'], len(table1), len(table2))
-        tree_data.build_status = "Построение дерева"
-        tree_data.save()
         min_size = min(len(table1), len(table2))
         table1 = table1[:min_size]
         table2 = table2[:min_size]
+        if 0 < tree_data.sector_size < 100:
+            tree_data.build_status = "Построение разделителей"
+            tree_data.save()
+            table1 = self._generate_slice(table1, tree_data.sector_size, tree_data.many_sectors)
+            table2 = self._generate_slice(table1, tree_data.sector_size, tree_data.many_sectors)
+        tree_data.build_status = "Построение дерева"
+        tree_data.save()
         result = [0] * min_size + [1] * min_size
         clf = ensemble.RandomForestClassifier()
         clf = clf.fit(table1 + table2, result)
