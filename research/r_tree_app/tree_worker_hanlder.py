@@ -51,11 +51,12 @@ class TreeWorkerHandler(object):
         Генерация таблицы признаков по блокам текстов
         :param text_list: список текстов
         :param block_size: размер блока
-        :return: таблица частот встречаемости частей речи в блоках текста
+        :return: таблица частот встречаемости частей речи в блоках текста [унограммы, биграммы]
         """
         word_index = 0
         ret = []  # матрица переходов по блокам текста
-        ret_item = [0] * dict_size * dict_size  # найденные переходы в текущем блоке текста
+        ret_single_item = [0] * dict_size  # статистика по унограммам
+        ret_double_item = [0] * dict_size * dict_size  # найденные переходы в текущем блоке текста
         for text in text_list.items:  # бежим по текстам и вытаскиваем слова из текста
             text_data = TblWord.objects.filter(text_id=text.text.id).order_by("chapter_index",
                                                                               "paragraph_index",
@@ -70,11 +71,13 @@ class TreeWorkerHandler(object):
                 if prev_pos < 0:  # если это первое слово в N-грамме, то запоминаем его
                     prev_pos = part_of_speech
                     continue
-                ret_item[prev_pos * dict_size + part_of_speech] += 1
+                ret_single_item[part_of_speech] += 1
+                ret_double_item[prev_pos * dict_size + part_of_speech] += 1
                 word_index += 1
                 if word_index >= block_size:
-                    ret.append(ret_item)
-                    ret_item = [0] * dict_size * dict_size
+                    ret.append([*ret_single_item, *ret_double_item])
+                    ret_single_item = [0] * dict_size
+                    ret_double_item = [0] * dict_size * dict_size
 
                     word_index = 0
         return ret
@@ -85,12 +88,14 @@ class TreeWorkerHandler(object):
         Построение пар "часть_речи-часть_речи" и "часть-часть(доля)=часть-часть(доля)"
         """
         ret = []
+        for item in pos:
+            ret.append(str(item))
         for item1 in pos:
             for item2 in pos:
                 ret.append(item1 + "-" + item2)
         if 0 < sector_size < 100:
             # у нас разделитель - дополняем таблицу пар комбинациями часть-часть(доля)=часть-часть(доля)
-            origin_size = len(ret)
+            origin_size = len(pos)
             if many_sectors:
                 n = 1.0
                 while n * sector_size < 100:
@@ -106,21 +111,23 @@ class TreeWorkerHandler(object):
         neg_ret = []
         for i in range(origin_size):
             for j in range(origin_size):
-                pos_ret.append(items[i] + f"({sector_size / 100}) + " + items[j] + f"({(100 - sector_size) / 100})")
-                neg_ret.append(items[i] + f"({sector_size / 100}) - " + items[j] + f"({(100 - sector_size) / 100})")
+                pos_ret.append(items[i] + f"({sector_size / 100})+" + items[j] + f"({(100 - sector_size) / 100})")
+                neg_ret.append(items[i] + f"({sector_size / 100})-" + items[j] + f"({(100 - sector_size) / 100})")
         return [*pos_ret, *neg_ret]
 
-    def _generate_slice(self, table: list, sector_size: float, many_sectors: bool) -> list:
+    @staticmethod
+    def _generate_slice(table: list, sector_size: float, many_sectors: bool) -> list:
+        assert 0 < sector_size < 100
         ret = []
         for item in table:
             ret_row = [*item]
             if many_sectors:
                 n = 1.0
                 while n * sector_size < 100:
-                    ret_row.append(*self._generate_subslice(item, n * sector_size))
+                    ret_row.extend(TreeWorkerHandler._generate_subslice(item, n * sector_size))
                     n += 1.0
             else:
-                ret_row.append(*self._generate_subslice(item, sector_size))
+                ret_row.extend(TreeWorkerHandler._generate_subslice(item, sector_size))
             ret.append(ret_row)
         return ret
 
