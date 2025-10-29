@@ -199,7 +199,7 @@ class TreeWorkerHandler(object):
         tree_data.build_status = "Построение дерева"
         tree_data.save()
         result = [0] * min_size + [1] * min_size
-        clf = ensemble.RandomForestClassifier()
+        clf = ensemble.RandomForestClassifier(max_depth=tree_data.max_depth)
         clf = clf.fit(table1 + table2, result)
         tree_data.build_status = "Выполнено"
         tree_data.build_at = datetime.now(timezone.utc)

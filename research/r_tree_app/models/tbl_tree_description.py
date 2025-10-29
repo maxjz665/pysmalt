@@ -29,6 +29,7 @@ class TblTreeDescription(BaseModel):
     is_need_separate = models.BooleanField(default=False, db_comment='Флаг использования разделителей унограмм в дереве решений')
     first_list = models.ForeignKey(TblTextListDescription, related_name="first_list_data", db_column="first_list", on_delete=models.CASCADE)
     second_list = models.ForeignKey(TblTextListDescription, related_name="second_list_data", db_column="second_list", on_delete=models.CASCADE)
+    max_depth = models.IntegerField(default=4, db_comment='Максимальная глубина дерева решений')
     build_at = models.DateTimeField(null=True, default=None, db_comment='Дата сборки')
     build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)
     graph_dot = models.TextField(blank=True, null=True, db_comment="Граф дерева решений")

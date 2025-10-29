@@ -22,6 +22,7 @@
         <div class="col card">
             <div class="card-body">
                 <div>Размер блока: {{ content.block_size }}</div>
+                <div>Глубина дерева решений: {{ content.max_depth }}</div>
                 <div>Использование разделителей: {% if content.sector_size > 0 %}cектор={{ content.sector_size }}%,
                     {% if content.many_sectors %}n=1, 2, ...{% else %}n=1{% endif %}{% else %}Не используются{% endif %}</div>
             {% if content.build_at or content.is_deleted %}
