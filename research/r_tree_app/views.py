@@ -42,6 +42,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
     input_name = request.POST.get("input_name", "Дерево решений")
     first_list = request.POST.get("first_list", 0)
     second_list = request.POST.get("second_list", 0)
+    is_need_uno = request.POST.get("is_need_uno", False)
+    is_need_duo = request.POST.get("is_need_duo", False)
     block_size = request.POST.get("block_size", 200)
     sector_size = request.POST.get("sector_size", 0)
     many_sectors = request.POST.get("many_sectors", False)
@@ -52,6 +54,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
                                                                     'many_sectors': many_sectors})
     err_msg = ""
@@ -80,13 +84,17 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
                                                                     'many_sectors': many_sectors,
                                                                     "error_message": err_msg})
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
+                                  is_need_uno=(is_need_uno == "on"), is_need_duo=(is_need_duo == "on"),
                                   sector_size=sector_size, many_sectors=(many_sectors == "on"),
+                                  is_need_separate=(0 < sector_size < 100),
                                   first_list=TblTextListDescription.get_item(request.user, first_list),
                                   second_list=TblTextListDescription.get_item(request.user, second_list),
                                   created_by=request.user.id, updated_by=request.user.id)
@@ -97,6 +105,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
                                                                     'many_sectors': many_sectors,
                                                                     "error_message": e})
@@ -174,7 +184,27 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
                                                                           "second_texts": second_texts,
                                                                           "error_message": "Нет прав на управление деревом"})
 
+    if action == "delete":
+        if request.user.is_authenticated and (request.user == list_data.owner or request.user.has_admin):
+            list_data.is_deleted = True
+            list_data.save()
+            return redirect("r_tree_app/tree_list")
+        return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                 "first_texts": first_texts,
+                                                                 "second_texts": second_texts,
+                                                                 "error_message": "Нет прав на управление деревом"})
 
+    if action == "restore":
+        if request.user.is_authenticated and (request.user == list_data.owner or request.user.has_admin):
+            list_data.is_deleted = False
+            list_data.save()
+            return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                 "first_texts": first_texts,
+                                                                 "second_texts": second_texts})
+        return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                 "first_texts": first_texts,
+                                                                 "second_texts": second_texts,
+                                                                 "error_message": "Нет прав на управление деревом"})
     return render(request, "r_tree_app/list_data.html",
                   context={"error_message": "Неизвестная операция над деревом решений",
                            "content": list_data,
