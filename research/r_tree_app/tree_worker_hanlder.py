@@ -46,11 +46,14 @@ class TreeWorkerHandler(object):
                 return
 
     @staticmethod
-    def _generate_table(text_list: TblTextListDescription, block_size: int, dict_size: int) -> list:
+    def _generate_table(text_list: TblTextListDescription, block_size: int, dict_size: int, is_need_uno: bool, is_need_duo: bool) -> list:
         """
         Генерация таблицы признаков по блокам текстов
         :param text_list: список текстов
         :param block_size: размер блока
+        :param dict_size: размер словарика
+        :param is_need_uno: требуется ли генерация статистик по унограммам
+        :param is_need_duo: требуется ли генерация статистик по биграммам
         :return: таблица частот встречаемости частей речи в блоках текста [унограммы, биграммы]
         """
         word_index = 0
@@ -75,7 +78,16 @@ class TreeWorkerHandler(object):
                 ret_double_item[prev_pos * dict_size + part_of_speech] += 1
                 word_index += 1
                 if word_index >= block_size:
-                    ret.append([*ret_single_item, *ret_double_item])
+                    if is_need_uno:
+                        if is_need_duo:
+                            ret.append([*ret_single_item, *ret_double_item])
+                        else:
+                            ret.append(ret_single_item)
+                    else:
+                        if is_need_duo:
+                            ret.append(ret_double_item)
+                        else:
+                            logging.error("Не заданы параметры генерации")
                     ret_single_item = [0] * dict_size
                     ret_double_item = [0] * dict_size * dict_size
 
@@ -83,40 +95,42 @@ class TreeWorkerHandler(object):
         return ret
 
     @staticmethod
-    def _generate_features(pos, sector_size: float, many_sectors: bool) -> list:
+    def _generate_features(pos, sector_size: float, many_sectors: bool, is_need_uno: bool, is_need_duo: bool, is_need_separate: bool) -> list:
         """
         Построение пар "часть_речи-часть_речи" и "часть-часть(доля)=часть-часть(доля)"
         """
         ret = []
-        for item in pos:
-            ret.append(str(item))
-        for item1 in pos:
-            for item2 in pos:
-                ret.append(item1 + "-" + item2)
-        if 0 < sector_size < 100:
+        if is_need_uno:
+            for item in pos:
+                ret.append(str(item))
+        if is_need_duo:
+            for item1 in pos:
+                for item2 in pos:
+                    ret.append(item1 + "-" + item2)
+        if is_need_separate and 0 < sector_size < 100:
             # у нас разделитель - дополняем таблицу пар комбинациями часть-часть(доля)=часть-часть(доля)
             origin_size = len(pos)
             if many_sectors:
                 n = 1.0
                 while n * sector_size < 100:
-                    ret.extend(TreeWorkerHandler._generate_subfeatures(ret, origin_size, n * sector_size))
+                    ret.extend(TreeWorkerHandler._generate_subfeatures(pos, n * sector_size))
                     n += 1.0
             else:
-                ret.extend(TreeWorkerHandler._generate_subfeatures(ret, origin_size, sector_size))
+                ret.extend(TreeWorkerHandler._generate_subfeatures(pos, sector_size))
         return ret
 
     @staticmethod
-    def _generate_subfeatures(items: list, origin_size: int, sector_size: float) -> list:
+    def _generate_subfeatures(pos: list, sector_size: float) -> list:
         pos_ret = []
         neg_ret = []
-        for i in range(origin_size):
-            for j in range(origin_size):
-                pos_ret.append(items[i] + f"({sector_size / 100})+" + items[j] + f"({(100 - sector_size) / 100})")
-                neg_ret.append(items[i] + f"({sector_size / 100})-" + items[j] + f"({(100 - sector_size) / 100})")
+        for i in range(len(pos)):
+            for j in range(len(pos)):
+                pos_ret.append(pos[i] + f"({sector_size / 100})+" + pos[j] + f"({(100 - sector_size) / 100})")
+                neg_ret.append(pos[i] + f"({sector_size / 100})-" + pos[j] + f"({(100 - sector_size) / 100})")
         return [*pos_ret, *neg_ret]
 
     @staticmethod
-    def _generate_slice(table: list, sector_size: float, many_sectors: bool) -> list:
+    def _generate_slice(table: list, len_pos: int, sector_size: float, many_sectors: bool) -> list:
         assert 0 < sector_size < 100
         ret = []
         for item in table:
@@ -124,22 +138,22 @@ class TreeWorkerHandler(object):
             if many_sectors:
                 n = 1.0
                 while n * sector_size < 100:
-                    ret_row.extend(TreeWorkerHandler._generate_subslice(item, n * sector_size))
+                    ret_row.extend(TreeWorkerHandler._generate_subslice(item, len_pos, n * sector_size))
                     n += 1.0
             else:
-                ret_row.extend(TreeWorkerHandler._generate_subslice(item, sector_size))
+                ret_row.extend(TreeWorkerHandler._generate_subslice(item, len_pos, sector_size))
             ret.append(ret_row)
         return ret
 
     @staticmethod
-    def _generate_subslice(record: list, sector_size: float) -> list:
+    def _generate_subslice(record: list, len_pos: int, sector_size: float) -> list:
         """
         Генерация записей с поворотами, т.е. (sector_size*x + (100-sector_size)*y)/100 и (sector_size*x - (100-sector_size)*y)/100
         """
         pos_ret = []
         neg_ret = []
-        for i in record:
-            for j in record:
+        for i in record[: len_pos]:
+            for j in record[: len_pos]:
                 pos_ret.append((sector_size * i + (100 - sector_size) * j) / 100)
                 neg_ret.append((sector_size * i - (100 - sector_size) * j) / 100)
         return [*pos_ret, *neg_ret]
@@ -165,18 +179,23 @@ class TreeWorkerHandler(object):
         # перестраиваем дерево решений
         pos = get_pos()
         len_pos = len(pos)
-        table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len_pos)
-        table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len_pos)
-        features = self._generate_features(pos, tree_data.sector_size, tree_data.many_sectors)
+        # т.к. для разделителей требуются унограммы, то мы их тоже строим
+        table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len_pos, tree_data.is_need_uno or tree_data.is_need_separate, tree_data.is_need_duo)
+        table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len_pos, tree_data.is_need_uno or tree_data.is_need_separate, tree_data.is_need_duo)
+        features = self._generate_features(pos, tree_data.sector_size, tree_data.many_sectors, tree_data.is_need_uno, tree_data.is_need_duo, tree_data.is_need_separate)
         logging.error(f"project: %s: table1: %s, table2: %s", params['project_id'], len(table1), len(table2))
         min_size = min(len(table1), len(table2))
         table1 = table1[:min_size]
         table2 = table2[:min_size]
-        if 0 < tree_data.sector_size < 100:
+        if tree_data.is_need_separate and 0 < tree_data.sector_size < 100:
             tree_data.build_status = "Построение разделителей"
             tree_data.save()
-            table1 = self._generate_slice(table1, tree_data.sector_size, tree_data.many_sectors)
-            table2 = self._generate_slice(table1, tree_data.sector_size, tree_data.many_sectors)
+            table1 = self._generate_slice(table1, len_pos, tree_data.sector_size, tree_data.many_sectors)
+            table2 = self._generate_slice(table1, len_pos, tree_data.sector_size, tree_data.many_sectors)
+            # удаляем унограммы если они не нужны
+            if not tree_data.is_need_uno:
+                table1 = self._remove_uno(table1, len_pos)
+                table2 = self._remove_uno(table2, len_pos)
         tree_data.build_status = "Построение дерева"
         tree_data.save()
         result = [0] * min_size + [1] * min_size
@@ -192,3 +211,16 @@ class TreeWorkerHandler(object):
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
         logging.error(f"project: %s: done", params['project_id'])
+
+    @staticmethod
+    def _remove_uno(table1: list, len_pos: int) -> list:
+        """
+        Удаление статистик по унограммам если они не используются
+        :param table1: Список статистик.
+        :param len_pos: Длина унограмм.
+        """
+        ret = []
+        for item in table1:
+            ret.append(item[len_pos:])
+        return ret
+
