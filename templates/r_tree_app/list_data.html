@@ -27,6 +27,8 @@
                     {% if content.many_sectors %}n=1, 2, ...{% else %}n=1{% endif %}{% else %}Не используются{% endif %}</div>
             {% if content.build_at or content.is_deleted %}
                 <div>Сборка: {{ content.build_at }}</div>
+                <div>Оценка точности: {{ content.accuracy|floatformat:3 }}</div>
+                <div>Размер вектора: {{ content.vector_size }}</div>
             {% else %}
                 <div>Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
                 <script>

@@ -10,9 +10,10 @@ from json import JSONDecodeError
 from aiomqtt import MqttError, Client
 from asgiref.sync import sync_to_async
 from sklearn import ensemble, tree
+from sklearn.metrics import accuracy_score
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
-from research.r_tree_app.utils import get_pos
+from research.r_tree_app.utils import get_pos, generate_subslice
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_word import TblWord
@@ -138,25 +139,12 @@ class TreeWorkerHandler(object):
             if many_sectors:
                 n = 1.0
                 while n * sector_size < 100:
-                    ret_row.extend(TreeWorkerHandler._generate_subslice(item, len_pos, n * sector_size))
+                    ret_row.extend(generate_subslice(item, len_pos, n * sector_size))
                     n += 1.0
             else:
-                ret_row.extend(TreeWorkerHandler._generate_subslice(item, len_pos, sector_size))
+                ret_row.extend(generate_subslice(item, len_pos, sector_size))
             ret.append(ret_row)
         return ret
-
-    @staticmethod
-    def _generate_subslice(record: list, len_pos: int, sector_size: float) -> list:
-        """
-        Генерация записей с поворотами, т.е. (sector_size*x + (100-sector_size)*y)/100 и (sector_size*x - (100-sector_size)*y)/100
-        """
-        pos_ret = []
-        neg_ret = []
-        for i in record[: len_pos]:
-            for j in record[: len_pos]:
-                pos_ret.append((sector_size * i + (100 - sector_size) * j) / 100)
-                neg_ret.append((sector_size * i - (100 - sector_size) * j) / 100)
-        return [*pos_ret, *neg_ret]
 
     @sync_to_async
     def build_tree(self, params):
@@ -173,6 +161,7 @@ class TreeWorkerHandler(object):
             logging.error("Invalid project_id")
             return
 
+        tree_data.accuracy = 0
         tree_data.build_status = "Построение матриц"
         tree_data.save()
 
@@ -191,7 +180,7 @@ class TreeWorkerHandler(object):
             tree_data.build_status = "Построение разделителей"
             tree_data.save()
             table1 = self._generate_slice(table1, len_pos, tree_data.sector_size, tree_data.many_sectors)
-            table2 = self._generate_slice(table1, len_pos, tree_data.sector_size, tree_data.many_sectors)
+            table2 = self._generate_slice(table2, len_pos, tree_data.sector_size, tree_data.many_sectors)
             # удаляем унограммы если они не нужны
             if not tree_data.is_need_uno:
                 table1 = self._remove_uno(table1, len_pos)
@@ -201,6 +190,11 @@ class TreeWorkerHandler(object):
         result = [0] * min_size + [1] * min_size
         clf = ensemble.RandomForestClassifier(max_depth=tree_data.max_depth)
         clf = clf.fit(table1 + table2, result)
+        tree_data.build_status = "Оценка точности"
+        tree_data.vector_size = len(table1[0])
+        tree_data.save()
+        y_pred = clf.predict(table1 + table2)
+        tree_data.accuracy = accuracy_score(result, y_pred)
         tree_data.build_status = "Выполнено"
         tree_data.build_at = datetime.now(timezone.utc)
         classes = ["list1", "list2"]

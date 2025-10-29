@@ -18,3 +18,15 @@ def get_pos():
         value_row = menu_items.get(id=item_value)
         values.append(value_row.item_caption)
     return values
+
+def generate_subslice(record: list, len_pos: int, sector_size: float) -> list:
+    """
+    Генерация записей с поворотами, т.е. (sector_size*x + (100-sector_size)*y)/100 и (sector_size*x - (100-sector_size)*y)/100
+    """
+    pos_ret = []
+    neg_ret = []
+    for i in record[: len_pos]:
+        for j in record[: len_pos]:
+            pos_ret.append((sector_size * i + (100 - sector_size) * j) / 100)
+            neg_ret.append((sector_size * i - (100 - sector_size) * j) / 100)
+    return [*pos_ret, *neg_ret]

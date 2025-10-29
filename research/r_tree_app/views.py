@@ -11,7 +11,7 @@ from django.shortcuts import render, redirect
 import graphviz
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
-from research.r_tree_app.utils import get_pos
+from research.r_tree_app.utils import get_pos, generate_subslice
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -294,8 +294,15 @@ def check_text(request: HttpRequest, list_id):
 
         # построение матрицы поворотов
         if list_data.is_need_separate:
-            # TODO: запилить расчет
-            ret_separate_item = [0] * dict_size * dict_size * 2
+            ret_separate_item = []
+            assert 0 < list_data.sector_size < 100
+            if list_data.many_sectors:
+                n = 1.0
+                while list_data.sector_size * n < 100:
+                    ret_separate_item.extend(generate_subslice(ret_uno_item, len(ret_uno_item), n * list_data.sector_size))
+                    n += 1
+            else:
+                ret_separate_item = generate_subslice(ret_uno_item, len(ret_uno_item), list_data.sector_size)
 
             if not list_data.is_need_uno:
                 ret_uno_item = []
