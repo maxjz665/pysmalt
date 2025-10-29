@@ -23,6 +23,15 @@ class StanzaAnalyzer:
         'X': 20
     }
 
+    # пилим синглтон ручками
+    __instance = None
+
+    @staticmethod
+    def get_instance():
+        if StanzaAnalyzer.__instance is None:
+            StanzaAnalyzer.__instance = StanzaAnalyzer()
+        return StanzaAnalyzer.__instance
+
     def __init__(self):
         # базовая станза (используется для нахождения признаков и синтаксических свойств)
         self.nlp_base = stanza.Pipeline(lang='ru', processors='tokenize, lemma, pos, depparse', model_dir=str(settings.BASE_DIR) + "/text_app/stanza_models/", download_method=DownloadMethod.REUSE_RESOURCES)

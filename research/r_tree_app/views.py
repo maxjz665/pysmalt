@@ -11,7 +11,7 @@ from django.shortcuts import render, redirect
 import graphviz
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
-from research.r_tree_app.utils import get_pos
+from research.r_tree_app.utils import get_pos, generate_subslice
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -32,7 +32,7 @@ def tree_list(request: HttpRequest) -> HttpResponse:
 
 def add_list(request: HttpRequest) -> HttpResponse:
     """
-    Форма добавления/добавление нового дерева решений
+    GET Форма добавления/ POST добавление нового дерева решений
     """
     if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
         return render(request, "not_found.html", context={"message": "Нет прав на добавление дерева решений",
@@ -42,14 +42,22 @@ def add_list(request: HttpRequest) -> HttpResponse:
     input_name = request.POST.get("input_name", "Дерево решений")
     first_list = request.POST.get("first_list", 0)
     second_list = request.POST.get("second_list", 0)
+    is_need_uno = request.POST.get("is_need_uno", False)
+    is_need_duo = request.POST.get("is_need_duo", False)
     block_size = request.POST.get("block_size", 200)
+    sector_size = request.POST.get("sector_size", 0)
+    many_sectors = request.POST.get("many_sectors", False)
     lists = TblTextListDescription.get_items(request.user).order_by("name").all()
 
     if request.method == "GET":
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
-                                                                    'block_size': block_size})
+                                                                    'block_size': block_size,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors})
     err_msg = ""
 
     if input_name == "":
@@ -58,6 +66,12 @@ def add_list(request: HttpRequest) -> HttpResponse:
         err_msg = "Выберите списки текстов"
     if first_list == second_list:
         err_msg = "Списки текстов должны различаться"
+    try:
+        sector_size = int(sector_size)
+        if sector_size < 0 or sector_size > 100:
+            raise ValueError
+    except ValueError:
+        err_msg = "Размер сектора должен быть в пределах 0-100"
     try:
         block_size = int(block_size)
         if block_size <= 0:
@@ -70,10 +84,17 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors,
                                                                     "error_message": err_msg})
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
+                                  is_need_uno=(is_need_uno == "on"), is_need_duo=(is_need_duo == "on"),
+                                  sector_size=sector_size, many_sectors=(many_sectors == "on"),
+                                  is_need_separate=(0 < sector_size < 100),
                                   first_list=TblTextListDescription.get_item(request.user, first_list),
                                   second_list=TblTextListDescription.get_item(request.user, second_list),
                                   created_by=request.user.id, updated_by=request.user.id)
@@ -84,6 +105,10 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors,
                                                                     "error_message": e})
 
 
@@ -159,7 +184,27 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
                                                                           "second_texts": second_texts,
                                                                           "error_message": "Нет прав на управление деревом"})
 
+    if action == "delete":
+        if request.user.is_authenticated and (request.user == list_data.owner or request.user.has_admin):
+            list_data.is_deleted = True
+            list_data.save()
+            return redirect("r_tree_app/tree_list")
+        return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                 "first_texts": first_texts,
+                                                                 "second_texts": second_texts,
+                                                                 "error_message": "Нет прав на управление деревом"})
 
+    if action == "restore":
+        if request.user.is_authenticated and (request.user == list_data.owner or request.user.has_admin):
+            list_data.is_deleted = False
+            list_data.save()
+            return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                 "first_texts": first_texts,
+                                                                 "second_texts": second_texts})
+        return render(request, "r_tree_app/list_data.html", context={"content": list_data,
+                                                                 "first_texts": first_texts,
+                                                                 "second_texts": second_texts,
+                                                                 "error_message": "Нет прав на управление деревом"})
     return render(request, "r_tree_app/list_data.html",
                   context={"error_message": "Неизвестная операция над деревом решений",
                            "content": list_data,
@@ -188,7 +233,7 @@ def check_text(request: HttpRequest, list_id):
     Проверка текста в дереве решений
     """
     list_data = TblTreeDescription.objects.get(id=list_id)
-    if list_data is None or (list_data.public == 0 and (not request.user.is_authenticated or
+    if list_data is None or list_data.is_deleted or (list_data.public == 0 and (not request.user.is_authenticated or
                                                         (request.user.id != list_data.owner.id and not request.user.has_admin))):
         render(request, "not_found.html", context={
             "message": "Нет прав на просмотр дерева решений",
@@ -225,7 +270,14 @@ def check_text(request: HttpRequest, list_id):
     ret = []
     for i in range(parts):  # делим текст на блоки и бежим по блокам
         data = content[i * part_size: (i + 1) * part_size]
-        ret_item = [0] * dict_size * dict_size  # найденные переходы в текущем блоке текста
+        if list_data.is_need_uno or list_data.is_need_separate:
+            ret_uno_item = [0] * dict_size
+        else:
+            ret_uno_item = []
+        if list_data.is_need_duo:
+            ret_duo_item = [0] * dict_size * dict_size # найденные переходы в текущем блоке текста
+        else:
+            ret_duo_item = []
         prev_pos = -1  # предыдущая часть речи
         for word in data:  # для каждого блока вычисляем вектор N-грамм
             part_of_speech = word.dictword.param_01
@@ -235,10 +287,30 @@ def check_text(request: HttpRequest, list_id):
             if prev_pos < 0:  # если это первое слово в N-грамме, то запоминаем его
                 prev_pos = part_of_speech
                 continue
-            ret_item[prev_pos * dict_size + part_of_speech] += 1
+            if list_data.is_need_uno or list_data.is_need_separate:
+                ret_uno_item[part_of_speech] += 1
+            if list_data.is_need_duo:
+                ret_duo_item[prev_pos * dict_size + part_of_speech] += 1
+
+        # построение матрицы поворотов
+        if list_data.is_need_separate:
+            ret_separate_item = []
+            assert 0 < list_data.sector_size < 100
+            if list_data.many_sectors:
+                n = 1.0
+                while list_data.sector_size * n < 100:
+                    ret_separate_item.extend(generate_subslice(ret_uno_item, len(ret_uno_item), n * list_data.sector_size))
+                    n += 1
+            else:
+                ret_separate_item = generate_subslice(ret_uno_item, len(ret_uno_item), list_data.sector_size)
+
+            if not list_data.is_need_uno:
+                ret_uno_item = []
+        else:
+            ret_separate_item = []
 
         # обработка вектора деревом решений
-        result = clf.predict_proba([ret_item])
+        result = clf.predict_proba([[*ret_uno_item, *ret_duo_item, *ret_separate_item]])
         ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1]})
 
     percent_pros = 0

@@ -15,11 +15,20 @@
 {%  block content %}
     <h2>Дерево решений "{{ content.name }}"</h2>
     <div class="container">
+    {% if content.is_deleted %}
+        <div class="alert alert-danger" role="alert">Внимание! Дерево удалено!!</div>
+    {% endif %}
         <div class="row">
         <div class="col card">
             <div class="card-body">
-            {% if content.build_at %}
+                <div>Размер блока: {{ content.block_size }}</div>
+                <div>Глубина дерева решений: {{ content.max_depth }}</div>
+                <div>Использование разделителей: {% if content.sector_size > 0 %}cектор={{ content.sector_size }}%,
+                    {% if content.many_sectors %}n=1, 2, ...{% else %}n=1{% endif %}{% else %}Не используются{% endif %}</div>
+            {% if content.build_at or content.is_deleted %}
                 <div>Сборка: {{ content.build_at }}</div>
+                <div>Оценка точности: {{ content.accuracy|floatformat:3 }}</div>
+                <div>Размер вектора: {{ content.vector_size }}</div>
             {% else %}
                 <div>Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
                 <script>
@@ -35,11 +44,17 @@
                 {% csrf_token %}
                 <div class="row">
                     <div class="col">
-                        <button type="submit" class="btn btn-primary mb-2" name="action" id="action" value="recalc">Пересчитать дерево</button>
-                        {% if content.public %}
-                            <button type="submit" class="btn btn-danger mb-2" name="action" id="action-pub" value="unpublish">Снять с публикации</button>
+                        {% if content.is_deleted %}
+                            <button type="submit" class="btn btn-danger mb-2" name="action" id="action-delete" value="restore">Восстановить</button>
                         {% else %}
-                            <button type="submit" class="btn btn-success mb-2" name="action" id="action-pub" value="publish">Опубликовать</button>
+                            <button type="submit" class="btn btn-primary mb-2" name="action" id="action" value="recalc">Пересчитать дерево</button>
+                            {% if content.public %}
+                                <button type="submit" class="btn btn-danger mb-2" name="action" id="action-pub" value="unpublish">Снять с публикации</button>
+                            {% else %}
+                                <button type="submit" class="btn btn-success mb-2" name="action" id="action-pub" value="publish">Опубликовать</button>
+                            {% endif %}
+                            <script>function clicked(e) { if(!confirm('Вы действительно хотите удалить дерево?')) { e.preventDefault(); } }</script>
+                            <button type="submit" class="btn btn-danger mb-2" onclick="clicked(event)" name="action" id="action-delete" value="delete">Удалить</button>
                         {% endif %}
                     </div>
                 </div>
@@ -49,16 +64,19 @@
         </div>
         <div class="col card">
             <div class="card-body">
+                {% if not content.is_deleted %}
                 <a class="btn btn-info" href="{% url 'r_tree_app/check_text' content.id %}">Проверить текст</a>
+                {% endif %}
             </div>
         </div>
         </div>
-        {% if content.build_at %}
+        {% if content.build_at and not content.is_deleted %}
             <div class="row">
                 <img width="100%" src="{% url 'r_tree_app/list_graph' content.id %}" alt="Модель графа">
             </div>
         {% endif %}
 
+        {% if not content.is_deleted %}
         <div class="row">
             <div class="col">
                 <h3>Первая группа</h3>
@@ -77,5 +95,6 @@
                 </ul>
             </div>
         </div>
+        {% endif %}
     </div>
 {% endblock %}

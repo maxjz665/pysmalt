@@ -15,10 +15,25 @@
     {% endif %}
 
     <table class='table table-bordered border-primary'>
-    <thead><tr><th>№</th><th>Название</th><th>Первый список</th><th>Второй список</th><th>Размер блока</th></tr></thead>
+    <thead><tr><th>№</th>
+        <th>Название</th>
+        <th>Первый список</th>
+        <th>Второй список</th>
+        <th>Типы деревьев</th>
+        <th>Размер блока</th>
+    </tr></thead>
     <tbody>
     {% for item in items %}
-        <tr><td>{{ item.id }}</td><td><a href="{% url 'r_tree_app/show_list' item.id %}">{{ item.name }}</a></td><td>{{ item.first_list.name }}</td><td>{{ item.second_list.name }}</td><td>{{ item.block_size }}</td></tr>
+        <tr>
+            <td>{{ item.id }}</td>
+            <td><a href="{% url 'r_tree_app/show_list' item.id %}">{{ item.name }}</a></td>
+            <td>{{ item.first_list.name }}</td>
+            <td>{{ item.second_list.name }}</td>
+            <td>{% if item.is_need_uno %}Часть речи{% if item.is_need_duo or item.is_need_separate %},{% endif %}{% endif %}
+                {% if item.is_need_duo %}Биграмма частей речи{% if item.is_need_separate %},{% endif %}{% endif %}
+                {% if item.is_need_separate %}Разделитель части речи{% endif %}
+            </td>
+            <td>{{ item.block_size }}</td></tr>
     {% endfor %}
     </tbody>
     </table>

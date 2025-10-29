@@ -6,27 +6,24 @@ import re
 import time
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
-from django.core.paginator import Paginator
 
+from text_app.models.parser import Parser
+from text_app.models.stanza_analyzer import StanzaAnalyzer
+from text_app.models.tbl_author import TblAuthor
+from text_app.models.tbl_author_types import TblAuthorTypes
 from text_app.models.tbl_dict_word import TblDictWord
+from text_app.models.tbl_magazine import TblMagazine
 from text_app.models.tbl_menu_items import TblMenuItems, TblMenuItems2
 from text_app.models.tbl_menu_params import TblMenuParams, TblMenuParams2
 from text_app.models.tbl_text import TblText
-from text_app.models.tbl_word import TblWord
 from text_app.models.tbl_textlist import TblTextListDescription
-from text_app.models.tbl_author_types import TblAuthorTypes
-from text_app.models.tbl_author import TblAuthor
-from text_app.models.tbl_magazine import TblMagazine
-from text_app.models.parser import Parser
+from text_app.models.tbl_word import TblWord
 from user_app.models import TblUser
-from text_app.models.stanza_analyzer import StanzaAnalyzer
-
-
-stanza_analyzer = StanzaAnalyzer()
 
 
 def index(request: HttpRequest):
@@ -378,7 +375,7 @@ def analyze_text(request):
 
         #mod_text = Parser.get_modern(text)
         #stanza_analyzer.analyze_text(mod_text)
-        stanza_analyzer.analyze_text(text)
+        StanzaAnalyzer.get_instance().analyze_text(text)
 
         sections = list(filter(None, re.split(r"\n|\r\n", text)))
         parser = Parser()
@@ -468,7 +465,7 @@ def analyze_sentence(request):
 
         if sentence:
             mdrn_sentence = Parser.get_modern(sentence)
-            res = stanza_analyzer.analyze_sentence(mdrn_sentence)
+            res = StanzaAnalyzer.get_instance().analyze_sentence(mdrn_sentence)
             return JsonResponse(res, safe=False)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
@@ -490,19 +487,19 @@ def analyze_word(request):
                 mdrn_word = Parser.get_modern(word)
             else:
                 mdrn_word = word
-            word_st = stanza_analyzer.analyze_word(mdrn_word, base_mode)
-            id_pos = stanza_analyzer.get_pos_id(word_st)
+            word_st = StanzaAnalyzer.get_instance().analyze_word(mdrn_word, base_mode)
+            id_pos = StanzaAnalyzer.get_instance().get_pos_id(word_st)
             if id_pos >= 0:
                 if id_pos == 4 and not base_mode: #доп проверка причастий и деепричастий
-                    word_st = stanza_analyzer.analyze_word(Parser.get_modern(word), True)
-                    id_pos = stanza_analyzer.get_pos_id(word_st)
+                    word_st = StanzaAnalyzer.get_instance().analyze_word(Parser.get_modern(word), True)
+                    id_pos = StanzaAnalyzer.get_instance().get_pos_id(word_st)
                 attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
                 id = attr_data["id"]
                 pos = attr_data['name']
             else:
                 if not base_mode:   #если был не базовый режим с совр написанием, пробуем еще раз с современным(если не удалось определить тег)
-                    word_st = stanza_analyzer.analyze_word(Parser.get_modern(word), True)
-                    id_pos = stanza_analyzer.get_pos_id(word_st)
+                    word_st = StanzaAnalyzer.get_instance().analyze_word(Parser.get_modern(word), True)
+                    id_pos = StanzaAnalyzer.get_instance().get_pos_id(word_st)
                     if id_pos >= 0:
                         attr_data = list(filter(lambda x: x['id'] == id_pos, attrs))[0]
                         id = attr_data["id"]
@@ -513,7 +510,7 @@ def analyze_word(request):
                 else:
                     pos = "None"
                     id = "None"
-            feats = stanza_analyzer.get_feats_description(word_st)
+            feats = StanzaAnalyzer.get_instance().get_feats_description(word_st)
             return JsonResponse({"part_of_speech": pos, "id": id, "feats": feats})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
