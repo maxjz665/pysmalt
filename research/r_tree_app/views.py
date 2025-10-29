@@ -233,7 +233,7 @@ def check_text(request: HttpRequest, list_id):
     Проверка текста в дереве решений
     """
     list_data = TblTreeDescription.objects.get(id=list_id)
-    if list_data is None or (list_data.public == 0 and (not request.user.is_authenticated or
+    if list_data is None or list_data.is_deleted or (list_data.public == 0 and (not request.user.is_authenticated or
                                                         (request.user.id != list_data.owner.id and not request.user.has_admin))):
         render(request, "not_found.html", context={
             "message": "Нет прав на просмотр дерева решений",
@@ -270,7 +270,14 @@ def check_text(request: HttpRequest, list_id):
     ret = []
     for i in range(parts):  # делим текст на блоки и бежим по блокам
         data = content[i * part_size: (i + 1) * part_size]
-        ret_item = [0] * dict_size * dict_size  # найденные переходы в текущем блоке текста
+        if list_data.is_need_uno or list_data.is_need_separate:
+            ret_uno_item = [0] * dict_size
+        else:
+            ret_uno_item = []
+        if list_data.is_need_duo:
+            ret_duo_item = [0] * dict_size * dict_size # найденные переходы в текущем блоке текста
+        else:
+            ret_duo_item = []
         prev_pos = -1  # предыдущая часть речи
         for word in data:  # для каждого блока вычисляем вектор N-грамм
             part_of_speech = word.dictword.param_01
@@ -280,10 +287,23 @@ def check_text(request: HttpRequest, list_id):
             if prev_pos < 0:  # если это первое слово в N-грамме, то запоминаем его
                 prev_pos = part_of_speech
                 continue
-            ret_item[prev_pos * dict_size + part_of_speech] += 1
+            if list_data.is_need_uno or list_data.is_need_separate:
+                ret_uno_item[part_of_speech] += 1
+            if list_data.is_need_duo:
+                ret_duo_item[prev_pos * dict_size + part_of_speech] += 1
+
+        # построение матрицы поворотов
+        if list_data.is_need_separate:
+            # TODO: запилить расчет
+            ret_separate_item = [0] * dict_size * dict_size * 2
+
+            if not list_data.is_need_uno:
+                ret_uno_item = []
+        else:
+            ret_separate_item = []
 
         # обработка вектора деревом решений
-        result = clf.predict_proba([ret_item])
+        result = clf.predict_proba([[*ret_uno_item, *ret_duo_item, *ret_separate_item]])
         ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1]})
 
     percent_pros = 0
