@@ -39,26 +39,36 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                           "return_url": "r_tree_app/tree_list",
                                                           "return_name": "К списку деревьев решений"})
 
+    pos = get_pos()
+
     input_name = request.POST.get("input_name", "Дерево решений")
     first_list = request.POST.get("first_list", 0)
     second_list = request.POST.get("second_list", 0)
     is_need_uno = request.POST.get("is_need_uno", False)
     is_need_duo = request.POST.get("is_need_duo", False)
     block_size = request.POST.get("block_size", 200)
+    removed_pos = request.POST.getlist("removed_pos", [])
     max_depth = request.POST.get("max_depth", 4)
     sector_size = request.POST.get("sector_size", 0)
     many_sectors = request.POST.get("many_sectors", False)
     lists = TblTextListDescription.get_items(request.user).order_by("name").all()
+
+    try:  # прилетают текстовые значения, конвертируем в числа.
+        removed_pos = list(map(int, removed_pos))
+    except ValueError:
+        removed_pos = []
 
     if request.method == "GET":
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
-                                                                    'max_depth': max_depth,
                                                                     'many_sectors': many_sectors})
     err_msg = ""
 
@@ -109,6 +119,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
                                                                     'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
@@ -118,7 +130,7 @@ def add_list(request: HttpRequest) -> HttpResponse:
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
-                                  max_depth=max_depth,
+                                  max_depth=max_depth, removed_pos=json.dumps(removed_pos),
                                   is_need_uno=(is_need_uno == "on"), is_need_duo=(is_need_duo == "on"),
                                   sector_size=sector_size, many_sectors=(many_sectors == "on"),
                                   is_need_separate=(0 < sector_size < 100),
@@ -132,6 +144,8 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
                                                                     'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,

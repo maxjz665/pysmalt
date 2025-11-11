@@ -64,7 +64,8 @@
     </div>
     </div>
 
-    <div class="card">
+    <div class="row">
+    <div class="card col-lg-8">
         <div class="card-header">
             Настройка двумерных разделителей (n&middot;&alpha;&middot;x<sub>1</sub> &plusmn; (1 - n&middot;&alpha;&middot;x<sub>2</sub>); n=1, 2, &hellip;)
         </div>
@@ -80,6 +81,20 @@
                         Несколько разделителей (1 &le; n &le; 100/&alpha;)
                     </label>
                 </div>
+            </div>
+        </div>
+    </div>
+        <div class="card col-lg-4">
+            <div class="card-header">
+                Исключение частей речи
+            </div>
+            <div class="card-body">
+                Выберите части речи, которые необходимо исключить из дерева решений
+                <select class="form-select" id="removed_pos" name="removed_pos" size="10" multiple>
+                    {% for item in pos %}
+                        <option value="{{ forloop.counter0 }}" {% if forloop.counter0 in removed_pos %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
     </div>
