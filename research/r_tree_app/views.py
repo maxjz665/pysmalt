@@ -45,6 +45,7 @@ def add_list(request: HttpRequest) -> HttpResponse:
     is_need_uno = request.POST.get("is_need_uno", False)
     is_need_duo = request.POST.get("is_need_duo", False)
     block_size = request.POST.get("block_size", 200)
+    max_depth = request.POST.get("max_depth", 4)
     sector_size = request.POST.get("sector_size", 0)
     many_sectors = request.POST.get("many_sectors", False)
     lists = TblTextListDescription.get_items(request.user).order_by("name").all()
@@ -57,15 +58,12 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
+                                                                    'max_depth': max_depth,
                                                                     'many_sectors': many_sectors})
     err_msg = ""
 
     if input_name == "":
         err_msg = "Введите название дерева решений"
-    if first_list == "" or second_list == "":
-        err_msg = "Выберите списки текстов"
-    if first_list == second_list:
-        err_msg = "Списки текстов должны различаться"
     try:
         sector_size = int(sector_size)
         if sector_size < 0 or sector_size > 100:
@@ -79,11 +77,39 @@ def add_list(request: HttpRequest) -> HttpResponse:
     except ValueError:
         err_msg = "Размер блока должен быть целым положительным числом"
 
+    try:
+        max_depth = int(max_depth)
+        if max_depth <= 0:
+            raise ValueError
+    except ValueError:
+        err_msg =  "Глубина дерева решений должна быть целым положительным числом"
+
+    try:
+        first_list = int(first_list)
+        if first_list <= 0:
+            raise ValueError
+    except ValueError:
+        err_msg = "Выберите список текстов первой группы"
+
+    try:
+        second_list = int(second_list)
+        if second_list <= 0:
+            raise ValueError
+    except ValueError:
+        err_msg = "Выберите список текстов второй группы"
+
+    if first_list == second_list:
+        err_msg = "Списки текстов должны различаться"
+
+    if not is_need_uno and not is_need_duo and sector_size == 0:
+        err_msg = "Выберите один из типов деревьев"
+
     if err_msg:
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
@@ -92,6 +118,7 @@ def add_list(request: HttpRequest) -> HttpResponse:
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
+                                  max_depth=max_depth,
                                   is_need_uno=(is_need_uno == "on"), is_need_duo=(is_need_duo == "on"),
                                   sector_size=sector_size, many_sectors=(many_sectors == "on"),
                                   is_need_separate=(0 < sector_size < 100),
@@ -105,6 +132,7 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,

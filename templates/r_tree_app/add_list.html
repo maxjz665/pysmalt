@@ -15,13 +15,17 @@
     <form method="post" enctype="multipart/form-data">
     <div class="container">
     <div class="row">
-        <div class="form-group col-lg-5">
+        <div class="form-group col-lg-4">
             <label for="input_name">Название дерева решений</label>
             <input type="text" class="form-control" name="input_name" id="input_name" placeholder="Введите название дерева решений" value="{{ input_name }}">
         </div>
-        <div class="form-group col-lg-3">
+        <div class="form-group col-lg-2">
             <label for="block_size">Размер блока</label>
             <input type="text" class="form-control" name="block_size" id="block_size" placeholder="Введите размер блока" value="{{ block_size }}">
+        </div>
+        <div class="form-group col-lg-2">
+            <label for="max_depth">Глубина дерева</label>
+            <input type="text" class="form-control" name="max_depth" id="max_depth" placeholder="Введите глубину дерева решений" value="{{ max_depth }}">
         </div>
         <div class="form-group col-lg-4">
             <div class="form-check form-switch mb-2 pt-3">
