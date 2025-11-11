@@ -126,6 +126,8 @@ class TreeWorkerHandler(object):
         neg_ret = []
         for i in range(len(pos)):
             for j in range(len(pos)):
+                if i == j:
+                    continue
                 pos_ret.append(pos[i] + f"({sector_size / 100})+" + pos[j] + f"({(100 - sector_size) / 100})")
                 neg_ret.append(pos[i] + f"({sector_size / 100})-" + pos[j] + f"({(100 - sector_size) / 100})")
         return [*pos_ret, *neg_ret]
