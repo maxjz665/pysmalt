@@ -25,8 +25,16 @@ def generate_subslice(record: list, len_pos: int, sector_size: float) -> list:
     """
     pos_ret = []
     neg_ret = []
-    for i in record[: len_pos]:
-        for j in record[: len_pos]:
-            pos_ret.append((sector_size * i + (100 - sector_size) * j) / 100)
-            neg_ret.append((sector_size * i - (100 - sector_size) * j) / 100)
+    for i in range(len_pos):
+        for j in range(len_pos):
+            if i == j:
+                continue
+            pos_ret.append((sector_size * record[i] + (100 - sector_size) * record[j]) / 100)
+            neg_ret.append((sector_size * record[i] - (100 - sector_size) * record[j]) / 100)
     return [*pos_ret, *neg_ret]
+
+def fix_pos(current_pos: int, removed_pos: list) -> int:
+    """
+    Получение правильной позиции элемента
+    """
+    return current_pos - len([item for item in removed_pos if item < current_pos])

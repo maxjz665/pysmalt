@@ -25,10 +25,16 @@
                 <div>Глубина дерева решений: {{ content.max_depth }}</div>
                 <div>Использование разделителей: {% if content.sector_size > 0 %}cектор={{ content.sector_size }}%,
                     {% if content.many_sectors %}n=1, 2, ...{% else %}n=1{% endif %}{% else %}Не используются{% endif %}</div>
+                <div>Исключенные части речи: {% if content.count_removed_pos == 0 %}нет{% else %}
+                    {{ content.text_removed_pos|join:", " }}
+                {% endif %}</div>
             {% if content.build_at or content.is_deleted %}
                 <div>Сборка: {{ content.build_at }}</div>
                 <div>Оценка точности: {{ content.accuracy|floatformat:3 }}</div>
                 <div>Размер вектора: {{ content.vector_size }}</div>
+                <div>Число разделов первой группы: {{ content.table1_size }}</div>
+                <div>Число разделов второй группы: {{ content.table2_size }}</div>
+                <div>Используемое число разделов: {% if content.table2_size > content.table1_size %}{{ content.table1_size }}{% else %}{{ content.table2_size }}{% endif %}</div>
             {% else %}
                 <div>Статус: {{ content.build_status }} (для обновления статуса страница будет перезагружена в течение 5 секунд)</div>
                 <script>

@@ -3,6 +3,7 @@
 """
 import asyncio
 import json
+import time
 
 from aiomqtt import Client
 from django.db.models import Q
@@ -11,7 +12,7 @@ from django.shortcuts import render, redirect
 import graphviz
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
-from research.r_tree_app.utils import get_pos, generate_subslice
+from research.r_tree_app.utils import get_pos, generate_subslice, fix_pos
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -39,21 +40,33 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                           "return_url": "r_tree_app/tree_list",
                                                           "return_name": "К списку деревьев решений"})
 
+    pos = get_pos()
+
     input_name = request.POST.get("input_name", "Дерево решений")
     first_list = request.POST.get("first_list", 0)
     second_list = request.POST.get("second_list", 0)
     is_need_uno = request.POST.get("is_need_uno", False)
     is_need_duo = request.POST.get("is_need_duo", False)
     block_size = request.POST.get("block_size", 200)
+    removed_pos = request.POST.getlist("removed_pos", [])
+    max_depth = request.POST.get("max_depth", 4)
     sector_size = request.POST.get("sector_size", 0)
     many_sectors = request.POST.get("many_sectors", False)
     lists = TblTextListDescription.get_items(request.user).order_by("name").all()
+
+    try:  # прилетают текстовые значения, конвертируем в числа.
+        removed_pos = list(map(int, removed_pos))
+    except ValueError:
+        removed_pos = []
 
     if request.method == "GET":
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
@@ -62,10 +75,6 @@ def add_list(request: HttpRequest) -> HttpResponse:
 
     if input_name == "":
         err_msg = "Введите название дерева решений"
-    if first_list == "" or second_list == "":
-        err_msg = "Выберите списки текстов"
-    if first_list == second_list:
-        err_msg = "Списки текстов должны различаться"
     try:
         sector_size = int(sector_size)
         if sector_size < 0 or sector_size > 100:
@@ -79,11 +88,41 @@ def add_list(request: HttpRequest) -> HttpResponse:
     except ValueError:
         err_msg = "Размер блока должен быть целым положительным числом"
 
+    try:
+        max_depth = int(max_depth)
+        if max_depth <= 0:
+            raise ValueError
+    except ValueError:
+        err_msg =  "Глубина дерева решений должна быть целым положительным числом"
+
+    try:
+        first_list = int(first_list)
+        if first_list <= 0:
+            raise ValueError
+    except ValueError:
+        err_msg = "Выберите список текстов первой группы"
+
+    try:
+        second_list = int(second_list)
+        if second_list <= 0:
+            raise ValueError
+    except ValueError:
+        err_msg = "Выберите список текстов второй группы"
+
+    if first_list == second_list:
+        err_msg = "Списки текстов должны различаться"
+
+    if not is_need_uno and not is_need_duo and sector_size == 0:
+        err_msg = "Выберите один из типов деревьев"
+
     if err_msg:
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
@@ -92,6 +131,7 @@ def add_list(request: HttpRequest) -> HttpResponse:
 
     try:
         item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
+                                  max_depth=max_depth, removed_pos=json.dumps(removed_pos),
                                   is_need_uno=(is_need_uno == "on"), is_need_duo=(is_need_duo == "on"),
                                   sector_size=sector_size, many_sectors=(many_sectors == "on"),
                                   is_need_separate=(0 < sector_size < 100),
@@ -105,6 +145,9 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     'first_list': first_list,
                                                                     'second_list': second_list,
                                                                     'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
                                                                     'is_need_uno': is_need_uno,
                                                                     'is_need_duo': is_need_duo,
                                                                     'sector_size': sector_size,
@@ -266,8 +309,10 @@ def check_text(request: HttpRequest, list_id):
     part_size = list_data.block_size
     parts = int(len(content) / part_size)
     pos = get_pos()
-    dict_size = len(pos)
+    removed_pos = json.loads(list_data.removed_pos)
+    dict_size = len(pos) - len(removed_pos)
     ret = []
+    total_diff = 0 # общее время работы деревьев решений
     for i in range(parts):  # делим текст на блоки и бежим по блокам
         data = content[i * part_size: (i + 1) * part_size]
         if list_data.is_need_uno or list_data.is_need_separate:
@@ -288,9 +333,10 @@ def check_text(request: HttpRequest, list_id):
                 prev_pos = part_of_speech
                 continue
             if list_data.is_need_uno or list_data.is_need_separate:
-                ret_uno_item[part_of_speech] += 1
+                ret_uno_item[fix_pos(part_of_speech, removed_pos)] += 1
             if list_data.is_need_duo:
-                ret_duo_item[prev_pos * dict_size + part_of_speech] += 1
+                ret_duo_item[fix_pos(prev_pos, removed_pos) * dict_size + fix_pos(part_of_speech, removed_pos)] += 1
+            prev_pos = part_of_speech
 
         # построение матрицы поворотов
         if list_data.is_need_separate:
@@ -310,8 +356,11 @@ def check_text(request: HttpRequest, list_id):
             ret_separate_item = []
 
         # обработка вектора деревом решений
+        start = time.time()
         result = clf.predict_proba([[*ret_uno_item, *ret_duo_item, *ret_separate_item]])
-        ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1]})
+        diff = time.time() - start
+        total_diff += diff
+        ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1], "time": diff})
 
     percent_pros = 0
     percent_equal = 0
@@ -332,4 +381,4 @@ def check_text(request: HttpRequest, list_id):
                                                              "link": "text_app/papers_data", "selectionTextId": paper_id,
                                                              "paper": paper,
                                                              "text": content, "colormap": ret, "percentPros": percent_pros, "percentEqual": percent_equal,
-                                                             "percentCons": percent_cons})
+                                                             "percentCons": percent_cons, "total_diff": total_diff})

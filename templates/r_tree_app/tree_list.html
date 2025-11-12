@@ -21,11 +21,12 @@
         <th>Второй список</th>
         <th>Типы деревьев</th>
         <th>Размер блока</th>
+        <th>Глубина дерева</th>
     </tr></thead>
     <tbody>
     {% for item in items %}
         <tr>
-            <td>{{ item.id }}</td>
+            <td style="text-align: right">{{ item.id }}</td>
             <td><a href="{% url 'r_tree_app/show_list' item.id %}">{{ item.name }}</a></td>
             <td>{{ item.first_list.name }}</td>
             <td>{{ item.second_list.name }}</td>
@@ -33,7 +34,7 @@
                 {% if item.is_need_duo %}Биграмма частей речи{% if item.is_need_separate %},{% endif %}{% endif %}
                 {% if item.is_need_separate %}Разделитель части речи{% endif %}
             </td>
-            <td>{{ item.block_size }}</td></tr>
+            <td style="text-align:center">{{ item.block_size }}</td><td style="text-align: center">{{ item.max_depth }}</td></tr>
     {% endfor %}
     </tbody>
     </table>
