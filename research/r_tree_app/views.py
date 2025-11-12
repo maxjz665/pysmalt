@@ -3,6 +3,7 @@
 """
 import asyncio
 import json
+import time
 
 from aiomqtt import Client
 from django.db.models import Q
@@ -11,7 +12,7 @@ from django.shortcuts import render, redirect
 import graphviz
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
-from research.r_tree_app.utils import get_pos, generate_subslice
+from research.r_tree_app.utils import get_pos, generate_subslice, fix_pos
 from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_textlist import TblTextListDescription
@@ -308,8 +309,10 @@ def check_text(request: HttpRequest, list_id):
     part_size = list_data.block_size
     parts = int(len(content) / part_size)
     pos = get_pos()
-    dict_size = len(pos)
+    removed_pos = json.loads(list_data.removed_pos)
+    dict_size = len(pos) - len(removed_pos)
     ret = []
+    total_diff = 0 # общее время работы деревьев решений
     for i in range(parts):  # делим текст на блоки и бежим по блокам
         data = content[i * part_size: (i + 1) * part_size]
         if list_data.is_need_uno or list_data.is_need_separate:
@@ -330,9 +333,10 @@ def check_text(request: HttpRequest, list_id):
                 prev_pos = part_of_speech
                 continue
             if list_data.is_need_uno or list_data.is_need_separate:
-                ret_uno_item[part_of_speech] += 1
+                ret_uno_item[fix_pos(part_of_speech, removed_pos)] += 1
             if list_data.is_need_duo:
-                ret_duo_item[prev_pos * dict_size + part_of_speech] += 1
+                ret_duo_item[fix_pos(prev_pos, removed_pos) * dict_size + fix_pos(part_of_speech, removed_pos)] += 1
+            prev_pos = part_of_speech
 
         # построение матрицы поворотов
         if list_data.is_need_separate:
@@ -352,8 +356,11 @@ def check_text(request: HttpRequest, list_id):
             ret_separate_item = []
 
         # обработка вектора деревом решений
+        start = time.time()
         result = clf.predict_proba([[*ret_uno_item, *ret_duo_item, *ret_separate_item]])
-        ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1]})
+        diff = time.time() - start
+        total_diff += diff
+        ret.append({"start": i*part_size, "end": (i+1)*part_size, "pros": result[0][0], "cons": result[0][1], "time": diff})
 
     percent_pros = 0
     percent_equal = 0
@@ -374,4 +381,4 @@ def check_text(request: HttpRequest, list_id):
                                                              "link": "text_app/papers_data", "selectionTextId": paper_id,
                                                              "paper": paper,
                                                              "text": content, "colormap": ret, "percentPros": percent_pros, "percentEqual": percent_equal,
-                                                             "percentCons": percent_cons})
+                                                             "percentCons": percent_cons, "total_diff": total_diff})
