@@ -40,6 +40,8 @@ class TblTreeDescription(BaseModel):
     build_status = models.TextField(max_length=200, db_comment="Статус сборки", null=True)
     graph_dot = models.TextField(blank=True, null=True, db_comment="Граф дерева решений")
     graph_pickle = PickledObjectField(null=True, db_comment="Бинарное дерево решений")
+    table1_size = models.IntegerField(default=0, db_comment="Число блоков текста первого набора")
+    table2_size = models.IntegerField(default=0, db_comment="Число блоков текста второго набора")
 
     @property
     def text_removed_pos(self):
@@ -52,3 +54,13 @@ class TblTreeDescription(BaseModel):
         for idx in items:
             ret.append(pos[idx])
         return ret
+
+    @property
+    def count_removed_pos(self):
+        """
+        Подсчет числа удаленных частей речи для фронта
+        """
+        try:
+            return len(json.loads(str(self.removed_pos)))
+        except Exception:
+            return 0

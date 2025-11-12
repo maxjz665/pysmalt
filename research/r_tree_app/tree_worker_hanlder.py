@@ -183,6 +183,8 @@ class TreeWorkerHandler(object):
         features = self._generate_features(pos, removed_pos, tree_data.sector_size, tree_data.many_sectors, tree_data.is_need_uno, tree_data.is_need_duo, tree_data.is_need_separate)
         logging.error(f"project: %s: table1: %s, table2: %s", params['project_id'], len(table1), len(table2))
         min_size = min(len(table1), len(table2))
+        tree_data.table1_size = len(table1)
+        tree_data.table2_size = len(table2)
         table1 = table1[:min_size]
         table2 = table2[:min_size]
         if tree_data.is_need_separate and 0 < tree_data.sector_size < 100:
