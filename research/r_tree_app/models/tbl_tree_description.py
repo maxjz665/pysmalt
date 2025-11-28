@@ -64,3 +64,14 @@ class TblTreeDescription(BaseModel):
             return len(json.loads(str(self.removed_pos)))
         except Exception:
             return 0
+
+    def clean_calcs(self):
+        """
+        Удаление результатов построения дерева
+        """
+        self.build_at = None
+        self.build_status = None
+        self.graph_dot = None
+        self.graph_pickle = None
+        self.table1_size = 0
+        self.table2_size = 0

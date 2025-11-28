@@ -59,6 +59,7 @@
                             {% else %}
                                 <button type="submit" class="btn btn-success mb-2" name="action" id="action-pub" value="publish">Опубликовать</button>
                             {% endif %}
+                            <a class="btn btn-warning mb-2" href="{% url 'r_tree_app/edit_list' content.id %}">Редактировать</a>
                             <script>function clicked(e) { if(!confirm('Вы действительно хотите удалить дерево?')) { e.preventDefault(); } }</script>
                             <button type="submit" class="btn btn-danger mb-2" onclick="clicked(event)" name="action" id="action-delete" value="delete">Удалить</button>
                         {% endif %}
