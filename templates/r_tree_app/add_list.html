@@ -5,7 +5,7 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item">Деревья решений</li>
             <li class="breadcrumb-item"><a href="{% url "r_tree_app/tree_list" %}">Список деревьев</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Добавление дерева решений</li>
+            <li class="breadcrumb-item active" aria-current="page">{% if data is None %}Добавление дерева решений{% else %}Редактирование "{{ data.name }}"{% endif %}</li>
         </ol>
     </nav>
 {%  endblock %}
@@ -43,7 +43,7 @@
         <label for="first_list">Список текстов первой группы</label>
          <select class="form-control selectpicker" data-live-search="true" id="first_list" name="first_list" style="width: 90%">
              {% for item in lists %}
-                 <option value="{{ item.id }}">{{ item.name }}</option>
+                 <option value="{{ item.id }}" {% if item.id == first_list %}selected{% endif %}>{{ item.name }}</option>
              {% endfor %}
          </select>
         {% if first_list is not None %}
@@ -55,7 +55,7 @@
         <label for="second_list">Список текстов второй группы</label>
          <select class="form-control selectpicker" data-live-search="true" id="second_list" name="second_list" style="width: 90%">
              {% for item in lists %}
-                 <option value="{{ item.id }}">{{ item.name }}</option>
+                 <option value="{{ item.id }}" {% if item.id == second_list %}selected{% endif %}>{{ item.name }}</option>
              {% endfor %}
          </select>
         {% if second_list is not None %}
@@ -101,7 +101,7 @@
 
     {% csrf_token %}
     <div class="row-cols-1">
-        <button type="submit" class="btn btn-primary" name="submit" id="submit" value="create">Создать</button>
+        <button type="submit" class="btn btn-primary" name="submit" id="submit" value="create">{% if data is None %}Создать{% else %}Изменить{% endif %}</button>
         <button type="reset" class="btn btn-info">Сбросить</button>
     </div>
     </div>

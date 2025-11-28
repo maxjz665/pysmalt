@@ -4,6 +4,7 @@
 import asyncio
 import json
 import time
+from datetime import datetime
 
 from aiomqtt import Client
 from django.db.models import Q
@@ -30,48 +31,11 @@ def tree_list(request: HttpRequest) -> HttpResponse:
         items = items.filter(public=True)
     return render(request, "r_tree_app/tree_list.html", context={"items": items})
 
-
-def add_list(request: HttpRequest) -> HttpResponse:
+def _check_form(input_name, sector_size, block_size, max_depth, first_list, second_list, is_need_uno, is_need_duo) -> str:
     """
-    GET Форма добавления/ POST добавление нового дерева решений
+    Проверка данных формы (для добавления и изменения)
     """
-    if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
-        return render(request, "not_found.html", context={"message": "Нет прав на добавление дерева решений",
-                                                          "return_url": "r_tree_app/tree_list",
-                                                          "return_name": "К списку деревьев решений"})
-
-    pos = get_pos()
-
-    input_name = request.POST.get("input_name", "Дерево решений")
-    first_list = request.POST.get("first_list", 0)
-    second_list = request.POST.get("second_list", 0)
-    is_need_uno = request.POST.get("is_need_uno", False)
-    is_need_duo = request.POST.get("is_need_duo", False)
-    block_size = request.POST.get("block_size", 200)
-    removed_pos = request.POST.getlist("removed_pos", [])
-    max_depth = request.POST.get("max_depth", 4)
-    sector_size = request.POST.get("sector_size", 0)
-    many_sectors = request.POST.get("many_sectors", False)
-    lists = TblTextListDescription.get_items(request.user).order_by("name").all()
-
-    try:  # прилетают текстовые значения, конвертируем в числа.
-        removed_pos = list(map(int, removed_pos))
-    except ValueError:
-        removed_pos = []
-
-    if request.method == "GET":
-        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
-                                                                    'first_list': first_list,
-                                                                    'second_list': second_list,
-                                                                    'block_size': block_size,
-                                                                    'pos': pos,
-                                                                    'removed_pos': removed_pos,
-                                                                    'max_depth': max_depth,
-                                                                    'is_need_uno': is_need_uno,
-                                                                    'is_need_duo': is_need_duo,
-                                                                    'sector_size': sector_size,
-                                                                    'many_sectors': many_sectors})
-    err_msg = ""
+    msg = ""
 
     if input_name == "":
         err_msg = "Введите название дерева решений"
@@ -114,6 +78,51 @@ def add_list(request: HttpRequest) -> HttpResponse:
 
     if not is_need_uno and not is_need_duo and sector_size == 0:
         err_msg = "Выберите один из типов деревьев"
+
+    return msg
+
+def add_list(request: HttpRequest) -> HttpResponse:
+    """
+    GET Форма добавления/ POST добавление нового дерева решений
+    """
+    if not request.user.is_authenticated or (request.user.researcher == 0 and not request.user.has_admin):
+        return render(request, "not_found.html", context={"message": "Нет прав на добавление дерева решений",
+                                                          "return_url": "r_tree_app/tree_list",
+                                                          "return_name": "К списку деревьев решений"})
+
+    pos = get_pos()
+
+    input_name = request.POST.get("input_name", "Дерево решений")
+    first_list = request.POST.get("first_list", 0)
+    second_list = request.POST.get("second_list", 0)
+    is_need_uno = request.POST.get("is_need_uno", False)
+    is_need_duo = request.POST.get("is_need_duo", False)
+    block_size = request.POST.get("block_size", 200)
+    removed_pos = request.POST.getlist("removed_pos", [])
+    max_depth = request.POST.get("max_depth", 4)
+    sector_size = request.POST.get("sector_size", 0)
+    many_sectors = request.POST.get("many_sectors", False)
+    lists = TblTextListDescription.get_items(request.user).order_by("name").all()
+
+    try:  # прилетают текстовые значения, конвертируем в числа.
+        removed_pos = list(map(int, removed_pos))
+    except ValueError:
+        removed_pos = []
+
+    if request.method == "GET":
+        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                    'first_list': first_list,
+                                                                    'second_list': second_list,
+                                                                    'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors})
+    err_msg = _check_form(input_name, sector_size, block_size, max_depth, first_list, second_list, is_need_uno, is_need_duo)
+
 
     if err_msg:
         return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
@@ -382,3 +391,99 @@ def check_text(request: HttpRequest, list_id):
                                                              "paper": paper,
                                                              "text": content, "colormap": ret, "percentPros": percent_pros, "percentEqual": percent_equal,
                                                              "percentCons": percent_cons, "total_diff": total_diff})
+
+
+def edit_list(request: HttpRequest, list_id):
+    """
+    Обработка редактирования метаданных дерева решений
+    """
+    list_data = TblTreeDescription.objects.get(id=list_id)
+    if list_data is None or (request.user.id != list_data.owner.id and not request.user.has_admin):
+        first_texts = list_data.first_list.items
+        second_texts = list_data.second_list.items
+        return render(request, "not_found.html", context={
+            "message": "Нет прав на редактирование дерева решений",
+            "return_url": "r_tree_app/tree_list",
+            "return_name": "К списку деревьев решений"
+        })
+
+    pos = get_pos()
+
+    input_name = request.POST.get("input_name", list_data.name)
+    first_list = request.POST.get("first_list", list_data.first_list.id)
+    second_list = request.POST.get("second_list", list_data.second_list.id)
+    is_need_uno = request.POST.get("is_need_uno", "on" if list_data.is_need_uno else "")
+    is_need_duo = request.POST.get("is_need_duo", "on" if list_data.is_need_duo else "")
+    block_size = request.POST.get("block_size", list_data.block_size)
+    removed_pos = request.POST.getlist("removed_pos", list_data.removed_pos)
+    max_depth = request.POST.get("max_depth", list_data.max_depth)
+    sector_size = request.POST.get("sector_size", list_data.sector_size)
+    many_sectors = request.POST.get("many_sectors", "on" if list_data.many_sectors else "")
+    lists = TblTextListDescription.get_items(request.user).order_by("name").all()
+
+    try:  # прилетают текстовые значения, конвертируем в числа.
+        removed_pos = list(map(int, removed_pos))
+    except ValueError:
+        removed_pos = []
+
+    if request.method == "GET":
+        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                    'data': list_data,
+                                                                    'first_list': first_list,
+                                                                    'second_list': second_list,
+                                                                    'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors})
+
+    err_msg = _check_form(input_name, sector_size, block_size, max_depth, first_list, second_list, is_need_uno, is_need_duo)
+    if err_msg:
+        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                    'data': list_data,
+                                                                    'first_list': first_list,
+                                                                    'second_list': second_list,
+                                                                    'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors,
+                                                                    "error_message": err_msg})
+
+    try:
+        list_data.name = input_name
+        list_data.block_size = int(block_size)
+        list_data.max_depth = int(max_depth)
+        list_data.removed_pos = json.dumps(removed_pos)
+        list_data.sector_size = float(sector_size)
+        list_data.many_sectors = (many_sectors == "on")
+        list_data.is_need_uno = (is_need_uno == "on")
+        list_data.is_need_duo = (is_need_duo == "on")
+        list_data.is_need_separate = (0 < float(sector_size) < 100)
+        list_data.first_list = TblTextListDescription.get_item(request.user, int(first_list))
+        list_data.second_list=TblTextListDescription.get_item(request.user, int(second_list))
+        list_data.updated_by = request.user.id
+        list_data.updated_at = datetime.now()
+        list_data.clean_calcs()
+        list_data.save()
+        return redirect("r_tree_app/show_list", list_id)
+    except Exception as e:
+        return render(request, "r_tree_app/add_list.html", context={"lists": lists, "input_name": input_name,
+                                                                    'data': list_data,
+                                                                    'first_list': first_list,
+                                                                    'second_list': second_list,
+                                                                    'block_size': block_size,
+                                                                    'pos': pos,
+                                                                    'removed_pos': removed_pos,
+                                                                    'max_depth': max_depth,
+                                                                    'is_need_uno': is_need_uno,
+                                                                    'is_need_duo': is_need_duo,
+                                                                    'sector_size': sector_size,
+                                                                    'many_sectors': many_sectors,
+                                                                    "error_message": e})

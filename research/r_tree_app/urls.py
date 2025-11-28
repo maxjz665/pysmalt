@@ -9,6 +9,7 @@ urlpatterns = [
     path('list', views.tree_list, name="r_tree_app/tree_list"),
     path('list/add', views.add_list, name="r_tree_app/add_list"),
     path('list/<int:list_id>', views.show_list, name="r_tree_app/show_list"),
+    path('list/<int:list_id>/edit', views.edit_list, name="r_tree_app/edit_list"),
     path('list/<int:list_id>/graph', views.get_graph, name="r_tree_app/list_graph"),
     path('check/<int:list_id>', views.check_text, name="r_tree_app/check_text"),
 ]
