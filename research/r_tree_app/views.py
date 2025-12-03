@@ -40,7 +40,7 @@ def _check_form(input_name, sector_size, block_size, max_depth, first_list, seco
     if input_name == "":
         err_msg = "Введите название дерева решений"
     try:
-        sector_size = int(sector_size)
+        sector_size = float(sector_size)
         if sector_size < 0 or sector_size > 100:
             raise ValueError
     except ValueError:
@@ -139,13 +139,13 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     "error_message": err_msg})
 
     try:
-        item = TblTreeDescription(name=input_name, owner=request.user, block_size=block_size,
-                                  max_depth=max_depth, removed_pos=json.dumps(removed_pos),
+        item = TblTreeDescription(name=input_name, owner=request.user, block_size=int(block_size),
+                                  max_depth=int(max_depth), removed_pos=json.dumps(removed_pos),
                                   is_need_uno=(is_need_uno == "on"), is_need_duo=(is_need_duo == "on"),
-                                  sector_size=sector_size, many_sectors=(many_sectors == "on"),
-                                  is_need_separate=(0 < sector_size < 100),
-                                  first_list=TblTextListDescription.get_item(request.user, first_list),
-                                  second_list=TblTextListDescription.get_item(request.user, second_list),
+                                  sector_size=float(sector_size), many_sectors=(many_sectors == "on"),
+                                  is_need_separate=(0 < int(sector_size) < 100),
+                                  first_list=TblTextListDescription.get_item(request.user, int(first_list)),
+                                  second_list=TblTextListDescription.get_item(request.user, int(second_list)),
                                   created_by=request.user.id, updated_by=request.user.id)
         item.save()
         return redirect("r_tree_app/tree_list")
