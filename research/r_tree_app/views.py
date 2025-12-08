@@ -415,7 +415,7 @@ def edit_list(request: HttpRequest, list_id):
     is_need_uno = request.POST.get("is_need_uno", "on" if list_data.is_need_uno else "")
     is_need_duo = request.POST.get("is_need_duo", "on" if list_data.is_need_duo else "")
     block_size = request.POST.get("block_size", list_data.block_size)
-    removed_pos = request.POST.getlist("removed_pos", list_data.removed_pos)
+    removed_pos = request.POST.getlist("removed_pos", json.loads(list_data.removed_pos))
     max_depth = request.POST.get("max_depth", list_data.max_depth)
     sector_size = request.POST.get("sector_size", list_data.sector_size)
     many_sectors = request.POST.get("many_sectors", "on" if list_data.many_sectors else "")
