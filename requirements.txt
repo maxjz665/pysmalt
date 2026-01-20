@@ -6,9 +6,10 @@ graphviz~=0.20.3
 aiomqtt~=2.0.1  # общение с воркерами через mqtt протокол
 asgiref~=3.8.1
 django-picklefield~=3.2  # для хранения дерева решения в БД
-#--extra-index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 nltk~=3.9.1
-#stanza~=1.10.1
+stanza~=1.10.1
+torch~=2.7.0+cpu
 prereform2modern~=1.0.0
 xlsxwriter~=3.2.2  # для генерации xlsx файлов
 numpy~=2.2.4 
