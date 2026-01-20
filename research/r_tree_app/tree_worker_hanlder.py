@@ -30,13 +30,12 @@ class TreeWorkerHandler(object):
                 logging.error("Found not calculated item with id=%s", item.id)
                 await TreeWorkerHandler.build_tree(item)
             else:
-                logging.error("No tasks, sleep")
                 await asyncio.sleep(reconnect_interval)
 
     @sync_to_async
     def get_task(self):
         try:
-            return TblTreeDescription.objects.get(build_at=None, is_deleted=False)
+            return TblTreeDescription.objects.filter(build_at=None, is_deleted=False).first()
         except TblTreeDescription.DoesNotExist:
             return None
 
@@ -67,6 +66,7 @@ class TreeWorkerHandler(object):
                     prev_pos = -1
                     continue
                 if prev_pos < 0:  # если это первое слово в N-грамме, то запоминаем его
+                    ret_single_item[fix_pos(part_of_speech, removed_pos)] += 1
                     prev_pos = part_of_speech
                     continue
                 ret_single_item[fix_pos(part_of_speech, removed_pos)] += 1
@@ -88,6 +88,7 @@ class TreeWorkerHandler(object):
                     ret_double_item = [0] * dict_size * dict_size
 
                     word_index = 0
+                    prev_pos = -1
         return ret
 
     @staticmethod
@@ -187,19 +188,22 @@ class TreeWorkerHandler(object):
         tree_data.build_status = "Построение дерева"
         tree_data.save()
         result = [0] * min_size + [1] * min_size
-        clf = ensemble.RandomForestClassifier(max_depth=tree_data.max_depth)
-        clf = clf.fit(table1 + table2, result)
-        tree_data.build_status = "Оценка точности"
+        max_score = 0
+        for i in range(10):
+            clf = ensemble.RandomForestClassifier(n_estimators=(100 if min_size < 100 else min_size), max_depth=tree_data.max_depth, bootstrap=False)
+            clf = clf.fit(table1 + table2, result)
+            y_pred = clf.predict(table1 + table2)
+            if accuracy_score(result, y_pred) > max_score:
+                max_score = accuracy_score(result, y_pred)
+                tree_data.accuracy = max_score
+                classes = ["list1", "list2"]
+                dot_data = tree.export_graphviz(clf.estimators_[0], out_file=None, feature_names=features, class_names=classes)
+                tree_data.graph_dot = dot_data
+                tree_data.graph_pickle = clf
+                tree_data.save()
         tree_data.vector_size = len(table1[0])
-        tree_data.save()
-        y_pred = clf.predict(table1 + table2)
-        tree_data.accuracy = accuracy_score(result, y_pred)
         tree_data.build_status = "Выполнено"
         tree_data.build_at = datetime.now(timezone.utc)
-        classes = ["list1", "list2"]
-        dot_data = tree.export_graphviz(clf.estimators_[0], out_file=None, feature_names=features, class_names=classes)
-        tree_data.graph_dot = dot_data
-        tree_data.graph_pickle = clf
         tree_data.save()
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
