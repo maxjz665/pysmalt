@@ -5,46 +5,39 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
-from json import JSONDecodeError
 
-from aiomqtt import MqttError, Client
 from asgiref.sync import sync_to_async
 from sklearn import ensemble, tree
 from sklearn.metrics import accuracy_score
 
 from research.r_tree_app.models.tbl_tree_description import TblTreeDescription
 from research.r_tree_app.utils import get_pos, generate_subslice, fix_pos
-from shower.settings import BROKER_HOST, BROKER_PORT
 from text_app.models.tbl_textlist import TblTextListDescription
 from text_app.models.tbl_word import TblWord
 
 
 class TreeWorkerHandler(object):
 
+
     async def run(self):
         """
         Запуск бесконечного цикла обработки сообщений
         """
-        reconnect_interval = 5  # In seconds
+        reconnect_interval = 15  # In seconds
         while True:
-            try:
-                async with Client(BROKER_HOST, BROKER_PORT, identifier="tg_bot_" + str(id(self))) as client:
-                    logging.debug("TG bot broker connected successfully")
-                    await client.subscribe("service/tree_worker/#")
-                    async for message in client.messages:
-                        topic = str(message.topic)
-                        logging.error("Got message from topic: %s", topic)
-                        if topic == "service/tree_worker/build":
-                            try:
-                                await self.build_tree(json.loads(message.payload))
-                            except JSONDecodeError:
-                                logging.error("JSON decode error")
-
-            except MqttError as error:
-                print(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
+            item = await self.get_task()
+            if item is not None:
+                logging.error("Found not calculated item with id=%s", item.id)
+                await TreeWorkerHandler.build_tree(item)
+            else:
                 await asyncio.sleep(reconnect_interval)
-            except KeyboardInterrupt:
-                return
+
+    @sync_to_async
+    def get_task(self):
+        try:
+            return TblTreeDescription.objects.filter(build_at=None, is_deleted=False).first()
+        except TblTreeDescription.DoesNotExist:
+            return None
 
     @staticmethod
     def _generate_table(text_list: TblTextListDescription, block_size: int, dict_size: int, removed_pos:list, is_need_uno: bool, is_need_duo: bool) -> list:
@@ -73,6 +66,7 @@ class TreeWorkerHandler(object):
                     prev_pos = -1
                     continue
                 if prev_pos < 0:  # если это первое слово в N-грамме, то запоминаем его
+                    ret_single_item[fix_pos(part_of_speech, removed_pos)] += 1
                     prev_pos = part_of_speech
                     continue
                 ret_single_item[fix_pos(part_of_speech, removed_pos)] += 1
@@ -94,6 +88,7 @@ class TreeWorkerHandler(object):
                     ret_double_item = [0] * dict_size * dict_size
 
                     word_index = 0
+                    prev_pos = -1
         return ret
 
     @staticmethod
@@ -154,23 +149,15 @@ class TreeWorkerHandler(object):
             ret.append(ret_row)
         return ret
 
+    @staticmethod
     @sync_to_async
-    def build_tree(self, params):
+    def build_tree(tree_data: TblTreeDescription):
         """
         Построение дерева решений для заданного проекта
         """
-        if "project_id" not in params:
-            logging.error("Missing project_id")
-            return
-
-        try:
-            tree_data = TblTreeDescription.objects.get(id=params["project_id"])
-        except TblTreeDescription.DoesNotExist:
-            logging.error("Invalid project_id")
-            return
 
         tree_data.accuracy = 0
-        tree_data.build_status = "Построение матриц"
+        tree_data.build_status = "Построение матрицы списка 1"
         tree_data.save()
 
         # перестраиваем дерево решений
@@ -178,10 +165,12 @@ class TreeWorkerHandler(object):
         removed_pos = json.loads(tree_data.removed_pos)
         len_pos = len(pos) - len(removed_pos)
         # т.к. для разделителей требуются унограммы, то мы их тоже строим
-        table1 = self._generate_table(tree_data.first_list, tree_data.block_size, len_pos, removed_pos, tree_data.is_need_uno or tree_data.is_need_separate, tree_data.is_need_duo)
-        table2 = self._generate_table(tree_data.second_list, tree_data.block_size, len_pos, removed_pos, tree_data.is_need_uno or tree_data.is_need_separate, tree_data.is_need_duo)
-        features = self._generate_features(pos, removed_pos, tree_data.sector_size, tree_data.many_sectors, tree_data.is_need_uno, tree_data.is_need_duo, tree_data.is_need_separate)
-        logging.error(f"project: %s: table1: %s, table2: %s", params['project_id'], len(table1), len(table2))
+        table1 = TreeWorkerHandler._generate_table(tree_data.first_list, tree_data.block_size, len_pos, removed_pos, tree_data.is_need_uno or tree_data.is_need_separate, tree_data.is_need_duo)
+        tree_data.build_status = "Построение матрицы списка 2"
+        tree_data.save()
+        table2 = TreeWorkerHandler._generate_table(tree_data.second_list, tree_data.block_size, len_pos, removed_pos, tree_data.is_need_uno or tree_data.is_need_separate, tree_data.is_need_duo)
+        features = TreeWorkerHandler._generate_features(pos, removed_pos, tree_data.sector_size, tree_data.many_sectors, tree_data.is_need_uno, tree_data.is_need_duo, tree_data.is_need_separate)
+        logging.error(f"project: %s: table1: %s, table2: %s", tree_data.id, len(table1), len(table2))
         min_size = min(len(table1), len(table2))
         tree_data.table1_size = len(table1)
         tree_data.table2_size = len(table2)
@@ -190,32 +179,35 @@ class TreeWorkerHandler(object):
         if tree_data.is_need_separate and 0 < tree_data.sector_size < 100:
             tree_data.build_status = "Построение разделителей"
             tree_data.save()
-            table1 = self._generate_slice(table1, len_pos, tree_data.sector_size, tree_data.many_sectors)
-            table2 = self._generate_slice(table2, len_pos, tree_data.sector_size, tree_data.many_sectors)
+            table1 = TreeWorkerHandler._generate_slice(table1, len_pos, tree_data.sector_size, tree_data.many_sectors)
+            table2 = TreeWorkerHandler._generate_slice(table2, len_pos, tree_data.sector_size, tree_data.many_sectors)
             # удаляем унограммы если они не нужны
             if not tree_data.is_need_uno:
-                table1 = self._remove_uno(table1, len_pos)
-                table2 = self._remove_uno(table2, len_pos)
+                table1 = TreeWorkerHandler._remove_uno(table1, len_pos)
+                table2 = TreeWorkerHandler._remove_uno(table2, len_pos)
         tree_data.build_status = "Построение дерева"
         tree_data.save()
         result = [0] * min_size + [1] * min_size
-        clf = ensemble.RandomForestClassifier(max_depth=tree_data.max_depth)
-        clf = clf.fit(table1 + table2, result)
-        tree_data.build_status = "Оценка точности"
+        max_score = 0
+        for i in range(10):
+            clf = ensemble.RandomForestClassifier(n_estimators=(100 if min_size < 100 else min_size), max_depth=tree_data.max_depth, bootstrap=False)
+            clf = clf.fit(table1 + table2, result)
+            y_pred = clf.predict(table1 + table2)
+            if accuracy_score(result, y_pred) > max_score:
+                max_score = accuracy_score(result, y_pred)
+                tree_data.accuracy = max_score
+                classes = ["list1", "list2"]
+                dot_data = tree.export_graphviz(clf.estimators_[0], out_file=None, feature_names=features, class_names=classes)
+                tree_data.graph_dot = dot_data
+                tree_data.graph_pickle = clf
+                tree_data.save()
         tree_data.vector_size = len(table1[0])
-        tree_data.save()
-        y_pred = clf.predict(table1 + table2)
-        tree_data.accuracy = accuracy_score(result, y_pred)
         tree_data.build_status = "Выполнено"
         tree_data.build_at = datetime.now(timezone.utc)
-        classes = ["list1", "list2"]
-        dot_data = tree.export_graphviz(clf.estimators_[0], out_file=None, feature_names=features, class_names=classes)
-        tree_data.graph_dot = dot_data
-        tree_data.graph_pickle = clf
         tree_data.save()
         # graph = graphviz.Source(dot_data)
         # graph.render("iris")
-        logging.error(f"project: %s: done", params['project_id'])
+        logging.error(f"project: %s: done", tree_data.id)
 
     @staticmethod
     def _remove_uno(table1: list, len_pos: int) -> list:

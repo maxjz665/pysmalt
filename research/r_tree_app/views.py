@@ -164,12 +164,6 @@ def add_list(request: HttpRequest) -> HttpResponse:
                                                                     "error_message": e})
 
 
-async def send_broker_message(list_id: int):
-    async with Client(BROKER_HOST, BROKER_PORT, identifier="django_" + str(list_id)) as client:
-        await client.publish("service/tree_worker/build", json.dumps({"project_id": list_id}))
-    pass
-
-
 def show_list(request: HttpRequest, list_id) -> HttpResponse:
     """
     Отображение дерева решений
@@ -201,11 +195,6 @@ def show_list(request: HttpRequest, list_id) -> HttpResponse:
         list_data.build_at = None
         list_data.build_status = "В очереди"
         list_data.save()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        task = loop.create_task(send_broker_message(list_id))
-        loop.run_until_complete(asyncio.gather(task))
-        loop.close()
         return render(request, "r_tree_app/list_data.html", context={"content": list_data,
                                                                      "first_texts": first_texts,
                                                                      "second_texts": second_texts,
