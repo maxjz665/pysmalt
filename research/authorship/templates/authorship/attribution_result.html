@@ -1,0 +1,66 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Результат атрибуции</h2>
+    <a href="{% url 'authorship/attribute_text' %}" class="btn btn-sm btn-secondary mb-3">&larr; Новый анализ</a>
+
+    <div class="card mb-3">
+        <div class="card-header">Анализируемый текст (фрагмент)</div>
+        <div class="card-body">
+            <p class="text-muted small">{{ input_text }}{% if input_text|length >= 500 %}...{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            Метод: {% if method == 'profile' %}Статистический профиль ({{ metric }}){% else %}Машинное обучение{% endif %}
+        </div>
+    </div>
+
+    {% if candidates %}
+    <h4>Рейтинг авторов-кандидатов</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Ранг</th>
+                <th>Автор</th>
+                <th>Оценка сходства</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in candidates %}
+            <tr class="{% if forloop.first %}table-success{% endif %}">
+                <td><strong>{{ c.rank }}</strong></td>
+                <td>
+                    <strong>{{ c.author_name }}</strong>
+                    {% if c.texts_in_profile %}
+                    <small class="text-muted">({{ c.texts_in_profile }} текстов в профиле)</small>
+                    {% endif %}
+                </td>
+                <td>{{ c.score|floatformat:4 }}</td>
+                <td>
+                    <div class="progress" style="width:300px;height:20px;">
+                        <div class="progress-bar {% if forloop.first %}bg-success{% else %}bg-secondary{% endif %}"
+                             style="width:{% widthratio c.score 1 100 %}%">
+                            {{ c.score|floatformat:2 }}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if candidates.0 %}
+    <div class="alert alert-success mt-3">
+        <strong>Наиболее вероятный автор:</strong> {{ candidates.0.author_name }}
+        (оценка: {{ candidates.0.score|floatformat:4 }})
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-warning">Не удалось определить авторство. Проверьте наличие профилей авторов.</div>
+    {% endif %}
+</div>
+{% endblock %}

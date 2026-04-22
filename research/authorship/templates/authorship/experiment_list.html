@@ -1,0 +1,27 @@
+{% extends "index.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Эксперименты</h2>
+    <a href="{% url 'authorship/home' %}" class="btn btn-sm btn-secondary mb-3">&larr; Назад</a>
+    <a href="{% url 'authorship/run_experiment' %}" class="btn btn-sm btn-primary mb-3">Новый эксперимент</a>
+
+    <table class="table table-striped">
+        <thead>
+            <tr><th>ID</th><th>Название</th><th>Метод</th><th>Accuracy</th><th>F1</th><th>Статус</th><th>Дата</th></tr>
+        </thead>
+        <tbody>
+            {% for exp in experiments %}
+            <tr>
+                <td>{{ exp.id }}</td>
+                <td><a href="{% url 'authorship/experiment_detail' exp.id %}">{{ exp.name }}</a></td>
+                <td>{{ exp.get_method_display }}</td>
+                <td>{{ exp.accuracy|floatformat:4 }}</td>
+                <td>{{ exp.f1_score|floatformat:4 }}</td>
+                <td>{{ exp.build_status }}</td>
+                <td>{{ exp.created_at|date:"d.m.Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@
                 <a class="dropdown-item" href="{% url 'r_ngrams_app/dataset_list' %}">N-граммы</a>
                 <a class="dropdown-item" href="{% url 'text_generator_form' %}">Генератор текстов</a>
                 <a class="dropdown-item" href="{% url 'hetco_app_form' %}">Метрики Хетсо</a>
+                <a class="dropdown-item" href="{% url 'authorship/home' %}">Определение авторства</a>
             </div>
         </li>
         {% if user.is_authenticated %}

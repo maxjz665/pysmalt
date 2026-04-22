@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'research.r_ngrams_app',
     'research.text_generator',
     'research.hetco_app',
+    'research.authorship',
 ]
 
 AUTH_USER_MODEL = 'user_app.TblUser'

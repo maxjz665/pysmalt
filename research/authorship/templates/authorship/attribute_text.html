@@ -1,0 +1,81 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Определение авторства текста</h2>
+    <a href="{% url 'authorship/home' %}" class="btn btn-sm btn-secondary mb-3">&larr; Назад</a>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="input_text">Текст для анализа</label>
+            <textarea class="form-control" id="input_text" name="input_text"
+                      rows="10" required placeholder="Вставьте текст неизвестного авторства..."></textarea>
+            <small class="form-text text-muted">Рекомендуемый объём — не менее 500 слов для достоверного результата.</small>
+        </div>
+
+        <div class="form-group">
+            <label>Метод</label>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="method" id="m_profile"
+                       value="profile" checked onchange="toggleAttrParams()">
+                <label class="form-check-label" for="m_profile">
+                    Статистический профиль (Ежов)
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="method" id="m_ml"
+                       value="ml" onchange="toggleAttrParams()">
+                <label class="form-check-label" for="m_ml">
+                    Машинное обучение (Севрюков)
+                </label>
+            </div>
+        </div>
+
+        <div id="attr_profile_params">
+            <div class="form-group">
+                <label for="text_list">Список текстов (база авторов)</label>
+                <select class="form-control" id="text_list" name="text_list">
+                    <option value="">--- Выберите ---</option>
+                    {% for tl in text_lists %}
+                    <option value="{{ tl.id }}">{{ tl.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="metric">Метрика</label>
+                <select class="form-control" id="metric" name="metric">
+                    <option value="cosine">Косинусное сходство</option>
+                    <option value="manhattan">Манхэттенское расстояние</option>
+                    <option value="kl">KL-дивергенция</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="attr_ml_params" style="display:none;">
+            <div class="form-group">
+                <label for="experiment_id">Обученная модель (эксперимент)</label>
+                <select class="form-control" id="experiment_id" name="experiment_id">
+                    <option value="">--- Выберите ---</option>
+                    {% for exp in experiments %}
+                    {% if exp.method == 'ml' %}
+                    <option value="{{ exp.id }}">{{ exp.name }} (accuracy={{ exp.accuracy|floatformat:2 }})</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success mt-3">Определить авторство</button>
+    </form>
+</div>
+
+<script>
+function toggleAttrParams() {
+    var isProfile = document.getElementById('m_profile').checked;
+    document.getElementById('attr_profile_params').style.display = isProfile ? 'block' : 'none';
+    document.getElementById('attr_ml_params').style.display = isProfile ? 'none' : 'block';
+}
+</script>
+{% endblock %}

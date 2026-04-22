@@ -24,6 +24,7 @@ urlpatterns = [
     path('research/r_bigrams/', include('research.r_ngrams_app.urls')),  # работа с деревьями решений
     path('research/text_generator/', include('research.text_generator.urls')), # работа с генерацией текстов
     path('research/hetco_app/', include('research.hetco_app.urls')),  # работа с модулем Хетсо
+    path('research/authorship/', include('research.authorship.urls')),  # определение авторства текста
 ]
 
 # включение адресов для консоли джанго если оно установлено в системе

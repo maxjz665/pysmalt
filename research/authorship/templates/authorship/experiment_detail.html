@@ -1,0 +1,92 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <a href="{% url 'authorship/home' %}" class="btn btn-sm btn-secondary mb-3">&larr; Назад</a>
+
+    <h2>{{ experiment.name }}</h2>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <table class="table table-bordered table-sm">
+                <tr><th>Метод</th><td>{{ experiment.get_method_display }}</td></tr>
+                <tr><th>Список текстов</th><td>{{ experiment.text_list.name }}</td></tr>
+                <tr><th>Статус</th><td>{{ experiment.build_status }}</td></tr>
+                <tr><th>Дата</th><td>{{ experiment.created_at|date:"d.m.Y H:i" }}</td></tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <table class="table table-bordered table-sm">
+                <tr><th>Accuracy</th><td><strong>{{ experiment.accuracy|floatformat:4 }}</strong></td></tr>
+                <tr><th>Precision (macro)</th><td>{{ experiment.precision|floatformat:4 }}</td></tr>
+                <tr><th>Recall (macro)</th><td>{{ experiment.recall|floatformat:4 }}</td></tr>
+                <tr><th>F1-score (macro)</th><td><strong>{{ experiment.f1_score|floatformat:4 }}</strong></td></tr>
+            </table>
+        </div>
+    </div>
+
+    {% if experiment.detailed_results.by_author %}
+    <h4 class="mt-4">Результаты по авторам</h4>
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr><th>Автор</th><th>Верно</th><th>Всего</th><th>Accuracy</th></tr>
+        </thead>
+        <tbody>
+            {% for aid, data in experiment.detailed_results.by_author.items %}
+            <tr>
+                <td>{{ data.name }}</td>
+                <td>{{ data.correct }}</td>
+                <td>{{ data.total }}</td>
+                <td>{{ data.accuracy|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if experiment.detailed_results.feature_importance %}
+    <h4 class="mt-4">Важность признаков (топ-20)</h4>
+    <table class="table table-striped table-sm">
+        <thead><tr><th>#</th><th>Признак</th><th>Важность</th><th></th></tr></thead>
+        <tbody>
+            {% for fi in experiment.detailed_results.feature_importance %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><code>{{ fi.name }}</code></td>
+                <td>{{ fi.importance|floatformat:4 }}</td>
+                <td>
+                    <div class="progress" style="width:200px;height:16px;">
+                        <div class="progress-bar bg-info" style="width:{% widthratio fi.importance 0.1 100 %}%"></div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h4 class="mt-4">Подробные результаты</h4>
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th>Текст</th>
+                <th>Истинный автор</th>
+                <th>Предсказанный автор</th>
+                <th>Уверенность</th>
+                <th>Результат</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in results %}
+            <tr class="{% if r.is_correct %}table-success{% else %}table-danger{% endif %}">
+                <td>{{ r.text.title|truncatechars:50 }}</td>
+                <td>{{ r.true_author.name }}</td>
+                <td>{{ r.predicted_author.name }}</td>
+                <td>{{ r.confidence|floatformat:3 }}</td>
+                <td>{% if r.is_correct %}&#10004;{% else %}&#10008;{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

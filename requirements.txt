@@ -10,3 +10,4 @@ nltk~=3.9.1
 prereform2modern~=1.0.0
 xlsxwriter~=3.2.2  # для генерации xlsx файлов
 numpy~=2.2.4
+natasha>=1.6.0

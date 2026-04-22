@@ -1,0 +1,137 @@
+{% extends "index.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Определение авторства текста</h2>
+    <p class="text-muted">Модуль синтаксического анализа для атрибуции текстов</p>
+
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.features }}</h5>
+                    <p class="card-text">Текстов с признаками</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.profiles }}</h5>
+                    <p class="card-text">Профилей авторов</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.experiments }}</h5>
+                    <p class="card-text">Экспериментов</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><strong>Подготовка данных</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'authorship/extract_features' %}" class="btn btn-outline-primary btn-block mb-2">
+                        Извлечь синтаксические признаки
+                    </a>
+                    <p class="text-muted small">Извлекает POS-теги, типы зависимостей, глубину деревьев и другие синтаксические характеристики из текстов.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><strong>Атрибуция</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'authorship/attribute_text' %}" class="btn btn-outline-success btn-block mb-2">
+                        Определить авторство текста
+                    </a>
+                    <p class="text-muted small">Загрузите текст неизвестного авторства и определите наиболее вероятного автора.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><strong>Метод 1: Статистический профиль (Ежов)</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'authorship/run_experiment' %}?method=profile" class="btn btn-outline-warning btn-block mb-2">
+                        Запустить эксперимент
+                    </a>
+                    <p class="text-muted small">Сравнение синтаксического профиля текста с профилями авторов через косинусное сходство, манхэттенское расстояние или KL-дивергенцию.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><strong>Метод 2: Машинное обучение (Севрюков)</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'authorship/run_experiment' %}?method=ml" class="btn btn-outline-danger btn-block mb-2">
+                        Запустить эксперимент
+                    </a>
+                    <p class="text-muted small">Обучение классификатора (SVM / Random Forest) на синтаксических признаках текстов.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><strong>Сравнение методов</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'authorship/compare_methods' %}" class="btn btn-outline-dark btn-block mb-2">
+                        Сравнить два эксперимента
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if experiments %}
+    <h4 class="mt-4">Последние эксперименты</h4>
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Метод</th>
+                <th>Accuracy</th>
+                <th>F1</th>
+                <th>Статус</th>
+                <th>Дата</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for exp in experiments %}
+            <tr>
+                <td><a href="{% url 'authorship/experiment_detail' exp.id %}">{{ exp.name }}</a></td>
+                <td>{{ exp.get_method_display }}</td>
+                <td>{{ exp.accuracy|floatformat:2 }}%</td>
+                <td>{{ exp.f1_score|floatformat:2 }}%</td>
+                <td>
+                    {% if exp.build_status == 'completed' %}
+                        <span class="badge badge-success">Выполнен</span>
+                    {% elif exp.build_status == 'running' %}
+                        <span class="badge badge-warning">В процессе</span>
+                    {% else %}
+                        <span class="badge badge-danger">{{ exp.build_status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ exp.created_at|date:"d.m.Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Запуск эксперимента по определению авторства</h2>
+    <a href="{% url 'authorship/home' %}" class="btn btn-sm btn-secondary mb-3">&larr; Назад</a>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="name">Название эксперимента</label>
+            <input type="text" class="form-control" id="name" name="name"
+                   placeholder="Оставьте пустым для автоматического названия">
+        </div>
+
+        <div class="form-group">
+            <label for="text_list">Список текстов</label>
+            <select class="form-control" id="text_list" name="text_list" required>
+                <option value="">--- Выберите список ---</option>
+                {% for tl in text_lists %}
+                <option value="{{ tl.id }}">{{ tl.name }}</option>
+                {% endfor %}
+            </select>
+            <small class="form-text text-muted">Тексты в списке должны иметь привязку к авторам.</small>
+        </div>
+
+        <div class="form-group">
+            <label>Метод</label>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="method" id="method_profile"
+                       value="profile" checked onchange="toggleMethodParams()">
+                <label class="form-check-label" for="method_profile">
+                    <strong>Статистический профиль</strong> (Ежов) &mdash;
+                    сравнение синтаксических профилей через метрику сходства
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="method" id="method_ml"
+                       value="ml" onchange="toggleMethodParams()">
+                <label class="form-check-label" for="method_ml">
+                    <strong>Машинное обучение</strong> (Севрюков) &mdash;
+                    обучение классификатора на синтаксических признаках
+                </label>
+            </div>
+        </div>
+
+        <!-- Параметры профильного метода -->
+        <div id="profile_params">
+            <div class="form-group">
+                <label for="metric">Метрика сходства</label>
+                <select class="form-control" id="metric" name="metric">
+                    <option value="cosine">Косинусное сходство</option>
+                    <option value="manhattan">Манхэттенское расстояние</option>
+                    <option value="kl">Дивергенция Кульбака–Лейблера</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Параметры ML-метода -->
+        <div id="ml_params" style="display:none;">
+            <div class="form-group">
+                <label for="classifier_type">Классификатор</label>
+                <select class="form-control" id="classifier_type" name="classifier_type">
+                    <option value="svm">SVM (метод опорных векторов)</option>
+                    <option value="rf">Random Forest (случайный лес)</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">Запустить эксперимент</button>
+    </form>
+</div>
+
+<script>
+function toggleMethodParams() {
+    var isProfile = document.getElementById('method_profile').checked;
+    document.getElementById('profile_params').style.display = isProfile ? 'block' : 'none';
+    document.getElementById('ml_params').style.display = isProfile ? 'none' : 'block';
+}
+</script>
+{% endblock %}

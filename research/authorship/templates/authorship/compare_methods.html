@@ -1,0 +1,30 @@
+{% extends "index.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Сравнение методов определения авторства</h2>
+    <a href="{% url 'authorship/home' %}" class="btn btn-sm btn-secondary mb-3">&larr; Назад</a>
+    <p>Выберите два эксперимента для сравнения. Оба должны быть выполнены на одном списке текстов.</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="experiment_1">Эксперимент 1 (Статистический профиль)</label>
+            <select class="form-control" id="experiment_1" name="experiment_1" required>
+                <option value="">--- Выберите ---</option>
+                {% for exp in experiments %}
+                <option value="{{ exp.id }}">{{ exp.name }} ({{ exp.get_method_display }}, acc={{ exp.accuracy|floatformat:2 }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="experiment_2">Эксперимент 2 (Машинное обучение)</label>
+            <select class="form-control" id="experiment_2" name="experiment_2" required>
+                <option value="">--- Выберите ---</option>
+                {% for exp in experiments %}
+                <option value="{{ exp.id }}">{{ exp.name }} ({{ exp.get_method_display }}, acc={{ exp.accuracy|floatformat:2 }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Сравнить</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "index.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Извлечение синтаксических признаков</h2>
+    <a href="{% url 'authorship/home' %}" class="btn btn-sm btn-secondary mb-3">&larr; Назад</a>
+    <p>Выберите список текстов, для которых нужно извлечь синтаксические признаки. Для каждого текста будут вычислены: распределения частей речи (POS-тегов), типов синтаксических зависимостей, глубины деревьев зависимостей, типы предложений и другие характеристики.</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="text_list">Список текстов</label>
+            <select class="form-control" id="text_list" name="text_list" required>
+                <option value="">--- Выберите список ---</option>
+                {% for tl in text_lists %}
+                <option value="{{ tl.id }}">{{ tl.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Извлечь признаки</button>
+    </form>
+</div>
+{% endblock %}
