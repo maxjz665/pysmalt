@@ -25,7 +25,9 @@ import numpy as np
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.model_selection import cross_val_predict, StratifiedKFold, LeaveOneOut
+from sklearn.model_selection import (cross_val_predict, StratifiedKFold,
+                                     LeaveOneOut, GridSearchCV)
+from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.metrics import (accuracy_score, precision_score, recall_score,
                              f1_score, confusion_matrix, classification_report)
 from sklearn.pipeline import Pipeline
@@ -282,45 +284,57 @@ def run_experiment(text_list: TblTextListDescription,
         experiment.params['n_authors'] = len(unique_authors)
         experiment.params['vector_size'] = VECTOR_SIZE
 
-        # Кросс-валидация
-        # Если текстов мало — leave-one-out, иначе StratifiedKFold
+        # Внешняя кросс-валидация (для оценки качества).
+        # Внутренняя — для подбора гиперпараметров (nested CV, без утечки).
+        # LOO для внешней — методологически соответствует профильному методу
+        # и даёт максимально стабильную оценку на малом корпусе.
         min_samples_per_class = min(np.bincount(
             LabelEncoder().fit_transform(y)
         ))
 
-        if min_samples_per_class < 3:
-            cv = LeaveOneOut()
-        else:
-            n_splits = min(5, min_samples_per_class)
-            cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+        outer_cv = LeaveOneOut()
 
-        # Создаём пайплайн
+        n_splits_inner = max(2, min(3, min_samples_per_class - 1))
+        inner_cv = StratifiedKFold(n_splits=n_splits_inner,
+                                   shuffle=True, random_state=0)
+
+        # Пайплайн со встроенным отбором признаков (ANOVA F-score).
+        # SelectKBest вычисляется внутри фолда → без утечки.
         if classifier_type == 'svm':
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
-                ('classifier', SVC(
-                    C=classifier_params.get('C', 1.0),
-                    gamma=classifier_params.get('gamma', 'scale'),
-                    kernel=classifier_params.get('kernel', 'rbf'),
-                    probability=True,
-                    random_state=42,
-                ))
+                ('selector', SelectKBest(score_func=f_classif, k='all')),
+                ('classifier', SVC(probability=True, random_state=42)),
             ])
+            param_grid = {
+                'selector__k': [50, 100, 'all'],
+                'classifier__C': [0.1, 1.0, 10.0],
+                'classifier__gamma': ['scale', 0.1],
+                'classifier__kernel': ['rbf', 'linear'],
+            }
         elif classifier_type == 'rf':
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
+                ('selector', SelectKBest(score_func=f_classif, k='all')),
                 ('classifier', RandomForestClassifier(
-                    n_estimators=classifier_params.get('n_estimators', 100),
-                    max_depth=classifier_params.get('max_depth', 10),
-                    random_state=42,
-                    n_jobs=-1,
-                ))
+                    random_state=42, n_jobs=-1,
+                )),
             ])
+            param_grid = {
+                'selector__k': [50, 100, 'all'],
+                'classifier__n_estimators': [100, 300],
+                'classifier__max_depth': [5, 10, None],
+            }
         else:
             raise ValueError(f"Неизвестный тип классификатора: {classifier_type}")
 
-        # Предсказания по кросс-валидации
-        y_pred = cross_val_predict(pipeline, X, y, cv=cv)
+        estimator = GridSearchCV(
+            pipeline, param_grid, cv=inner_cv,
+            scoring='f1_macro', n_jobs=-1, refit=True,
+        )
+
+        # Nested CV: внешние фолды — для оценки, внутренние — для тюнинга.
+        y_pred = cross_val_predict(estimator, X, y, cv=outer_cv, n_jobs=1)
 
         # Метрики
         accuracy = accuracy_score(y, y_pred)
@@ -329,8 +343,14 @@ def run_experiment(text_list: TblTextListDescription,
         f1 = f1_score(y, y_pred, average='macro', zero_division=0)
         cm = confusion_matrix(y, y_pred)
 
-        # Обучаем финальную модель на всех данных
-        pipeline.fit(X, y)
+        # Обучаем финальную модель на всех данных с подбором
+        # гиперпараметров на том же внутреннем CV.
+        estimator.fit(X, y)
+        pipeline = estimator.best_estimator_
+        experiment.params['best_params'] = {
+            k: (v if not isinstance(v, (int, float, str)) else v)
+            for k, v in estimator.best_params_.items()
+        }
 
         # Сохраняем результаты по каждому тексту
         for i, (text_id, true_label, pred_label) in enumerate(zip(text_ids, y, y_pred)):
@@ -363,11 +383,17 @@ def run_experiment(text_list: TblTextListDescription,
                 'accuracy': round(float(author_correct / author_total), 4),
             }
 
-        # Feature importance (для RF)
+        # Feature importance (для RF) с учётом отбора признаков
         feature_imp = []
         if classifier_type == 'rf':
             clf = pipeline.named_steps['classifier']
-            for fname, imp in zip(FEATURE_NAMES, clf.feature_importances_):
+            selector = pipeline.named_steps.get('selector')
+            if selector is not None and hasattr(selector, 'get_support'):
+                support = selector.get_support()
+                selected_names = [n for n, keep in zip(FEATURE_NAMES, support) if keep]
+            else:
+                selected_names = list(FEATURE_NAMES)
+            for fname, imp in zip(selected_names, clf.feature_importances_):
                 feature_imp.append({'name': fname, 'importance': round(float(imp), 6)})
             feature_imp.sort(key=lambda x: x['importance'], reverse=True)
 

@@ -33,6 +33,7 @@ from research.authorship.utils.features import (
     extract_and_vectorize, build_feature_vector,
     extract_and_save_features, FEATURE_NAMES, VECTOR_SIZE,
     POS_TAGS, DEP_TYPES,
+    POS_BIGRAMS_VOCAB, SYNTACTIC_PRODUCTIONS_VOCAB, FUNCTION_WORDS_VOCAB,
 )
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_author import TblAuthor
@@ -50,23 +51,35 @@ _N_POS = len(POS_TAGS)
 _N_DEP = len(DEP_TYPES)
 _N_CLAUSE = 4
 _N_DEPTH = 15
+_N_POSBI = len(POS_BIGRAMS_VOCAB)
+_N_PROD = len(SYNTACTIC_PRODUCTIONS_VOCAB)
+_N_FW = len(FUNCTION_WORDS_VOCAB)
 
 _s0 = 0
 _s1 = _s0 + _N_SCALAR
 _s2 = _s1 + _N_POS
 _s3 = _s2 + _N_DEP
 _s4 = _s3 + _N_CLAUSE
-_s5 = _s4 + _N_DEPTH  # == VECTOR_SIZE
+_s5 = _s4 + _N_DEPTH
+_s6 = _s5 + _N_POSBI
+_s7 = _s6 + _N_PROD
+_s8 = _s7 + _N_FW  # == VECTOR_SIZE
 
 _BLOCK_SLICES = (
-    slice(_s0, _s1),  # scalar
-    slice(_s1, _s2),  # POS unigrams
-    slice(_s2, _s3),  # dependency relations
-    slice(_s3, _s4),  # clause types
-    slice(_s4, _s5),  # tree depth distribution
+    slice(_s0, _s1),  # [0]  scalar
+    slice(_s1, _s2),  # [1]  POS unigrams
+    slice(_s2, _s3),  # [2]  dependency relations
+    slice(_s3, _s4),  # [3]  clause types
+    slice(_s4, _s5),  # [4]  tree depth distribution
+    slice(_s5, _s6),  # [5]  POS bigrams
+    slice(_s6, _s7),  # [6]  syntactic productions (head-dep-child)
+    slice(_s7, _s8),  # [7]  function words
 )
 
-_BLOCK_WEIGHTS = (0.35, 1.0, 1.2, 0.9, 0.8)
+# Веса блоков признаков.
+# Выше у чисто-синтаксических блоков (зависимости, продукции).
+# Ниже у скалярных метрик, которые сильно зависят от длины текста.
+_BLOCK_WEIGHTS = (0.35, 1.0, 1.2, 0.9, 0.8, 1.0, 1.3, 1.0)
 
 
 # ────────────────────────────────────────────────────────────
