@@ -6,11 +6,14 @@
 
 Метод:
   1. Для каждого автора строится синтаксический профиль —
-     усреднённый вектор признаков по всем его текстам.
-  2. Неизвестный текст сравнивается с профилями авторов
+     медианный вектор признаков по всем его текстам (робастная агрегация).
+  2. Внутри кросс-валидации вектора нормализуются по обучающему фолду
+     (без утечки данных из тестового текста).
+  3. К нормализованным векторам применяются веса блоков признаков.
+  4. Неизвестный текст сравнивается с профилями авторов
      через метрики сходства (косинусное, Манхэттенское,
      дивергенция Кульбака–Лейблера).
-  3. Автор с наибольшим сходством считается наиболее вероятным.
+  5. Автор с наибольшим сходством считается наиболее вероятным.
 
 Отличие от ML-метода: здесь нет обучения модели. Профиль —
 это прямая статистическая характеристика, прозрачная и
@@ -28,13 +31,74 @@ from research.authorship.models import (
 )
 from research.authorship.utils.features import (
     extract_and_vectorize, build_feature_vector,
-    extract_and_save_features, FEATURE_NAMES, VECTOR_SIZE
+    extract_and_save_features, FEATURE_NAMES, VECTOR_SIZE,
+    POS_TAGS, DEP_TYPES,
 )
 from text_app.models.tbl_text import TblText
 from text_app.models.tbl_author import TblAuthor
 from text_app.models.tbl_textlist import TblTextListDescription
 
 logger = logging.getLogger(__name__)
+
+
+# ────────────────────────────────────────────────────────────
+#  Блоки признаков и их веса
+# ────────────────────────────────────────────────────────────
+
+_N_SCALAR = 4
+_N_POS = len(POS_TAGS)
+_N_DEP = len(DEP_TYPES)
+_N_CLAUSE = 4
+_N_DEPTH = 15
+
+_s0 = 0
+_s1 = _s0 + _N_SCALAR
+_s2 = _s1 + _N_POS
+_s3 = _s2 + _N_DEP
+_s4 = _s3 + _N_CLAUSE
+_s5 = _s4 + _N_DEPTH  # == VECTOR_SIZE
+
+_BLOCK_SLICES = (
+    slice(_s0, _s1),  # scalar
+    slice(_s1, _s2),  # POS unigrams
+    slice(_s2, _s3),  # dependency relations
+    slice(_s3, _s4),  # clause types
+    slice(_s4, _s5),  # tree depth distribution
+)
+
+_BLOCK_WEIGHTS = (0.35, 1.0, 1.2, 0.9, 0.8)
+
+
+# ────────────────────────────────────────────────────────────
+#  Вспомогательные функции: нормализация и взвешивание
+# ────────────────────────────────────────────────────────────
+
+def _apply_block_weights(vec: np.ndarray) -> np.ndarray:
+    """Apply per-block weights to a feature vector."""
+    out = vec.copy().astype(float)
+    for w, sl in zip(_BLOCK_WEIGHTS, _BLOCK_SLICES):
+        out[sl] *= w
+    return out
+
+
+def _normalize_fold(train_matrix: np.ndarray,
+                    test_vec: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Z-score normalization using train-fold statistics only (no leakage).
+    Features with std == 0 are left unchanged (divided by 1.0).
+    """
+    mean = train_matrix.mean(axis=0)
+    std = train_matrix.std(axis=0)
+    std[std == 0.0] = 1.0
+    return (train_matrix - mean) / std, (test_vec - mean) / std
+
+
+def _build_profile(vecs: List[np.ndarray], aggregation: str = 'median') -> np.ndarray:
+    """Build author profile via median (robust) or mean aggregation."""
+    arr = np.array(vecs)
+    if aggregation == 'median':
+        return np.median(arr, axis=0)
+    return np.mean(arr, axis=0)
 
 
 # ────────────────────────────────────────────────────────────
@@ -100,8 +164,8 @@ def build_author_profile(author: TblAuthor,
     """
     Строит синтаксический профиль автора на основе текстов из списка.
 
-    Профиль = среднее арифметическое векторов признаков всех текстов
-    автора в данном списке.
+    Профиль = медиана векторов признаков всех текстов автора
+    (робастная агрегация, устойчивая к выбросам).
 
     Args:
         author: объект автора
@@ -110,7 +174,6 @@ def build_author_profile(author: TblAuthor,
     Returns:
         TblAuthorProfile: сохранённый профиль
     """
-    # Получаем тексты автора из списка
     from text_app.models.tbl_textlist import TblTextListItems
     text_ids = TblTextListItems.objects.filter(
         list=text_list
@@ -123,7 +186,6 @@ def build_author_profile(author: TblAuthor,
 
     vectors = []
     for text_obj in texts:
-        # Получаем или вычисляем признаки
         try:
             sf = TblSyntacticFeature.objects.get(text=text_obj)
         except TblSyntacticFeature.DoesNotExist:
@@ -133,20 +195,21 @@ def build_author_profile(author: TblAuthor,
     if not vectors:
         raise ValueError(f"Нет текстов автора {author.name} в списке {text_list.name}")
 
-    # Усреднение
-    mean_vector = np.mean(vectors, axis=0)
-    std_vector = np.std(vectors, axis=0)
+    arr = np.array(vectors)
+    median_vector = np.median(arr, axis=0)
+    std_vector = np.std(arr, axis=0)
 
     profile, _ = TblAuthorProfile.objects.update_or_create(
         author=author,
         text_list=text_list,
         defaults={
             'texts_count': len(vectors),
-            'profile_vector': mean_vector.tolist(),
+            'profile_vector': median_vector.tolist(),
             'profile_data': {
                 'std_vector': std_vector.tolist(),
                 'texts_count': len(vectors),
                 'feature_names': FEATURE_NAMES,
+                'aggregation': 'median',
             }
         }
     )
@@ -201,27 +264,23 @@ def attribute_text(raw_text: str,
         list[dict]: список кандидатов, отсортированный по убыванию сходства
             [{'author': TblAuthor, 'score': float, 'rank': int}, ...]
     """
-    # Извлекаем признаки неизвестного текста
     features, vector = extract_and_vectorize(raw_text)
-    vec = np.array(vector)
+    vec = _apply_block_weights(np.array(vector))
 
-    # Загружаем профили
     profiles = TblAuthorProfile.objects.filter(text_list=text_list)
     if not profiles.exists():
         profiles = build_all_profiles(text_list)
 
     results = []
     for profile in profiles:
-        pvec = profile.get_profile_vector_np()
+        pvec = _apply_block_weights(profile.get_profile_vector_np())
 
         if metric == 'cosine':
             score = cosine_similarity(vec, pvec)
         elif metric == 'manhattan':
-            # Инвертируем: чем меньше расстояние, тем больше сходство
             dist = manhattan_distance(vec, pvec)
             score = 1.0 / (1.0 + dist)
         elif metric == 'kl':
-            # Для KL берём только распределительные части вектора (с позиции 4)
             p_dist = vec[4:]
             q_dist = pvec[4:]
             dist = symmetric_kl(p_dist, q_dist)
@@ -236,7 +295,6 @@ def attribute_text(raw_text: str,
             'texts_in_profile': profile.texts_count,
         })
 
-    # Сортируем по убыванию сходства
     results.sort(key=lambda x: x['score'], reverse=True)
     for i, r in enumerate(results):
         r['rank'] = i + 1
@@ -255,15 +313,18 @@ def run_experiment(text_list: TblTextListDescription,
                    owner=None) -> TblAttributionExperiment:
     """
     Запускает эксперимент по определению авторства
-    с кросс-валидацией (leave-one-out или k-fold).
+    с leave-one-out кросс-валидацией.
 
-    На каждом фолде один текст исключается, профили строятся
-    по оставшимся текстам, затем исключённый текст атрибутируется.
+    Улучшения по сравнению с базовой версией:
+    - fold-wise z-score нормализация (без утечки данных тестового текста)
+    - взвешивание блоков признаков после нормализации
+    - медианная агрегация профилей авторов (устойчива к выбросам)
+    - корректный macro-F1 (среднее по классам, не F(P̄, R̄))
 
     Args:
         text_list: список текстов для эксперимента
-        metric: метрика сходства
-        n_folds: количество фолдов (0 = leave-one-out)
+        metric: метрика сходства ('cosine', 'manhattan', 'kl')
+        n_folds: зарезервировано для совместимости (используется LOO)
         name: название эксперимента
         owner: пользователь-владелец
 
@@ -277,11 +338,11 @@ def run_experiment(text_list: TblTextListDescription,
         method='profile',
         text_list=text_list,
         owner=owner,
-        params={'metric': metric, 'n_folds': n_folds},
+        params={'metric': metric, 'n_folds': n_folds,
+                'aggregation': 'median', 'normalization': 'fold-wise'},
         build_status='running',
     )
 
-    # Получаем все тексты с авторами
     items = TblTextListItems.objects.filter(list=text_list).select_related('text', 'text__author')
     texts_with_authors = [(item.text, item.text.author)
                           for item in items
@@ -292,53 +353,64 @@ def run_experiment(text_list: TblTextListDescription,
         experiment.save()
         return experiment
 
-    # Извлекаем признаки для всех текстов
+    # Собираем сырые векторы признаков для всех текстов
     all_features = {}
     for text_obj, author in texts_with_authors:
         try:
             sf = TblSyntacticFeature.objects.get(text=text_obj)
         except TblSyntacticFeature.DoesNotExist:
             sf = extract_and_save_features(text_obj)
-        all_features[text_obj.id] = np.array(sf.feature_vector)
+        all_features[text_obj.id] = np.array(sf.feature_vector, dtype=float)
 
     # Leave-one-out кросс-валидация
     correct = 0
     total = 0
-    author_results = {}  # author_id -> {correct, total}
+    author_results = {}  # author_id -> {correct, total, name}
 
     for test_text, true_author in texts_with_authors:
-        test_vec = all_features.get(test_text.id)
-        if test_vec is None:
+        test_raw = all_features.get(test_text.id)
+        if test_raw is None:
             continue
 
-        # Строим профили без тестового текста
-        train_texts = [(t, a) for t, a in texts_with_authors if t.id != test_text.id]
-        author_vectors = {}
-        for t, a in train_texts:
-            author_vectors.setdefault(a.id, []).append(all_features[t.id])
+        # Разделяем обучающий и тестовый фолды
+        train_pairs = [(t, a) for t, a in texts_with_authors if t.id != test_text.id]
+        train_raw = np.array([all_features[t.id] for t, a in train_pairs], dtype=float)
 
-        # Усредняем профили
-        scores = {}
-        for author_id, vecs in author_vectors.items():
-            mean_vec = np.mean(vecs, axis=0)
+        # Fold-wise нормализация (статистики только по обучающим данным)
+        train_norm, test_norm = _normalize_fold(train_raw, test_raw)
+
+        # Взвешивание блоков признаков
+        train_weighted = np.array([_apply_block_weights(v) for v in train_norm])
+        test_weighted = _apply_block_weights(test_norm)
+
+        # Медианные профили авторов из нормализованных взвешенных векторов
+        author_vecs: Dict[int, List[np.ndarray]] = {}
+        for (t, a), wv in zip(train_pairs, train_weighted):
+            author_vecs.setdefault(a.id, []).append(wv)
+
+        profiles = {aid: _build_profile(vecs, 'median')
+                    for aid, vecs in author_vecs.items()}
+
+        # Оценка сходства с каждым профилем
+        scores: Dict[int, float] = {}
+        for author_id, profile_vec in profiles.items():
             if metric == 'cosine':
-                scores[author_id] = cosine_similarity(test_vec, mean_vec)
+                scores[author_id] = cosine_similarity(test_weighted, profile_vec)
             elif metric == 'manhattan':
-                d = manhattan_distance(test_vec, mean_vec)
+                d = manhattan_distance(test_weighted, profile_vec)
                 scores[author_id] = 1.0 / (1.0 + d)
             elif metric == 'kl':
-                d = symmetric_kl(test_vec[4:], mean_vec[4:])
+                # KL применяется к распределительной части вектора (с позиции 4)
+                d = symmetric_kl(test_weighted[4:], profile_vec[4:])
                 scores[author_id] = 1.0 / (1.0 + d)
 
-        # Предсказание
         predicted_id = max(scores, key=scores.get) if scores else None
-        is_correct = predicted_id == true_author.id
+        is_correct = (predicted_id == true_author.id)
 
         if is_correct:
             correct += 1
         total += 1
 
-        # Статистика по авторам
         aid = true_author.id
         if aid not in author_results:
             author_results[aid] = {'correct': 0, 'total': 0, 'name': true_author.name}
@@ -346,7 +418,6 @@ def run_experiment(text_list: TblTextListDescription,
         if is_correct:
             author_results[aid]['correct'] += 1
 
-        # Сохраняем результат
         predicted_author = TblAuthor.objects.get(id=predicted_id) if predicted_id else None
         TblAttributionResult.objects.create(
             experiment=experiment,
@@ -358,40 +429,45 @@ def run_experiment(text_list: TblTextListDescription,
             is_correct=is_correct,
         )
 
-    # Подсчёт метрик
+    # ── Метрики ────────────────────────────────────────────
     accuracy = correct / total if total > 0 else 0
 
-    # Precision / Recall / F1 (macro-averaged)
+    # Precision и Recall по классам (авторам)
+    per_class_f1 = []
     precisions = []
     recalls = []
+
     for aid, data in author_results.items():
-        # TP = правильно предсказано для этого автора
         tp = data['correct']
-        # FP = другие тексты ошибочно приписаны этому автору
         fp = TblAttributionResult.objects.filter(
             experiment=experiment,
             predicted_author_id=aid,
             is_correct=False
         ).count()
-        # FN = тексты этого автора приписаны другим
         fn = data['total'] - tp
 
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-        precisions.append(precision)
-        recalls.append(recall)
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = (2 * precision * recall / (precision + recall)
+              if (precision + recall) > 0 else 0.0)
+
         data['precision'] = round(precision, 4)
         data['recall'] = round(recall, 4)
+        data['f1'] = round(f1, 4)
 
-    macro_precision = np.mean(precisions) if precisions else 0
-    macro_recall = np.mean(recalls) if recalls else 0
-    macro_f1 = (2 * macro_precision * macro_recall / (macro_precision + macro_recall)
-                if (macro_precision + macro_recall) > 0 else 0)
+        precisions.append(precision)
+        recalls.append(recall)
+        per_class_f1.append(f1)
+
+    macro_precision = float(np.mean(precisions)) if precisions else 0.0
+    macro_recall = float(np.mean(recalls)) if recalls else 0.0
+    # Корректный macro-F1: среднее по классам, а не F(P̄, R̄)
+    macro_f1 = float(np.mean(per_class_f1)) if per_class_f1 else 0.0
 
     experiment.accuracy = round(accuracy, 4)
-    experiment.precision = round(float(macro_precision), 4)
-    experiment.recall = round(float(macro_recall), 4)
-    experiment.f1_score = round(float(macro_f1), 4)
+    experiment.precision = round(macro_precision, 4)
+    experiment.recall = round(macro_recall, 4)
+    experiment.f1_score = round(macro_f1, 4)
     experiment.detailed_results = author_results
     experiment.build_status = 'completed'
     experiment.save()
