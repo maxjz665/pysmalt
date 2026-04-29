@@ -1,0 +1,324 @@
+{% extends "index.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+  <!-- ══════════════════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════════════════ -->
+  <div class="p-4 mb-4 rounded" style="background: linear-gradient(135deg,#1a237e 0%,#0d47a1 60%,#1565c0 100%); color:#fff;">
+    <div class="d-flex align-items-center mb-2">
+      <span class="badge badge-warning mr-2" style="font-size:.85rem;">Курсовая работа</span>
+      <span class="small" style="opacity:.8;">Петрозаводский государственный университет, 2025</span>
+    </div>
+    <h2 class="mb-1 font-weight-bold" style="line-height:1.25;">
+      Алгоритмы определения авторства текста<br>
+      <span style="font-size:1.2rem;font-weight:400;opacity:.9;">на основе синтаксического анализа</span>
+    </h2>
+    <p class="mb-3" style="opacity:.85;max-width:680px;">
+      Система использует вектор из <strong>193 синтаксических признаков</strong> (POS-теги, типы зависимостей,
+      синтаксические конструкции, функциональные слова) и два независимых метода атрибуции.
+      Все эксперименты проведены методом Leave-One-Out.
+    </p>
+    <a href="{% url 'authorship/home' %}" class="btn btn-outline-light btn-sm mr-2">
+      ← К модулю
+    </a>
+    <a href="{% url 'authorship/experiment_list' %}" class="btn btn-light btn-sm">
+      Все эксперименты
+    </a>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       STAT CARDS
+  ══════════════════════════════════════════════════════ -->
+  <div class="row mb-4">
+    <div class="col-6 col-md-3 mb-3">
+      <div class="card text-center h-100 border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div style="font-size:2.2rem;font-weight:700;color:#1565c0;">{{ best.n_authors }}</div>
+          <div class="text-muted small">авторов в лучшем корпусе</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+      <div class="card text-center h-100 border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div style="font-size:2.2rem;font-weight:700;color:#1565c0;">{{ best.n_texts }}</div>
+          <div class="text-muted small">текстов в лучшем корпусе</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+      <div class="card text-center h-100 border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div style="font-size:2.2rem;font-weight:700;color:#2e7d32;">{{ best.profile_f1 }}%</div>
+          <div class="text-muted small">F1 — профильный метод</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+      <div class="card text-center h-100 border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div style="font-size:2.2rem;font-weight:700;color:#e65100;">{{ best.ml_f1 }}%</div>
+          <div class="text-muted small">F1 — ML SVM</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       METHOD CARDS
+  ══════════════════════════════════════════════════════ -->
+  <h4 class="mb-3">Методы атрибуции</h4>
+  <div class="row mb-4">
+
+    <!-- Профильный метод -->
+    <div class="col-md-6 mb-3">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-header font-weight-bold" style="background:#e8f5e9;border-bottom:2px solid #2e7d32;color:#1b5e20;">
+          Метод 1 — Профильный (Ежов)
+        </div>
+        <div class="card-body">
+          <p class="card-text small">
+            Для каждого автора строится <strong>медианный синтаксический профиль</strong>
+            (вектор 193 признаков, нормализованный пофолдово).
+            Неизвестный текст сравнивается с профилями по
+            <strong>Манхэттенскому расстоянию</strong> с блочными весами.
+          </p>
+          <ul class="small mb-3">
+            <li>193-мерный вектор признаков (8 блоков)</li>
+            <li>Fold-wise z-score нормализация — без утечки</li>
+            <li>Медианная агрегация профиля (робастна к выбросам)</li>
+            <li>Блочные веса: синтаксические конструкции × 1.3</li>
+            <li>Оценка: Leave-One-Out, macro-F1</li>
+          </ul>
+          <div class="d-flex align-items-center">
+            <span class="mr-2 small text-muted">Лучший F1:</span>
+            <span class="badge badge-success" style="font-size:1rem;">{{ best.profile_f1 }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ML метод -->
+    <div class="col-md-6 mb-3">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-header font-weight-bold" style="background:#fff3e0;border-bottom:2px solid #e65100;color:#bf360c;">
+          Метод 2 — ML / SVM (Севрюков)
+        </div>
+        <div class="card-body">
+          <p class="card-text small">
+            Обучается классификатор <strong>SVM с RBF-ядром</strong> на синтаксических
+            признаках текстов. Гиперпараметры подбираются через
+            <strong>GridSearchCV</strong> с вложенной кросс-валидацией
+            (outer LOO, inner 3-fold Stratified KFold).
+          </p>
+          <ul class="small mb-3">
+            <li>SVM (RBF) + StandardScaler в пайплайне</li>
+            <li>SelectKBest (ANOVA F-score) — отбор признаков</li>
+            <li>GridSearch по C, gamma, kernel, k признаков</li>
+            <li>Nested CV — без утечки при оценке качества</li>
+            <li>Feature importance — что наиболее дискриминативно</li>
+          </ul>
+          <div class="d-flex align-items-center">
+            <span class="mr-2 small text-muted">Лучший F1:</span>
+            <span class="badge badge-warning text-dark" style="font-size:1rem;">{{ best.ml_f1 }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       COMPARISON TABLE
+  ══════════════════════════════════════════════════════ -->
+  <h4 class="mb-3">Сравнение корпусов</h4>
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead style="background:#f5f5f5;">
+          <tr>
+            <th>Корпус</th>
+            <th class="text-center">Авторов</th>
+            <th class="text-center">Текстов</th>
+            <th style="min-width:200px;">Profile F1 (manhattan)</th>
+            <th style="min-width:200px;">ML SVM F1</th>
+            <th class="text-center">Детали</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in corpora %}
+          <tr {% if c.is_best %}style="background:#f1f8e9;"{% endif %}>
+            <td>
+              {% if c.is_best %}
+                <strong>{{ c.label }}</strong>
+                <span class="badge badge-success ml-1">лучший</span>
+              {% else %}
+                {{ c.label }}
+              {% endif %}
+              <div class="text-muted" style="font-size:.78rem;max-width:260px;">{{ c.description }}</div>
+            </td>
+            <td class="text-center align-middle">{{ c.n_authors }}</td>
+            <td class="text-center align-middle">{{ c.n_texts }}</td>
+
+            <!-- Profile F1 bar -->
+            <td class="align-middle">
+              {% if c.profile_f1 %}
+                <div class="d-flex align-items-center">
+                  <div class="progress flex-grow-1 mr-2" style="height:18px;">
+                    <div class="progress-bar {% if c.is_best %}bg-success{% else %}bg-info{% endif %}"
+                         role="progressbar"
+                         style="width:{{ c.profile_f1 }}%;"
+                         aria-valuenow="{{ c.profile_f1 }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                  </div>
+                  <span class="small font-weight-bold" style="min-width:44px;">{{ c.profile_f1 }}%</span>
+                </div>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+
+            <!-- ML F1 bar -->
+            <td class="align-middle">
+              {% if c.ml_f1 %}
+                <div class="d-flex align-items-center">
+                  <div class="progress flex-grow-1 mr-2" style="height:18px;">
+                    <div class="progress-bar {% if c.is_best %}bg-warning{% else %}bg-secondary{% endif %}"
+                         role="progressbar"
+                         style="width:{{ c.ml_f1 }}%;"
+                         aria-valuenow="{{ c.ml_f1 }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                  </div>
+                  <span class="small font-weight-bold" style="min-width:44px;">{{ c.ml_f1 }}%</span>
+                </div>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+
+            <!-- Links -->
+            <td class="text-center align-middle">
+              {% if c.profile_exp_id %}
+                <a href="{% url 'authorship/experiment_detail' c.profile_exp_id %}" class="btn btn-xs btn-outline-success btn-sm py-0 px-1 d-block mb-1" style="font-size:.75rem;">Profile</a>
+              {% endif %}
+              {% if c.ml_exp_id %}
+                <a href="{% url 'authorship/experiment_detail' c.ml_exp_id %}" class="btn btn-xs btn-outline-warning btn-sm py-0 px-1 d-block" style="font-size:.75rem;">ML SVM</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       FEATURE VECTOR INFO
+  ══════════════════════════════════════════════════════ -->
+  <h4 class="mb-3">Вектор синтаксических признаков (193 компонента)</h4>
+  <div class="row mb-4">
+    <div class="col-md-6 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead style="background:#f5f5f5;">
+              <tr><th>Блок признаков</th><th class="text-center">Размер</th><th class="text-center">Вес</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Скалярные (длина, глубина)</td><td class="text-center">4</td><td class="text-center"><span class="badge badge-secondary">×0.35</span></td></tr>
+              <tr><td>POS-теги (унаграммы)</td><td class="text-center">17</td><td class="text-center"><span class="badge badge-secondary">×1.0</span></td></tr>
+              <tr><td>Типы зависимостей</td><td class="text-center">38</td><td class="text-center"><span class="badge badge-info">×1.2</span></td></tr>
+              <tr><td>Типы клауз</td><td class="text-center">4</td><td class="text-center"><span class="badge badge-secondary">×0.9</span></td></tr>
+              <tr><td>Распределение глубины (гист.)</td><td class="text-center">15</td><td class="text-center"><span class="badge badge-secondary">×0.8</span></td></tr>
+              <tr><td>POS-биграммы</td><td class="text-center">30</td><td class="text-center"><span class="badge badge-secondary">×1.0</span></td></tr>
+              <tr style="background:#f1f8e9;"><td><strong>Синтаксические конструкции</strong></td><td class="text-center"><strong>25</strong></td><td class="text-center"><span class="badge badge-success">×1.3</span></td></tr>
+              <tr><td>Функциональные слова</td><td class="text-center">60</td><td class="text-center"><span class="badge badge-secondary">×1.0</span></td></tr>
+              <tr style="background:#e3f2fd;">
+                <td><strong>Итого</strong></td>
+                <td class="text-center"><strong>193</strong></td>
+                <td class="text-center">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header" style="background:#e3f2fd;font-weight:600;">Лучший корпус: {{ best.label }}</div>
+        <div class="card-body">
+          <p class="small text-muted mb-2">Авторы:</p>
+          <ul class="small mb-3">
+            {% for author in best.authors_list %}
+            <li>{{ author }}</li>
+            {% endfor %}
+          </ul>
+          <div class="row text-center">
+            <div class="col-6">
+              <div style="font-size:1.5rem;font-weight:700;color:#2e7d32;">{{ best.profile_f1 }}%</div>
+              <div class="small text-muted">Profile F1</div>
+            </div>
+            <div class="col-6">
+              <div style="font-size:1.5rem;font-weight:700;color:#e65100;">{{ best.ml_f1 }}%</div>
+              <div class="small text-muted">ML SVM F1</div>
+            </div>
+          </div>
+          <hr class="my-2">
+          <p class="small text-muted mb-0">
+            {{ best.n_authors }} авторов × {{ best.texts_per_author }} текстов = {{ best.n_texts }} текстов
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       CONCLUSION
+  ══════════════════════════════════════════════════════ -->
+  <div class="card border-0 shadow-sm" style="border-left:4px solid #1565c0 !important;">
+    <div class="card-body">
+      <h5 class="card-title" style="color:#1565c0;">Выводы</h5>
+      <div class="row">
+        <div class="col-md-4 mb-2">
+          <div class="d-flex">
+            <span style="color:#2e7d32;font-size:1.3rem;margin-right:8px;">✓</span>
+            <div>
+              <strong>Оба метода работают</strong><br>
+              <span class="small text-muted">F1 выше 74% на всех корпусах</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-2">
+          <div class="d-flex">
+            <span style="color:#2e7d32;font-size:1.3rem;margin-right:8px;">✓</span>
+            <div>
+              <strong>Профильный метод лучше</strong><br>
+              <span class="small text-muted">F1 = {{ best.profile_f1 }}% vs {{ best.ml_f1 }}% у ML</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-2">
+          <div class="d-flex">
+            <span style="color:#2e7d32;font-size:1.3rem;margin-right:8px;">✓</span>
+            <div>
+              <strong>Лучший корпус — {{ best.label }}</strong><br>
+              <span class="small text-muted">{{ best.n_authors }} авторов, {{ best.n_texts }} текстов</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <hr class="my-2">
+      <p class="small text-muted mb-0">
+        Синтаксические признаки, извлечённые библиотекой <strong>Natasha</strong> (dependency parsing),
+        позволяют устойчиво различать стиль авторов русской публицистики XIX века.
+        Профильный метод превосходит ML в условиях малой выборки (LOO на 42 текстах),
+        что типично для авторитетных корпусов исторических текстов.
+      </p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

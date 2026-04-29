@@ -5,6 +5,7 @@ from django.urls import path
 
 from research.authorship.views.authorship_views import (
     authorship_home,
+    demo_view,
     extract_features_view,
     text_features_view,
     run_experiment_view,
@@ -16,6 +17,7 @@ from research.authorship.views.authorship_views import (
 
 urlpatterns = [
     path('', authorship_home, name='authorship/home'),
+    path('demo/', demo_view, name='authorship/demo'),
     path('features/extract', extract_features_view, name='authorship/extract_features'),
     path('features/<int:text_id>', text_features_view, name='authorship/text_features'),
     path('experiments/', experiment_list_view, name='authorship/experiment_list'),

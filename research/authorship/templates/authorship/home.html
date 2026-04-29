@@ -3,7 +3,12 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Определение авторства текста</h2>
+    <div class="d-flex align-items-center justify-content-between mb-1">
+        <h2 class="mb-0">Определение авторства текста</h2>
+        <a href="{% url 'authorship/demo' %}" class="btn btn-primary">
+            Презентация результатов →
+        </a>
+    </div>
     <p class="text-muted">Модуль синтаксического анализа для атрибуции текстов</p>
 
     <div class="row mt-4">

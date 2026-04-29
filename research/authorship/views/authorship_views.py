@@ -267,6 +267,70 @@ def attribute_text_view(request: HttpRequest) -> HttpResponse:
 
 
 # ────────────────────────────────────────────────────────────
+#  Демо-страница
+# ────────────────────────────────────────────────────────────
+
+def demo_view(request: HttpRequest) -> HttpResponse:
+    """Презентационная страница с итогами экспериментов."""
+    CORPORA = [
+        {
+            'label':       'Baseline 5×8',
+            'list_id':     3,
+            'n_authors':   5,
+            'n_texts':     40,
+            'description': 'Даль, Достоевский Ф.М., Мещерский В.П., Пуцыкович В.Ф., Страхов Н.Н.',
+            'is_best':     False,
+        },
+        {
+            'label':       '5×7',
+            'list_id':     4,
+            'n_authors':   5,
+            'n_texts':     35,
+            'description': 'Достоевский Ф.М., Мещерский В.П., Страхов Н.Н., Достоевский М.М., Григорьев А.А.',
+            'is_best':     False,
+        },
+        {
+            'label':       '7×6',
+            'list_id':     5,
+            'n_authors':   7,
+            'n_texts':     42,
+            'description': 'Достоевский Ф.М., Мещерский В.П., Страхов Н.Н., Достоевский М.М., '
+                           'Григорьев А.А., Победоносцев К.П., Пуцыкович В.Ф.',
+            'is_best':     True,
+        },
+    ]
+
+    for corpus in CORPORA:
+        profile_exp = TblAttributionExperiment.objects.filter(
+            text_list_id=corpus['list_id'],
+            method='profile',
+            build_status='completed',
+        ).order_by('-f1_score').first()
+
+        ml_exp = TblAttributionExperiment.objects.filter(
+            text_list_id=corpus['list_id'],
+            method='ml',
+            build_status='completed',
+        ).order_by('-f1_score').first()
+
+        corpus['profile_f1']     = round(profile_exp.f1_score * 100, 1) if profile_exp else None
+        corpus['profile_acc']    = round(profile_exp.accuracy  * 100, 1) if profile_exp else None
+        corpus['ml_f1']          = round(ml_exp.f1_score * 100, 1)      if ml_exp     else None
+        corpus['ml_acc']         = round(ml_exp.accuracy  * 100, 1)     if ml_exp     else None
+        corpus['profile_exp_id'] = profile_exp.id if profile_exp else None
+        corpus['ml_exp_id']      = ml_exp.id      if ml_exp      else None
+
+    best = next(c for c in CORPORA if c['is_best'])
+    best['texts_per_author'] = best['n_texts'] // best['n_authors']
+    best['authors_list'] = [a.strip() for a in best['description'].split(',')]
+
+    return render(request, 'authorship/demo.html', {
+        'corpora': CORPORA,
+        'best': best,
+    })
+
+
+# ────────────────────────────────────────────────────────────
 #  Сравнение методов
 # ────────────────────────────────────────────────────────────
 
