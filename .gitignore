@@ -9,3 +9,8 @@ __pycache__/
 
 shower/settings/local.py
 db.sqlite3
+
+# Generated reports — do not commit
+reports/*.html
+reports/*.md
+reports/*.pdf
