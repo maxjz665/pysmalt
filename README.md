@@ -11,10 +11,10 @@
 - запуск инструментария исследователя 
 
 ## Локальные настройки
-Для изменения настроек по умолчанию можно использовать файл `shower/settings/local.py`.
-Данный файл отсутствует в системе и создается вручную.
+Для переопределения настроек по умолчанию создайте файл `shower/settings/local.py` вручную
+(в репозитории его нет).
 
-Пример настройки подключения к БД в `shower/settings/local.py`:
+Пример подключения к MySQL в `shower/settings/local.py`:
 ```python
 DATABASES = {
     'default': {
@@ -55,7 +55,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-Если миграции применяются к уже существующей БД, то можно пропустить создание таблиц с помощью команды
+Если миграции применяются к уже существующей БД, таблицы можно не пересоздавать:
 ```shell
 python manage.py migrate --fake-initial
 ```
@@ -66,11 +66,11 @@ python manage.py test --settings=shower.settings.test
 ```
 
 ### Консоль отладки Django
-Для консоли необходимо установить дополнительно пакет https://django-debug-toolbar.readthedocs.io/en/stable/
+Установите пакет https://django-debug-toolbar.readthedocs.io/en/stable/
 ```shell
 pip install django-debug-toolbar
 ```
-и добавить настройки для консоли
+и добавьте в `shower/settings/local.py`:
 ```python
 from shower.settings.base import MIDDLEWARE, INSTALLED_APPS
 
