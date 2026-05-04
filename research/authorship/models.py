@@ -95,12 +95,25 @@ class TblSyntacticFeature(models.Model):
     feature_vector = models.JSONField(default=list,
                                       help_text='Полный нормализованный вектор признаков')
 
+    vector = models.JSONField(default=list, blank=True,
+                              help_text='193-component feature vector used by the authorship pipeline')
+    vector_size = models.IntegerField(default=193,
+                                      help_text='Feature vector size, expected to be 193')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     extracted_at = models.DateTimeField(auto_now=True)
 
     def get_feature_vector_np(self):
         """Возвращает вектор признаков как numpy-массив."""
         import numpy as np
-        return np.array(self.feature_vector, dtype=float)
+        return np.array(self.vector or self.feature_vector, dtype=float)
+
+    def save(self, *args, **kwargs):
+        if self.vector and not self.feature_vector:
+            self.feature_vector = self.vector
+        if self.feature_vector and not self.vector:
+            self.vector = self.feature_vector
+        self.vector_size = len(self.vector or self.feature_vector or [])
+        super().save(*args, **kwargs)
 
 
 class TblAuthorProfile(models.Model):
@@ -126,6 +139,8 @@ class TblAuthorProfile(models.Model):
                                       help_text='Усреднённый вектор признаков')
     profile_data = models.JSONField(default=dict,
                                     help_text='Детализированные данные профиля')
+    method = models.CharField(max_length=20, default='profile')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     built_at = models.DateTimeField(auto_now=True)
 
     def get_profile_vector_np(self):
@@ -161,10 +176,14 @@ class TblAttributionExperiment(models.Model):
                               help_text='Параметры эксперимента')
 
     # Результаты
+    metric = models.CharField(max_length=50, default='',
+                              help_text='Primary metric used by this experiment')
     accuracy = models.FloatField(default=0)
     precision = models.FloatField(default=0)
     recall = models.FloatField(default=0)
     f1_score = models.FloatField(default=0)
+    metrics = models.JSONField(default=dict,
+                               help_text='Metrics dict: accuracy, macro_precision, macro_recall, macro_f1')
     confusion_matrix = models.JSONField(default=list)
     detailed_results = models.JSONField(default=dict,
                                         help_text='Подробные результаты по авторам')

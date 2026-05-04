@@ -25,7 +25,73 @@ def authorship_home(request: HttpRequest) -> HttpResponse:
         user=request.user, exclude_deleted=True
     ).order_by("name")
 
+    attribution_candidates = None
+    input_text = ""
+    selected_list_id = None
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+        selected_list_id = int(request.POST.get("text_list", 0) or 0)
+        try:
+            if not selected_list_id:
+                raise ValueError("Выберите список текстов.")
+            text_list = TblTextListDescription.get_item(request.user, selected_list_id)
+
+            if action == "run_profile":
+                from research.authorship.utils.profile_method import run_experiment
+                experiment = run_experiment(
+                    text_list=text_list,
+                    metric="manhattan",
+                    owner=request.user if request.user.is_authenticated else None,
+                )
+                if experiment.build_status != "completed":
+                    raise ValueError(experiment.build_status)
+                return redirect('authorship/experiment_detail', experiment_id=experiment.id)
+
+            if action == "run_ml":
+                from research.authorship.utils.ml_method import run_experiment
+                experiment = run_experiment(
+                    text_list=text_list,
+                    classifier_type="svm",
+                    owner=request.user if request.user.is_authenticated else None,
+                )
+                if experiment.build_status != "completed":
+                    raise ValueError(experiment.build_status)
+                return redirect('authorship/experiment_detail', experiment_id=experiment.id)
+
+            if action == "attribute":
+                input_text = request.POST.get("input_text", "").strip()
+                if not input_text:
+                    raise ValueError("Введите текст для атрибуции.")
+                from research.authorship.utils.profile_method import attribute_text
+                attribution_candidates = attribute_text(
+                    raw_text=input_text,
+                    text_list=text_list,
+                    metric="manhattan",
+                )
+            else:
+                raise ValueError("Неизвестное действие.")
+        except Exception as exc:
+            logger.exception("Authorship home action failed")
+            messages.error(request, str(exc))
+
     experiments = TblAttributionExperiment.objects.all().order_by('-created_at')[:20]
+    list_rows = []
+    for text_list in text_lists:
+        item_qs = TblTextListItems.objects.filter(list=text_list)
+        text_ids = item_qs.values_list("text_id", flat=True)
+        list_rows.append({
+            "object": text_list,
+            "texts_count": item_qs.count(),
+            "authors_count": TblText.objects.filter(
+                id__in=text_ids,
+                author__isnull=False,
+            ).values("author_id").distinct().count(),
+            "features_count": TblSyntacticFeature.objects.filter(
+                text_id__in=text_ids,
+                vector_size=193,
+            ).count(),
+        })
 
     # Статистика
     total_features = TblSyntacticFeature.objects.count()
@@ -34,7 +100,11 @@ def authorship_home(request: HttpRequest) -> HttpResponse:
 
     return render(request, "authorship/home.html", {
         "text_lists": text_lists,
+        "list_rows": list_rows,
         "experiments": experiments,
+        "attribution_candidates": attribution_candidates,
+        "input_text": input_text,
+        "selected_list_id": selected_list_id,
         "stats": {
             "features": total_features,
             "profiles": total_profiles,
@@ -130,7 +200,7 @@ def run_experiment_view(request: HttpRequest) -> HttpResponse:
     # POST: запускаем эксперимент
     list_id = int(request.POST.get("text_list", 0))
     method = request.POST.get("method", "profile")
-    metric = request.POST.get("metric", "cosine")
+    metric = request.POST.get("metric", "manhattan")
     classifier_type = request.POST.get("classifier_type", "svm")
     experiment_name = request.POST.get("name", "")
 
@@ -230,7 +300,7 @@ def attribute_text_view(request: HttpRequest) -> HttpResponse:
     try:
         if method == 'profile':
             list_id = int(request.POST.get("text_list", 0))
-            metric = request.POST.get("metric", "cosine")
+            metric = request.POST.get("metric", "manhattan")
             text_list = TblTextListDescription.get_item(request.user, list_id)
 
             from research.authorship.utils.profile_method import attribute_text

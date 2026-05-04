@@ -65,6 +65,10 @@ class Command(BaseCommand):
             help='Report on all three corpora (list_id 3, 4, 5)',
         )
         parser.add_argument(
+            '--all', dest='all_corpora', action='store_true',
+            help='Alias for --all-corpora',
+        )
+        parser.add_argument(
             '--include-ml', action='store_true',
             help='Include ML SVM results in the report',
         )

@@ -1,426 +1,311 @@
-"""
-Алгоритм определения авторства на основе
-машинного обучения (классификация по синтаксическим признакам).
-
-Автор модуля: Р. Ю. Севрюков
-
-Метод:
-  1. Из текстов извлекаются синтаксические признаки
-     (тот же вектор из 77 компонент, что и в профильном методе).
-  2. Признаки нормализуются (StandardScaler).
-  3. Обучается классификатор (SVM с RBF-ядром или Random Forest).
-  4. Неизвестный текст классифицируется обученной моделью.
-
-Отличие от профильного метода: модель сама определяет
-оптимальные границы между классами в пространстве признаков,
-а не опирается на фиксированную метрику расстояния.
-Feature importance позволяет определить, какие синтаксические
-черты оказались наиболее дискриминативными.
-"""
 import logging
 import pickle
-from typing import List, Dict, Optional, Tuple
+import warnings
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.model_selection import (cross_val_predict, StratifiedKFold,
-                                     LeaveOneOut, GridSearchCV)
-from sklearn.feature_selection import SelectKBest, f_classif
-from sklearn.metrics import (accuracy_score, precision_score, recall_score,
-                             f1_score, confusion_matrix, classification_report)
-from sklearn.pipeline import Pipeline
 
-from research.authorship.models import (
-    TblSyntacticFeature, TblAttributionExperiment, TblAttributionResult
-)
+from research.authorship.models import TblAttributionExperiment, TblAttributionResult, TblSyntacticFeature
 from research.authorship.utils.features import (
-    extract_and_vectorize, extract_and_save_features,
-    FEATURE_NAMES, VECTOR_SIZE
+    FEATURE_NAMES,
+    VECTOR_SIZE,
+    FeatureExtractionError,
+    extract_and_save_features,
+    extract_and_vectorize,
 )
-from text_app.models.tbl_text import TblText
 from text_app.models.tbl_author import TblAuthor
-from text_app.models.tbl_textlist import TblTextListDescription
+from text_app.models.tbl_text import TblText
+from text_app.models.tbl_textlist import TblTextListDescription, TblTextListItems
 
 logger = logging.getLogger(__name__)
 
+SVM_PARAM_GRID = {
+    "selector__k": [50, 100, "all"],
+    "classifier__C": [0.1, 1.0, 10.0],
+    "classifier__gamma": ["scale", 0.1],
+    "classifier__kernel": ["rbf", "linear"],
+}
 
-# ────────────────────────────────────────────────────────────
-#  Построение обучающей выборки
-# ────────────────────────────────────────────────────────────
 
-def _prepare_dataset(text_list: TblTextListDescription) -> Tuple[np.ndarray, np.ndarray, list, list]:
-    """
-    Формирует матрицу признаков X и вектор меток y
-    из текстов заданного списка.
+def _load_sklearn():
+    try:
+        from sklearn.feature_selection import SelectKBest, f_classif
+        from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
+        from sklearn.model_selection import GridSearchCV, LeaveOneOut, StratifiedKFold
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.svm import SVC
+    except Exception as exc:
+        raise RuntimeError(
+            "scikit-learn is required for the ML authorship method. "
+            "Install requirements.txt and rerun the command."
+        ) from exc
 
-    Returns:
-        X: матрица (n_samples, 77)
-        y: массив меток авторов
-        text_ids: список id текстов (в том же порядке)
-        author_names: список имён авторов (для LabelEncoder)
-    """
-    from text_app.models.tbl_textlist import TblTextListItems
+    return {
+        "SelectKBest": SelectKBest,
+        "f_classif": f_classif,
+        "accuracy_score": accuracy_score,
+        "confusion_matrix": confusion_matrix,
+        "f1_score": f1_score,
+        "precision_score": precision_score,
+        "recall_score": recall_score,
+        "GridSearchCV": GridSearchCV,
+        "LeaveOneOut": LeaveOneOut,
+        "Pipeline": Pipeline,
+        "StandardScaler": StandardScaler,
+        "StratifiedKFold": StratifiedKFold,
+        "SVC": SVC,
+    }
 
-    items = TblTextListItems.objects.filter(
-        list=text_list
-    ).select_related('text', 'text__author')
 
-    X_list = []
-    y_list = []
+def _resolve_text_list(text_list: Union[int, TblTextListDescription]) -> TblTextListDescription:
+    if isinstance(text_list, TblTextListDescription):
+        return text_list
+    return TblTextListDescription.objects.get(id=int(text_list))
+
+
+def _feature_vector_for_text(text: TblText) -> np.ndarray:
+    try:
+        sf = TblSyntacticFeature.objects.get(text=text)
+    except TblSyntacticFeature.DoesNotExist:
+        sf = extract_and_save_features(text)
+
+    vector = sf.vector or sf.feature_vector
+    if len(vector) != VECTOR_SIZE:
+        raise FeatureExtractionError(
+            f"Text {text.id} has vector size {len(vector)}, expected {VECTOR_SIZE}."
+        )
+    return np.array(vector, dtype=float)
+
+
+def _prepare_dataset(text_list: TblTextListDescription) -> Tuple[np.ndarray, np.ndarray, List[int], Dict[int, str]]:
+    items = (
+        TblTextListItems.objects
+        .filter(list=text_list)
+        .select_related("text", "text__author")
+        .order_by("text_id")
+    )
+
+    vectors = []
+    labels = []
     text_ids = []
-    author_map = {}  # author_id -> author_name
+    author_map: Dict[int, str] = {}
 
     for item in items:
-        text_obj = item.text
-        author = text_obj.author
-        if author is None:
+        if not item.text.author_id:
             continue
+        vectors.append(_feature_vector_for_text(item.text))
+        labels.append(item.text.author_id)
+        text_ids.append(item.text_id)
+        author_map[item.text.author_id] = item.text.author.name
 
-        # Получаем или извлекаем признаки
-        try:
-            sf = TblSyntacticFeature.objects.get(text=text_obj)
-        except TblSyntacticFeature.DoesNotExist:
-            sf = extract_and_save_features(text_obj)
-
-        X_list.append(sf.feature_vector)
-        y_list.append(author.id)
-        text_ids.append(text_obj.id)
-        author_map[author.id] = author.name
-
-    X = np.array(X_list, dtype=float)
-    y = np.array(y_list)
-
-    return X, y, text_ids, author_map
+    return np.array(vectors, dtype=float), np.array(labels, dtype=int), text_ids, author_map
 
 
-# ────────────────────────────────────────────────────────────
-#  Обучение классификатора
-# ────────────────────────────────────────────────────────────
-
-def train_svm(X: np.ndarray, y: np.ndarray,
-              C: float = 1.0, gamma: str = 'scale',
-              kernel: str = 'rbf') -> Pipeline:
-    """
-    Обучает SVM-классификатор.
-
-    Args:
-        X: матрица признаков
-        y: метки классов
-        C: параметр регуляризации
-        gamma: параметр ядра
-        kernel: тип ядра ('rbf', 'linear', 'poly')
-
-    Returns:
-        Pipeline: обученный пайплайн (scaler + classifier)
-    """
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('classifier', SVC(
-            C=C, gamma=gamma, kernel=kernel,
-            probability=True,  # для predict_proba
-            random_state=42,
-            decision_function_shape='ovr'
-        ))
+def _make_svm_pipeline(sk):
+    return sk["Pipeline"]([
+        ("scaler", sk["StandardScaler"]()),
+        ("selector", sk["SelectKBest"](score_func=sk["f_classif"], k="all")),
+        ("classifier", sk["SVC"](probability=True, random_state=42)),
     ])
-    pipeline.fit(X, y)
-    return pipeline
 
 
-def train_random_forest(X: np.ndarray, y: np.ndarray,
-                        n_estimators: int = 100,
-                        max_depth: int = 10) -> Pipeline:
-    """
-    Обучает Random Forest классификатор.
-
-    Args:
-        X: матрица признаков
-        y: метки классов
-        n_estimators: количество деревьев
-        max_depth: максимальная глубина деревьев
-
-    Returns:
-        Pipeline: обученный пайплайн (scaler + classifier)
-    """
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('classifier', RandomForestClassifier(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            random_state=42,
-            n_jobs=-1
-        ))
-    ])
-    pipeline.fit(X, y)
-    return pipeline
+def _can_grid_search(y_train: np.ndarray) -> bool:
+    _, counts = np.unique(y_train, return_counts=True)
+    return len(counts) >= 2 and int(counts.min()) >= 2
 
 
-# ────────────────────────────────────────────────────────────
-#  Атрибуция текста
-# ────────────────────────────────────────────────────────────
+def _fit_estimator(sk, X_train: np.ndarray, y_train: np.ndarray):
+    pipeline = _make_svm_pipeline(sk)
+    if _can_grid_search(y_train):
+        _, counts = np.unique(y_train, return_counts=True)
+        inner_splits = min(3, int(counts.min()))
+        search = sk["GridSearchCV"](
+            pipeline,
+            SVM_PARAM_GRID,
+            cv=sk["StratifiedKFold"](n_splits=inner_splits, shuffle=True, random_state=42),
+            scoring="f1_macro",
+            n_jobs=1,
+            refit=True,
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            search.fit(X_train, y_train)
+        return search.best_estimator_, search.best_params_
 
-def attribute_text(raw_text: str,
-                   experiment: TblAttributionExperiment) -> List[Dict]:
-    """
-    Определяет автора текста с помощью обученной ML-модели.
-
-    Args:
-        raw_text: текст неизвестного авторства
-        experiment: эксперимент с обученной моделью
-
-    Returns:
-        list[dict]: список кандидатов с вероятностями
-    """
-    if not experiment.trained_model:
-        raise ValueError("Модель не обучена")
-
-    pipeline = pickle.loads(experiment.trained_model)
-    author_map = experiment.params.get('author_map', {})
-
-    # Извлекаем признаки
-    features, vector = extract_and_vectorize(raw_text)
-    X = np.array([vector])
-
-    # Предсказание
-    predicted_id = pipeline.predict(X)[0]
-    probabilities = pipeline.predict_proba(X)[0]
-    classes = pipeline.classes_
-
-    results = []
-    for cls, prob in zip(classes, probabilities):
-        author_name = author_map.get(str(cls), f"Author #{cls}")
-        results.append({
-            'author_id': int(cls),
-            'author_name': author_name,
-            'score': round(float(prob), 6),
-        })
-
-    results.sort(key=lambda x: x['score'], reverse=True)
-    for i, r in enumerate(results):
-        r['rank'] = i + 1
-
-    return results
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        pipeline.fit(X_train, y_train)
+    return pipeline, {"fallback": "no inner grid search; too few samples per class"}
 
 
-def get_feature_importance(experiment: TblAttributionExperiment) -> List[Dict]:
-    """
-    Возвращает важность признаков (только для Random Forest).
-
-    Returns:
-        list[dict]: [{name, importance}, ...], отсортированный по убыванию
-    """
-    if not experiment.trained_model:
-        return []
-
-    pipeline = pickle.loads(experiment.trained_model)
-    classifier = pipeline.named_steps['classifier']
-
-    if not hasattr(classifier, 'feature_importances_'):
-        return []
-
-    importances = classifier.feature_importances_
-    result = []
-    for name, imp in zip(FEATURE_NAMES, importances):
-        result.append({'name': name, 'importance': round(float(imp), 6)})
-
-    result.sort(key=lambda x: x['importance'], reverse=True)
-    return result
+def _prediction_scores(estimator, X_test: np.ndarray) -> Tuple[int, Dict[int, float], float]:
+    prediction = int(estimator.predict(X_test)[0])
+    scores: Dict[int, float] = {}
+    confidence = 1.0
+    if hasattr(estimator, "predict_proba"):
+        probabilities = estimator.predict_proba(X_test)[0]
+        classes = estimator.classes_
+        scores = {int(cls): float(prob) for cls, prob in zip(classes, probabilities)}
+        confidence = float(scores.get(prediction, 0.0))
+    return prediction, scores, confidence
 
 
-# ────────────────────────────────────────────────────────────
-#  Эксперимент с кросс-валидацией
-# ────────────────────────────────────────────────────────────
-
-def run_experiment(text_list: TblTextListDescription,
-                   classifier_type: str = 'svm',
-                   name: str = '',
-                   owner=None,
-                   **classifier_params) -> TblAttributionExperiment:
-    """
-    Запускает эксперимент по определению авторства
-    с кросс-валидацией и обучением модели.
-
-    Args:
-        text_list: список текстов для эксперимента
-        classifier_type: 'svm' или 'rf' (random forest)
-        name: название эксперимента
-        owner: пользователь-владелец
-        **classifier_params: параметры классификатора
-
-    Returns:
-        TblAttributionExperiment: результаты эксперимента
-    """
+def run_experiment(
+    text_list: Union[int, TblTextListDescription],
+    classifier_type: str = "svm",
+    name: str = "",
+    owner=None,
+    **classifier_params,
+) -> TblAttributionExperiment:
+    text_list = _resolve_text_list(text_list)
     experiment = TblAttributionExperiment.objects.create(
-        name=name or f"ML ({classifier_type}) - {text_list.name}",
-        method='ml',
+        name=name or f"ML SVC - {text_list.name}",
+        method="ml",
+        metric="f1_macro",
         text_list=text_list,
         owner=owner,
         params={
-            'classifier_type': classifier_type,
-            'classifier_params': classifier_params,
+            "pipeline": "StandardScaler -> SelectKBest(f_classif) -> SVC",
+            "outer_cv": "leave-one-out",
+            "param_grid": SVM_PARAM_GRID,
+            "classifier_type": classifier_type,
+            "vector_size": VECTOR_SIZE,
         },
-        build_status='running',
+        build_status="running",
     )
 
     try:
-        # Подготовка данных
+        if classifier_type != "svm":
+            raise ValueError("The report ML pipeline uses classifier_type='svm'.")
+
+        sk = _load_sklearn()
         X, y, text_ids, author_map = _prepare_dataset(text_list)
-
-        if len(X) < 3:
-            experiment.build_status = 'error: недостаточно текстов'
-            experiment.save()
-            return experiment
-
         unique_authors = np.unique(y)
-        if len(unique_authors) < 2:
-            experiment.build_status = 'error: недостаточно авторов'
-            experiment.save()
-            return experiment
+        if len(X) < 3 or len(unique_authors) < 2:
+            raise ValueError("Need at least 3 texts and 2 authors for ML attribution.")
 
-        # Сохраняем маппинг авторов
-        experiment.params['author_map'] = {str(k): v for k, v in author_map.items()}
-        experiment.params['n_samples'] = len(X)
-        experiment.params['n_authors'] = len(unique_authors)
-        experiment.params['vector_size'] = VECTOR_SIZE
+        y_pred = []
+        best_params_by_fold = []
+        for train_idx, test_idx in sk["LeaveOneOut"]().split(X, y):
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train = y[train_idx]
+            estimator, best_params = _fit_estimator(sk, X_train, y_train)
+            prediction, fold_scores, confidence = _prediction_scores(estimator, X_test)
+            y_pred.append(prediction)
+            best_params_by_fold.append(best_params)
 
-        # Внешняя кросс-валидация (для оценки качества).
-        # Внутренняя — для подбора гиперпараметров (nested CV, без утечки).
-        # LOO для внешней — методологически соответствует профильному методу
-        # и даёт максимально стабильную оценку на малом корпусе.
-        min_samples_per_class = min(np.bincount(
-            LabelEncoder().fit_transform(y)
-        ))
-
-        outer_cv = LeaveOneOut()
-
-        n_splits_inner = max(2, min(3, min_samples_per_class - 1))
-        inner_cv = StratifiedKFold(n_splits=n_splits_inner,
-                                   shuffle=True, random_state=0)
-
-        # Пайплайн со встроенным отбором признаков (ANOVA F-score).
-        # SelectKBest вычисляется внутри фолда → без утечки.
-        if classifier_type == 'svm':
-            pipeline = Pipeline([
-                ('scaler', StandardScaler()),
-                ('selector', SelectKBest(score_func=f_classif, k='all')),
-                ('classifier', SVC(probability=True, random_state=42)),
-            ])
-            param_grid = {
-                'selector__k': [50, 100, 'all'],
-                'classifier__C': [0.1, 1.0, 10.0],
-                'classifier__gamma': ['scale', 0.1],
-                'classifier__kernel': ['rbf', 'linear'],
-            }
-        elif classifier_type == 'rf':
-            pipeline = Pipeline([
-                ('scaler', StandardScaler()),
-                ('selector', SelectKBest(score_func=f_classif, k='all')),
-                ('classifier', RandomForestClassifier(
-                    random_state=42, n_jobs=-1,
-                )),
-            ])
-            param_grid = {
-                'selector__k': [50, 100, 'all'],
-                'classifier__n_estimators': [100, 300],
-                'classifier__max_depth': [5, 10, None],
-            }
-        else:
-            raise ValueError(f"Неизвестный тип классификатора: {classifier_type}")
-
-        estimator = GridSearchCV(
-            pipeline, param_grid, cv=inner_cv,
-            scoring='f1_macro', n_jobs=-1, refit=True,
-        )
-
-        # Nested CV: внешние фолды — для оценки, внутренние — для тюнинга.
-        y_pred = cross_val_predict(estimator, X, y, cv=outer_cv, n_jobs=1)
-
-        # Метрики
-        accuracy = accuracy_score(y, y_pred)
-        precision = precision_score(y, y_pred, average='macro', zero_division=0)
-        recall = recall_score(y, y_pred, average='macro', zero_division=0)
-        f1 = f1_score(y, y_pred, average='macro', zero_division=0)
-        cm = confusion_matrix(y, y_pred)
-
-        # Обучаем финальную модель на всех данных с подбором
-        # гиперпараметров на том же внутреннем CV.
-        estimator.fit(X, y)
-        pipeline = estimator.best_estimator_
-        experiment.params['best_params'] = {
-            k: (v if not isinstance(v, (int, float, str)) else v)
-            for k, v in estimator.best_params_.items()
-        }
-
-        # Сохраняем результаты по каждому тексту
-        for i, (text_id, true_label, pred_label) in enumerate(zip(text_ids, y, y_pred)):
-            text_obj = TblText.objects.get(id=text_id)
-            true_author = TblAuthor.objects.get(id=true_label)
-            pred_author = TblAuthor.objects.get(id=pred_label)
-
+            true_label = int(y[test_idx][0])
+            text = TblText.objects.get(id=text_ids[test_idx[0]])
             TblAttributionResult.objects.create(
                 experiment=experiment,
-                text=text_obj,
-                true_author=true_author,
-                predicted_author=pred_author,
-                confidence=1.0 if true_label == pred_label else 0.0,
-                scores={},
-                is_correct=(true_label == pred_label),
+                text=text,
+                true_author=TblAuthor.objects.get(id=true_label),
+                predicted_author=TblAuthor.objects.get(id=prediction),
+                confidence=round(confidence, 6),
+                scores={str(k): round(v, 6) for k, v in fold_scores.items()},
+                is_correct=(true_label == prediction),
             )
 
-        # Подробные результаты по авторам
-        detailed = {}
-        for author_id, author_name in author_map.items():
-            mask = (y == int(author_id))
-            if mask.sum() == 0:
-                continue
-            author_correct = ((y == int(author_id)) & (y_pred == int(author_id))).sum()
-            author_total = mask.sum()
-            detailed[author_id] = {
-                'name': author_name,
-                'correct': int(author_correct),
-                'total': int(author_total),
-                'accuracy': round(float(author_correct / author_total), 4),
+        y_pred_arr = np.array(y_pred, dtype=int)
+        labels = sorted(int(author_id) for author_id in unique_authors)
+        accuracy = sk["accuracy_score"](y, y_pred_arr)
+        precision = sk["precision_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
+        recall = sk["recall_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
+        macro_f1 = sk["f1_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
+        cm = sk["confusion_matrix"](y, y_pred_arr, labels=labels)
+
+        final_estimator, best_params = _fit_estimator(sk, X, y)
+
+        by_author = {}
+        for author_id in labels:
+            mask = y == author_id
+            total = int(mask.sum())
+            correct = int(((y == author_id) & (y_pred_arr == author_id)).sum())
+            by_author[str(author_id)] = {
+                "name": author_map.get(author_id, str(author_id)),
+                "correct": correct,
+                "total": total,
+                "accuracy": round(correct / total if total else 0.0, 4),
             }
 
-        # Feature importance (для RF) с учётом отбора признаков
-        feature_imp = []
-        if classifier_type == 'rf':
-            clf = pipeline.named_steps['classifier']
-            selector = pipeline.named_steps.get('selector')
-            if selector is not None and hasattr(selector, 'get_support'):
-                support = selector.get_support()
-                selected_names = [n for n, keep in zip(FEATURE_NAMES, support) if keep]
-            else:
-                selected_names = list(FEATURE_NAMES)
-            for fname, imp in zip(selected_names, clf.feature_importances_):
-                feature_imp.append({'name': fname, 'importance': round(float(imp), 6)})
-            feature_imp.sort(key=lambda x: x['importance'], reverse=True)
-
-        experiment.accuracy = round(accuracy, 4)
-        experiment.precision = round(precision, 4)
-        experiment.recall = round(recall, 4)
-        experiment.f1_score = round(f1, 4)
+        metrics = {
+            "accuracy": round(float(accuracy), 4),
+            "macro_precision": round(float(precision), 4),
+            "macro_recall": round(float(recall), 4),
+            "macro_f1": round(float(macro_f1), 4),
+            "n_texts": int(len(X)),
+            "n_authors": int(len(labels)),
+        }
+        experiment.accuracy = metrics["accuracy"]
+        experiment.precision = metrics["macro_precision"]
+        experiment.recall = metrics["macro_recall"]
+        experiment.f1_score = metrics["macro_f1"]
+        experiment.metrics = metrics
         experiment.confusion_matrix = cm.tolist()
         experiment.detailed_results = {
-            'by_author': detailed,
-            'feature_importance': feature_imp[:20],
-            'classification_report': classification_report(
-                y, y_pred,
-                target_names=[author_map.get(str(c), str(c)) for c in np.unique(y)],
-                output_dict=True,
-                zero_division=0
-            ),
+            "by_author": by_author,
+            "author_labels": [
+                {"id": author_id, "name": author_map.get(author_id, str(author_id))}
+                for author_id in labels
+            ],
+            "best_params": best_params,
+            "fold_params_sample": best_params_by_fold[:5],
         }
-        experiment.trained_model = pickle.dumps(pipeline)
-        experiment.build_status = 'completed'
+        experiment.params["author_map"] = {str(k): v for k, v in author_map.items()}
+        experiment.params["best_params"] = best_params
+        experiment.trained_model = pickle.dumps(final_estimator)
+        experiment.build_status = "completed"
         experiment.save()
-
-        logger.info(f"Эксперимент {experiment.name}: accuracy={accuracy:.2%}, F1={f1:.2%}")
-
-    except Exception as e:
-        logger.exception("Ошибка при выполнении эксперимента")
-        experiment.build_status = f'error: {str(e)}'
-        experiment.save()
+        logger.info(
+            "ML experiment %s completed: accuracy=%.4f macro_f1=%.4f",
+            experiment.id,
+            experiment.accuracy,
+            experiment.f1_score,
+        )
+    except Exception as exc:
+        logger.exception("ML experiment failed")
+        experiment.build_status = f"error: {exc}"
+        experiment.save(update_fields=["build_status"])
 
     return experiment
+
+
+def attribute_text(raw_text: str, experiment: TblAttributionExperiment) -> List[dict]:
+    if not experiment.trained_model:
+        raise ValueError("The selected ML experiment has no trained model.")
+
+    estimator = pickle.loads(experiment.trained_model)
+    author_map = experiment.params.get("author_map", {})
+    _features, vector = extract_and_vectorize(raw_text)
+    X = np.array([vector], dtype=float)
+
+    if not hasattr(estimator, "predict_proba"):
+        prediction = int(estimator.predict(X)[0])
+        return [{
+            "rank": 1,
+            "author_id": prediction,
+            "author_name": author_map.get(str(prediction), str(prediction)),
+            "score": 1.0,
+        }]
+
+    probabilities = estimator.predict_proba(X)[0]
+    candidates = []
+    for cls, probability in zip(estimator.classes_, probabilities):
+        author_id = int(cls)
+        candidates.append({
+            "author_id": author_id,
+            "author_name": author_map.get(str(author_id), str(author_id)),
+            "score": round(float(probability), 6),
+        })
+
+    candidates.sort(key=lambda item: item["score"], reverse=True)
+    for rank, item in enumerate(candidates, start=1):
+        item["rank"] = rank
+    return candidates
+
+
+def get_feature_importance(_experiment: TblAttributionExperiment) -> List[dict]:
+    return []

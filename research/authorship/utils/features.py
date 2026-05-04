@@ -12,11 +12,19 @@ from collections import Counter, defaultdict
 from typing import List, Dict, Optional, Tuple
 
 import numpy as np
-from natasha import Doc
 
-from research.authorship.utils.importer import get_natasha_doc, normalize_text, split_into_paragraphs
+from research.authorship.utils.importer import (
+    get_natasha_doc,
+    normalize_text,
+    reconstruct_text,
+    split_into_paragraphs,
+)
 
 logger = logging.getLogger(__name__)
+
+
+class FeatureExtractionError(RuntimeError):
+    """Raised when the real Natasha feature pipeline cannot process a text."""
 
 # ────────────────────────────────────────────────────────────
 #  Константы: фиксированный порядок признаков
@@ -50,6 +58,7 @@ CLAUSE_TYPES = [
 
 POS_TAG_INDEX = {tag: i for i, tag in enumerate(POS_TAGS)}
 DEP_TYPE_INDEX = {dep: i for i, dep in enumerate(DEP_TYPES)}
+FEATURE_BLOCKS = (4, 17, 38, 4, 15, 30, 25, 60)
 
 
 # ────────────────────────────────────────────────────────────
@@ -251,8 +260,13 @@ def extract_features_from_text(raw_text: str) -> dict:
     Returns:
         dict: словарь с признаками и распределениями
     """
+    if not raw_text or not raw_text.strip():
+        raise FeatureExtractionError("Cannot extract features from an empty text.")
+
     text = normalize_text(raw_text)
     paragraphs = split_into_paragraphs(text)
+    if not paragraphs:
+        raise FeatureExtractionError("Cannot split text into paragraphs for feature extraction.")
 
     all_pos_tags = Counter()
     all_pos_bigrams = Counter()
@@ -267,7 +281,13 @@ def extract_features_from_text(raw_text: str) -> dict:
     total_tokens = 0  # общее число токенов (для нормировки функциональных слов)
 
     for paragraph in paragraphs:
-        doc = get_natasha_doc(paragraph)
+        try:
+            doc = get_natasha_doc(paragraph)
+        except Exception as exc:
+            raise FeatureExtractionError(
+                "Natasha failed to parse a paragraph. Check that natasha and its "
+                "model dependencies are installed correctly."
+            ) from exc
         for sent in doc.sents:
             # Собираем токены предложения
             sent_tokens = [tok for tok in doc.tokens
@@ -289,6 +309,11 @@ def extract_features_from_text(raw_text: str) -> dict:
             all_productions.update(features['productions'])
             all_function_words.update(features['function_word_lemmas'])
             total_tokens += features['word_count']
+
+    if not sentence_lengths:
+        raise FeatureExtractionError(
+            "Natasha did not produce any parsed sentences for this text."
+        )
 
     # Нормализация распределений
     total_pos = sum(all_pos_tags.values()) or 1
@@ -424,6 +449,11 @@ def build_feature_vector(features: dict) -> List[float]:
     for fw in FUNCTION_WORDS_VOCAB:
         vec.append(fw_dist.get(fw, 0.0))
 
+    if len(vec) != VECTOR_SIZE:
+        raise FeatureExtractionError(
+            f"Feature vector has size {len(vec)}, expected {VECTOR_SIZE}."
+        )
+
     return vec
 
 
@@ -437,6 +467,25 @@ def extract_and_vectorize(raw_text: str) -> Tuple[dict, List[float]]:
     features = extract_features_from_text(raw_text)
     vector = build_feature_vector(features)
     return features, vector
+
+
+def _reconstruct_text_from_words(words: List) -> str:
+    """Best-effort reconstruction when punctuation rows are not available."""
+    parts = []
+    prev_paragraph = None
+    prev_sentence = None
+    for word in words:
+        if prev_paragraph is not None and word.paragraph_index != prev_paragraph:
+            parts.append("\n\n")
+        elif prev_sentence is not None and word.sentence_index != prev_sentence:
+            parts.append(". ")
+        elif parts:
+            parts.append(" ")
+        parts.append(word.word)
+        prev_paragraph = word.paragraph_index
+        prev_sentence = word.sentence_index
+    text = "".join(parts).strip()
+    return text if text.endswith((".", "!", "?")) else f"{text}."
 
 
 # ────────────────────────────────────────────────────────────
@@ -456,12 +505,14 @@ def extract_and_save_features(text_obj) -> 'TblSyntacticFeature':
     from research.authorship.models import TblSyntacticFeature
 
     # Получаем содержимое текста из SMALT
-    words = text_obj.get_content()
+    words = list(text_obj.get_content())
     if not words:
-        raise ValueError(f"Текст {text_obj.id} не содержит слов")
+        raise FeatureExtractionError(f"Text {text_obj.id} has no stored tokens.")
 
     # Восстанавливаем текст из слов
-    raw_text = ' '.join(w.word for w in words)
+    raw_text = reconstruct_text(text_obj)
+    if not raw_text or not any(mark in raw_text for mark in ".!?"):
+        raw_text = _reconstruct_text_from_words(words)
 
     features, vector = extract_and_vectorize(raw_text)
 
@@ -480,6 +531,8 @@ def extract_and_save_features(text_obj) -> 'TblSyntacticFeature':
             'punct_pattern_dist': {},
             'tree_depth_dist': features['tree_depth_dist'],
             'feature_vector': vector,
+            'vector': vector,
+            'vector_size': len(vector),
         }
     )
     return sf
@@ -502,3 +555,7 @@ FEATURE_NAMES = (
 )
 
 VECTOR_SIZE = len(FEATURE_NAMES)
+if sum(FEATURE_BLOCKS) != VECTOR_SIZE or VECTOR_SIZE != 193:
+    raise RuntimeError(
+        f"Invalid authorship feature layout: blocks={FEATURE_BLOCKS}, size={VECTOR_SIZE}"
+    )

@@ -6,9 +6,9 @@
 """
 import logging
 import re
-from datetime import date
 from typing import List, Tuple, Optional
 
+from django.utils import timezone
 from natasha import Segmenter, MorphVocab, NewsEmbedding, NewsMorphTagger, NewsSyntaxParser, Doc
 
 from text_app.models.tbl_text import TblText
@@ -208,8 +208,13 @@ def import_text_to_db(text_obj: TblText, raw_text: str) -> dict:
                         word_index += 1
 
                         # Ищем или создаём запись в словаре
-                        entry = TblDictWord(word=token_text)
-                        entry.save()
+                        lemma = (getattr(token, 'lemma', None) or token_text).lower()
+                        entry, _ = TblDictWord.objects.get_or_create(
+                            word=token_text,
+                            initial_form=lemma,
+                            modern=lemma,
+                            defaults={'param_01': 0},
+                        )
 
                         word_obj = TblWord(
                             text=text_obj,
@@ -218,7 +223,7 @@ def import_text_to_db(text_obj: TblText, raw_text: str) -> dict:
                             paragraph_index=para_idx,
                             sentence_index=sentences_count,
                             word_index=word_index,
-                            chdate=date.today().strftime("%Y-%m-%d"),
+                            chdate=timezone.now(),
                             word=token_text,
                             dictword=entry,
                             wordorder=0,

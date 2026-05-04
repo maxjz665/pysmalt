@@ -1,125 +1,134 @@
-"""
-Команда для запуска экспериментов по определению авторства из консоли.
+from django.core.management.base import BaseCommand, CommandError
 
-Примеры использования:
-    python manage.py run_authorship --list_id=1 --method=profile --metric=cosine
-    python manage.py run_authorship --list_id=1 --method=ml --classifier=svm
-    python manage.py run_authorship --list_id=1 --method=both
-    python manage.py run_authorship --list_id=1 --extract_only
-"""
-import logging
-
-from django.core.management.base import BaseCommand
-
+from research.authorship.utils.demo_data import get_default_authorship_list
+from research.authorship.utils.features import FeatureExtractionError, extract_and_save_features
 from text_app.models.tbl_textlist import TblTextListDescription, TblTextListItems
-
-logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Запуск экспериментов по определению авторства текста'
+    help = "Run authorship attribution experiments on a text list."
 
     def add_arguments(self, parser):
-        parser.add_argument('--list_id', type=int, required=True,
-                            help='ID списка текстов')
-        parser.add_argument('--method', type=str, default='both',
-                            choices=['profile', 'ml', 'both'],
-                            help='Метод атрибуции')
-        parser.add_argument('--metric', type=str, default='cosine',
-                            choices=['cosine', 'manhattan', 'kl'],
-                            help='Метрика для профильного метода')
-        parser.add_argument('--classifier', type=str, default='svm',
-                            choices=['svm', 'rf'],
-                            help='Классификатор для ML-метода')
-        parser.add_argument('--extract_only', action='store_true',
-                            help='Только извлечь признаки, не запускать эксперимент')
+        parser.add_argument("--list_id", "--list-id", dest="list_id", type=int, default=None)
+        parser.add_argument(
+            "--method",
+            default="both",
+            choices=["profile", "ml", "both"],
+            help="Experiment method.",
+        )
+        parser.add_argument(
+            "--metric",
+            default="manhattan",
+            choices=["manhattan", "cosine"],
+            help="Profile metric. The report pipeline uses Manhattan.",
+        )
+        parser.add_argument(
+            "--classifier",
+            default="svm",
+            choices=["svm", "rf"],
+            help="ML classifier family. The report pipeline uses svm.",
+        )
+        parser.add_argument(
+            "--extract-features",
+            action="store_true",
+            help="Extract/re-extract real Natasha 193-dimensional features before experiments.",
+        )
+        parser.add_argument(
+            "--extract-only",
+            "--extract_only",
+            dest="extract_only",
+            action="store_true",
+            help="Only extract real Natasha features and stop.",
+        )
 
     def handle(self, *args, **options):
-        list_id = options['list_id']
+        text_list = self._resolve_text_list(options["list_id"])
+        self.stdout.write(f"Text list: id={text_list.id} name='{text_list.name}'")
 
-        try:
-            text_list = TblTextListDescription.objects.get(id=list_id)
-        except TblTextListDescription.DoesNotExist:
-            self.stderr.write(f"Список текстов с ID={list_id} не найден")
-            return
+        if options["extract_features"] or options["extract_only"]:
+            self._extract_features(text_list)
+            if options["extract_only"]:
+                return
 
-        self.stdout.write(f"Список: {text_list.name}")
+        if options["method"] in ("profile", "both"):
+            from research.authorship.utils.profile_method import run_experiment as run_profile
 
-        # Шаг 1: извлечение признаков
-        self.stdout.write("Извлечение синтаксических признаков...")
-        from research.authorship.utils.features import extract_and_save_features
+            exp = run_profile(
+                text_list=text_list,
+                metric=options["metric"],
+                extract_features=options["extract_features"],
+            )
+            self._print_experiment(exp)
 
-        items = TblTextListItems.objects.filter(
-            list=text_list
-        ).select_related('text', 'text__author')
+        if options["method"] in ("ml", "both"):
+            from research.authorship.utils.ml_method import run_experiment as run_ml
 
+            exp = run_ml(
+                text_list=text_list,
+                classifier_type=options["classifier"],
+            )
+            self._print_experiment(exp)
+
+    def _resolve_text_list(self, list_id):
+        if list_id is not None:
+            try:
+                return TblTextListDescription.objects.get(id=list_id)
+            except TblTextListDescription.DoesNotExist as exc:
+                raise CommandError(f"Text list id={list_id} was not found.") from exc
+
+        text_list = get_default_authorship_list()
+        if not text_list:
+            raise CommandError(
+                "No text list was found. Run load_authorship_demo first or pass --list_id."
+            )
+        return text_list
+
+    def _extract_features(self, text_list):
+        items = (
+            TblTextListItems.objects
+            .filter(list=text_list)
+            .select_related("text", "text__author")
+            .order_by("text_id")
+        )
         processed = 0
-        errors = 0
+        errors = []
+        self.stdout.write("Extracting real Natasha authorship features...")
         for item in items:
             try:
                 sf = extract_and_save_features(item.text)
                 processed += 1
-                author_name = item.text.author.name if item.text.author else "???"
+                author_name = item.text.author.name if item.text.author else "unknown"
                 self.stdout.write(
-                    f"  [{processed}] {item.text.title[:50]} "
-                    f"(автор: {author_name}, "
-                    f"ср.длина={sf.avg_sentence_length:.1f}, "
-                    f"глубина={sf.avg_tree_depth:.1f})"
+                    f"  [{processed}] text_id={item.text_id} author='{author_name}' "
+                    f"vector_size={sf.vector_size}"
                 )
-            except Exception as e:
-                errors += 1
-                self.stderr.write(f"  Ошибка для текста {item.text.id}: {e}")
+            except FeatureExtractionError as exc:
+                errors.append(f"text_id={item.text_id}: {exc}")
 
+        if errors:
+            for error in errors:
+                self.stderr.write(error)
+            raise CommandError(
+                f"Feature extraction failed for {len(errors)} text(s); "
+                "the command did not use a synthetic fallback."
+            )
+
+        self.stdout.write(self.style.SUCCESS(f"Features extracted: {processed}"))
+
+    def _print_experiment(self, exp):
+        metrics = exp.metrics or {
+            "accuracy": exp.accuracy,
+            "macro_f1": exp.f1_score,
+            "n_texts": exp.results.count(),
+            "n_authors": len(exp.detailed_results.get("by_author", {}))
+            if isinstance(exp.detailed_results, dict) else 0,
+        }
         self.stdout.write(self.style.SUCCESS(
-            f"Извлечено признаков: {processed}, ошибок: {errors}"
+            f"experiment_id={exp.id} method={exp.method} status={exp.build_status} "
+            f"accuracy={metrics.get('accuracy', exp.accuracy):.4f} "
+            f"macro_f1={metrics.get('macro_f1', exp.f1_score):.4f} "
+            f"texts={metrics.get('n_texts', exp.results.count())} "
+            f"authors={metrics.get('n_authors', 0)}"
         ))
-
-        if options['extract_only']:
-            return
-
-        # Шаг 2: эксперименты
-        method = options['method']
-
-        if method in ('profile', 'both'):
-            self.stdout.write("\n--- Профильный метод (Ежов) ---")
-            from research.authorship.utils.profile_method import run_experiment as run_profile
-            exp = run_profile(
-                text_list=text_list,
-                metric=options['metric'],
-            )
-            self.stdout.write(self.style.SUCCESS(
-                f"Accuracy: {exp.accuracy:.4f}, "
-                f"Precision: {exp.precision:.4f}, "
-                f"Recall: {exp.recall:.4f}, "
-                f"F1: {exp.f1_score:.4f}"
-            ))
-            if exp.detailed_results:
-                for aid, data in exp.detailed_results.items():
-                    if isinstance(data, dict) and 'name' in data:
-                        self.stdout.write(
-                            f"  {data['name']}: {data.get('correct',0)}/{data.get('total',0)}"
-                        )
-
-        if method in ('ml', 'both'):
-            self.stdout.write("\n--- ML-метод (Севрюков) ---")
-            from research.authorship.utils.ml_method import run_experiment as run_ml
-            exp = run_ml(
-                text_list=text_list,
-                classifier_type=options['classifier'],
-            )
-            self.stdout.write(self.style.SUCCESS(
-                f"Accuracy: {exp.accuracy:.4f}, "
-                f"Precision: {exp.precision:.4f}, "
-                f"Recall: {exp.recall:.4f}, "
-                f"F1: {exp.f1_score:.4f}"
-            ))
-
-            # Feature importance для RF
-            if options['classifier'] == 'rf' and exp.detailed_results:
-                fi = exp.detailed_results.get('feature_importance', [])
-                if fi:
-                    self.stdout.write("\nТоп-10 важных признаков:")
-                    for item in fi[:10]:
-                        self.stdout.write(f"  {item['name']}: {item['importance']:.4f}")
-
-        self.stdout.write(self.style.SUCCESS("\nГотово."))
+        if exp.build_status != "completed":
+            raise CommandError(f"{exp.method} experiment did not complete: {exp.build_status}")
