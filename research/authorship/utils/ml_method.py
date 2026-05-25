@@ -267,10 +267,105 @@ def run_experiment(
         )
     except Exception as exc:
         logger.exception("ML experiment failed")
-        experiment.build_status = f"error: {exc}"
-        experiment.save(update_fields=["build_status"])
+        experiment.build_status = "failed"
+        experiment.error_message = str(exc)
+        experiment.save(update_fields=["build_status", "error_message"])
 
     return experiment
+
+
+def execute_existing_experiment(experiment: TblAttributionExperiment) -> None:
+    """
+    Run an ML experiment that has already been persisted (called by the worker).
+    Raises on failure — the worker handles build_status and error_message.
+    """
+    if experiment.method == 'ml' and experiment.params.get("classifier_type", "svm") != "svm":
+        raise ValueError("The report ML pipeline uses classifier_type='svm'.")
+
+    sk = _load_sklearn()
+    X, y, text_ids, author_map = _prepare_dataset(experiment.text_list)
+    unique_authors = np.unique(y)
+    if len(X) < 3 or len(unique_authors) < 2:
+        raise ValueError("Need at least 3 texts and 2 authors for ML attribution.")
+
+    y_pred = []
+    best_params_by_fold = []
+    for train_idx, test_idx in sk["LeaveOneOut"]().split(X, y):
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train = y[train_idx]
+        estimator, best_params = _fit_estimator(sk, X_train, y_train)
+        prediction, fold_scores, confidence = _prediction_scores(estimator, X_test)
+        y_pred.append(prediction)
+        best_params_by_fold.append(best_params)
+
+        true_label = int(y[test_idx][0])
+        text = TblText.objects.get(id=text_ids[test_idx[0]])
+        TblAttributionResult.objects.create(
+            experiment=experiment,
+            text=text,
+            true_author=TblAuthor.objects.get(id=true_label),
+            predicted_author=TblAuthor.objects.get(id=prediction),
+            confidence=round(confidence, 6),
+            scores={str(k): round(v, 6) for k, v in fold_scores.items()},
+            is_correct=(true_label == prediction),
+        )
+
+    y_pred_arr = np.array(y_pred, dtype=int)
+    labels = sorted(int(author_id) for author_id in unique_authors)
+    accuracy = sk["accuracy_score"](y, y_pred_arr)
+    precision = sk["precision_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
+    recall = sk["recall_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
+    macro_f1 = sk["f1_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
+    cm = sk["confusion_matrix"](y, y_pred_arr, labels=labels)
+
+    final_estimator, best_params = _fit_estimator(sk, X, y)
+
+    by_author = {}
+    for author_id in labels:
+        mask = y == author_id
+        total = int(mask.sum())
+        correct = int(((y == author_id) & (y_pred_arr == author_id)).sum())
+        by_author[str(author_id)] = {
+            "name": author_map.get(author_id, str(author_id)),
+            "correct": correct,
+            "total": total,
+            "accuracy": round(correct / total if total else 0.0, 4),
+        }
+
+    metrics = {
+        "accuracy": round(float(accuracy), 4),
+        "macro_precision": round(float(precision), 4),
+        "macro_recall": round(float(recall), 4),
+        "macro_f1": round(float(macro_f1), 4),
+        "n_texts": int(len(X)),
+        "n_authors": int(len(labels)),
+    }
+    experiment.accuracy = metrics["accuracy"]
+    experiment.precision = metrics["macro_precision"]
+    experiment.recall = metrics["macro_recall"]
+    experiment.f1_score = metrics["macro_f1"]
+    experiment.metrics = metrics
+    experiment.confusion_matrix = cm.tolist()
+    experiment.detailed_results = {
+        "by_author": by_author,
+        "author_labels": [
+            {"id": author_id, "name": author_map.get(author_id, str(author_id))}
+            for author_id in labels
+        ],
+        "best_params": best_params,
+        "fold_params_sample": best_params_by_fold[:5],
+    }
+    experiment.params["author_map"] = {str(k): v for k, v in author_map.items()}
+    experiment.params["best_params"] = best_params
+    experiment.trained_model = pickle.dumps(final_estimator)
+    experiment.build_status = "completed"
+    experiment.save()
+    logger.info(
+        "ML experiment %s completed: accuracy=%.4f macro_f1=%.4f",
+        experiment.id,
+        experiment.accuracy,
+        experiment.f1_score,
+    )
 
 
 def attribute_text(raw_text: str, experiment: TblAttributionExperiment) -> List[dict]:

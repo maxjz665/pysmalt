@@ -347,10 +347,110 @@ def run_experiment(
         )
     except Exception as exc:
         logger.exception("Profile experiment failed")
-        experiment.build_status = f"error: {exc}"
-        experiment.save(update_fields=["build_status"])
+        experiment.build_status = "failed"
+        experiment.error_message = str(exc)
+        experiment.save(update_fields=["build_status", "error_message"])
 
     return experiment
+
+
+def execute_existing_experiment(experiment: TblAttributionExperiment) -> None:
+    """
+    Run a profile experiment that has already been persisted (called by the worker).
+    Raises on failure — the worker handles build_status and error_message.
+    """
+    text_list = experiment.text_list
+    metric = experiment.params.get("metric", "manhattan")
+    extract_features = experiment.params.get("extract_features", False)
+
+    pairs = _list_text_author_pairs(text_list)
+    author_ids = sorted({author.id for _text, author in pairs})
+    if len(pairs) < 3 or len(author_ids) < 2:
+        raise ValueError("Need at least 3 texts and 2 authors for profile attribution.")
+
+    vectors = {
+        text.id: _feature_vector_for_text(text, extract_missing=extract_features)
+        for text, _author in pairs
+    }
+
+    predictions: List[Tuple[int, int]] = []
+    author_names = {author.id: author.name for _text, author in pairs}
+
+    for test_text, true_author in pairs:
+        train_pairs = [(text, author) for text, author in pairs if text.id != test_text.id]
+        train_matrix = np.array([vectors[text.id] for text, _author in train_pairs], dtype=float)
+        train_norm, test_norm = _normalize_fold(train_matrix, vectors[test_text.id])
+        train_weighted = [_apply_block_weights(vec) for vec in train_norm]
+        test_weighted = _apply_block_weights(test_norm)
+
+        fold_author_vectors: Dict[int, List[np.ndarray]] = {}
+        for (_text, author), vector in zip(train_pairs, train_weighted):
+            fold_author_vectors.setdefault(author.id, []).append(vector)
+
+        fold_profiles = {
+            author_id: _build_profile(vecs, aggregation="median")
+            for author_id, vecs in fold_author_vectors.items()
+            if vecs
+        }
+        distances = {
+            author_id: _distance_or_score(test_weighted, profile_vec, metric)[0]
+            for author_id, profile_vec in fold_profiles.items()
+        }
+        similarities = {
+            author_id: _distance_or_score(test_weighted, profile_vec, metric)[1]
+            for author_id, profile_vec in fold_profiles.items()
+        }
+        if not distances:
+            raise ValueError(f"Fold for text {test_text.id} has no author profiles.")
+
+        predicted_id = min(distances, key=distances.get)
+        predictions.append((true_author.id, predicted_id))
+        predicted_author = TblAuthor.objects.get(id=predicted_id)
+
+        TblAttributionResult.objects.create(
+            experiment=experiment,
+            text=test_text,
+            true_author=true_author,
+            predicted_author=predicted_author,
+            confidence=round(float(similarities[predicted_id]), 6),
+            scores={
+                str(author_id): {
+                    "author": author_names.get(author_id, str(author_id)),
+                    "distance": round(float(distance), 6),
+                    "similarity": round(float(similarities[author_id]), 6),
+                }
+                for author_id, distance in distances.items()
+            },
+            is_correct=(true_author.id == predicted_id),
+        )
+
+    metrics, confusion_matrix, by_author = _calculate_metrics(predictions, author_ids)
+    for author_id, values in by_author.items():
+        values["name"] = author_names.get(int(author_id), author_id)
+
+    experiment.accuracy = metrics["accuracy"]
+    experiment.precision = metrics["macro_precision"]
+    experiment.recall = metrics["macro_recall"]
+    experiment.f1_score = metrics["macro_f1"]
+    experiment.metrics = metrics
+    experiment.confusion_matrix = confusion_matrix
+    experiment.detailed_results = {
+        "by_author": by_author,
+        "author_labels": [
+            {"id": author_id, "name": author_names.get(author_id, str(author_id))}
+            for author_id in author_ids
+        ],
+    }
+    experiment.build_status = "completed"
+    experiment.save()
+
+    build_all_profiles(text_list)
+    logger.info(
+        "Profile experiment %s completed: accuracy=%.4f macro_f1=%.4f",
+        experiment.id,
+        experiment.accuracy,
+        experiment.f1_score,
+    )
 
 
 def attribute_text(

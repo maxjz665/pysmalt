@@ -19,7 +19,14 @@ from text_app.models.tbl_word import TblWord
 
 
 SMOKE_LIST_NAME = "Authorship smoke 3x4"
-SQL_DUMP_NAME = "smalt.sql.20220421.112227.gz"
+
+SQL_DUMP_CANDIDATES = [
+    "smalt.sql.20260115.070144.gz",   # primary (2026)
+    "smalt.sql.20220421.112227.gz",   # fallback (2022)
+]
+
+# Kept for backwards compatibility (error messages, etc.)
+SQL_DUMP_NAME = SQL_DUMP_CANDIDATES[0]
 
 
 @dataclass(frozen=True)
@@ -37,21 +44,18 @@ CORPUS_SPECS: Dict[str, CorpusSpec] = {
         list_name="Authorship corpus 5x8",
         authors=(10, 1, 15, 32, 14),
         texts_per_author=8,
-        target_list_id=3,
     ),
     "5x7": CorpusSpec(
         key="5x7",
         list_name="Authorship corpus 5x7",
         authors=(1, 15, 14, 2, 4),
         texts_per_author=7,
-        target_list_id=4,
     ),
     "7x6": CorpusSpec(
         key="7x6",
         list_name="Authorship corpus 7x6",
         authors=(1, 15, 14, 2, 4, 26, 32),
         texts_per_author=6,
-        target_list_id=5,
     ),
 }
 
@@ -146,20 +150,18 @@ class CorpusLoadError(RuntimeError):
 
 
 def find_sql_dump(explicit_path: Optional[str] = None) -> Optional[Path]:
-    candidates: List[Path] = []
     if explicit_path:
-        candidates.append(Path(explicit_path))
+        p = Path(explicit_path)
+        if p.exists():
+            return p.resolve()
 
     base_dir = Path(settings.BASE_DIR)
-    candidates.extend([
-        base_dir / SQL_DUMP_NAME,
-        base_dir.parent / SQL_DUMP_NAME,
-        base_dir.parent.parent / SQL_DUMP_NAME,
-    ])
-
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate.resolve()
+    search_dirs = [base_dir, base_dir.parent, base_dir.parent.parent]
+    for dump_name in SQL_DUMP_CANDIDATES:
+        for search_dir in search_dirs:
+            candidate = search_dir / dump_name
+            if candidate.exists():
+                return candidate.resolve()
     return None
 
 
@@ -505,7 +507,7 @@ def load_sql_corpus(
     authors_from_sql, selected = _select_sql_texts(sql_path, spec)
     words_by_source_id = _collect_sql_words(sql_path, [item["source_id"] for item in selected])
 
-    text_list = _get_or_create_list(spec.list_name, target_id=spec.target_list_id)
+    text_list = _get_or_create_list(spec.list_name)
     loaded_texts: List[TblText] = []
 
     with transaction.atomic():
@@ -560,10 +562,11 @@ def load_corpus(
 
     dump_path = find_sql_dump(sql_path)
     if not dump_path:
+        candidates_str = " or ".join(SQL_DUMP_CANDIDATES)
         raise CorpusLoadError(
             "Full corpora require the real SMALT SQL dump. Put "
-            f"{SQL_DUMP_NAME} in the project root, next to the project root, "
-            "or pass --source-sql=/path/to/dump. No synthetic full corpus is used."
+            f"{candidates_str} in the project root, next to the project root, "
+            "or pass --source-sql=/path/to/dump."
         )
 
     results = []

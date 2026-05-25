@@ -192,7 +192,10 @@ class TblAttributionExperiment(models.Model):
                                        help_text='Обученная модель (pickle)')
 
     created_at = models.DateTimeField(auto_now_add=True)
-    build_status = models.CharField(max_length=50, default='pending')
+    build_status = models.CharField(max_length=100, default='pending')
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True, default='')
 
 
 class TblAttributionResult(models.Model):

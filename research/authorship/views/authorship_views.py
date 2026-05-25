@@ -197,7 +197,7 @@ def run_experiment_view(request: HttpRequest) -> HttpResponse:
             "text_lists": text_lists,
         })
 
-    # POST: запускаем эксперимент
+    # POST: создаём queued-эксперимент и немедленно возвращаем redirect
     list_id = int(request.POST.get("text_list", 0))
     method = request.POST.get("method", "profile")
     metric = request.POST.get("metric", "manhattan")
@@ -210,39 +210,45 @@ def run_experiment_view(request: HttpRequest) -> HttpResponse:
             "text_lists": text_lists,
         })
 
-    text_list = TblTextListDescription.get_item(request.user, list_id)
+    if method not in ('profile', 'ml'):
+        messages.error(request, f"Неизвестный метод: {method}")
+        return render(request, "authorship/run_experiment.html", {
+            "text_lists": text_lists,
+        })
 
     try:
-        if method == 'profile':
-            from research.authorship.utils.profile_method import run_experiment
-            experiment = run_experiment(
-                text_list=text_list,
-                metric=metric,
-                name=experiment_name,
-                owner=request.user if request.user.is_authenticated else None,
-            )
-        elif method == 'ml':
-            from research.authorship.utils.ml_method import run_experiment
-            experiment = run_experiment(
-                text_list=text_list,
-                classifier_type=classifier_type,
-                name=experiment_name,
-                owner=request.user if request.user.is_authenticated else None,
-            )
-        else:
-            messages.error(request, f"Неизвестный метод: {method}")
-            return render(request, "authorship/run_experiment.html", {
-                "text_lists": text_lists,
-            })
-
-        return redirect('authorship/experiment_detail', experiment_id=experiment.id)
-
+        text_list = TblTextListDescription.get_item(request.user, list_id)
+        auto_name = (
+            f"Profile ({metric}) - {text_list.name}"
+            if method == 'profile'
+            else f"ML SVC - {text_list.name}"
+        )
+        params = {
+            "metric": metric,
+            "cv": "leave-one-out",
+        } if method == 'profile' else {
+            "pipeline": "StandardScaler -> SelectKBest(f_classif) -> SVC",
+            "outer_cv": "leave-one-out",
+            "classifier_type": classifier_type,
+        }
+        experiment = TblAttributionExperiment.objects.create(
+            name=experiment_name or auto_name,
+            method=method,
+            metric=metric if method == 'profile' else "f1_macro",
+            text_list=text_list,
+            owner=request.user if request.user.is_authenticated else None,
+            params=params,
+            build_status='queued',
+        )
     except Exception as e:
-        logger.exception("Ошибка при запуске эксперимента")
+        logger.exception("Ошибка при создании эксперимента")
         messages.error(request, f"Ошибка: {str(e)}")
         return render(request, "authorship/run_experiment.html", {
             "text_lists": text_lists,
         })
+
+    messages.info(request, "Эксперимент поставлен в очередь. Запустите run_authorship_worker.")
+    return redirect('authorship/experiment_detail', experiment_id=experiment.id)
 
 
 def experiment_detail_view(request: HttpRequest, experiment_id: int) -> HttpResponse:
@@ -251,10 +257,12 @@ def experiment_detail_view(request: HttpRequest, experiment_id: int) -> HttpResp
     results = TblAttributionResult.objects.filter(
         experiment=experiment
     ).select_related('text', 'true_author', 'predicted_author').order_by('text__title')
+    is_active = experiment.build_status in ('queued', 'running')
 
     return render(request, "authorship/experiment_detail.html", {
         "experiment": experiment,
         "results": results,
+        "is_active": is_active,
     })
 
 
