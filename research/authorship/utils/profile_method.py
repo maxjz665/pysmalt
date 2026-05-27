@@ -493,3 +493,120 @@ def attribute_text(
     for rank, item in enumerate(candidates, start=1):
         item["rank"] = rank
     return candidates
+
+
+# ── Fragment attribution helpers ──────────────────────────────────────────────
+
+_NO_PROFILE_MSG = (
+    "Для выбранного списка не найдены признаки/профили. "
+    "Сначала извлеките признаки или запустите профильный эксперимент."
+)
+
+
+def prepare_profile_attribution_context(
+    text_list: Union[int, TblTextListDescription],
+    metric: str = "manhattan",
+) -> dict:
+    """
+    Load and pre-process author profiles for fragment attribution.
+
+    Performs all DB queries and numpy conversions *once* so that the caller
+    (attribute_fragments) can reuse the result for every fragment without
+    hitting the database again.
+
+    Returns a context dict suitable for attribute_raw_text_with_context().
+
+    Raises:
+        ValueError: If profiles or normalisation stats are missing/incomplete.
+    """
+    text_list = _resolve_text_list(text_list)
+
+    profiles = list(TblAuthorProfile.objects.filter(text_list=text_list).select_related("author"))
+    if not profiles:
+        try:
+            profiles = build_all_profiles(text_list)
+        except Exception as exc:
+            raise ValueError(_NO_PROFILE_MSG) from exc
+
+    if not profiles:
+        raise ValueError(_NO_PROFILE_MSG)
+
+    reference = profiles[0].profile_data
+    mean = reference.get("mean")
+    std = reference.get("std")
+    if not mean or not std:
+        try:
+            profiles = build_all_profiles(text_list)
+        except Exception as exc:
+            raise ValueError(_NO_PROFILE_MSG) from exc
+        reference = profiles[0].profile_data
+        mean = reference.get("mean")
+        std = reference.get("std")
+
+    if not mean or not std:
+        raise ValueError(_NO_PROFILE_MSG)
+
+    mean_arr = np.array(list(mean), dtype=float)
+    std_arr = np.array(list(std), dtype=float)
+    std_arr[std_arr == 0.0] = 1.0
+
+    profile_entries = [
+        {
+            "author_id": p.author_id,
+            "author_name": p.author.name,
+            "texts_in_profile": p.texts_count,
+            "profile_vec": np.array(p.profile_vector, dtype=float),
+        }
+        for p in profiles
+    ]
+
+    return {
+        "text_list": text_list,
+        "metric": metric,
+        "mean": mean_arr,
+        "std": std_arr,
+        "profiles": profile_entries,
+    }
+
+
+def attribute_raw_text_with_context(raw_text: str, context: dict) -> List[dict]:
+    """
+    Attribute a single raw text string using a pre-built profile context.
+
+    Unlike attribute_text(), this function does *no* DB access — all profile
+    data was already loaded by prepare_profile_attribution_context().  Used by
+    attribute_fragments() to avoid re-loading profiles for each fragment.
+
+    Args:
+        raw_text: Fragment text to attribute.
+        context:  Dict returned by prepare_profile_attribution_context().
+
+    Returns:
+        Ranked list of candidate dicts: {author_id, author_name, score, distance,
+        texts_in_profile, rank}.
+    """
+    _features, vector = extract_and_vectorize(raw_text)
+    raw_vec = np.array(vector, dtype=float)
+
+    mean_arr: np.ndarray = context["mean"]
+    std_arr: np.ndarray = context["std"]
+    metric: str = context["metric"]
+    profile_entries: list = context["profiles"]
+
+    test_vec = _apply_block_weights((raw_vec - mean_arr) / std_arr)
+
+    candidates = []
+    for entry in profile_entries:
+        distance, similarity = _distance_or_score(test_vec, entry["profile_vec"], metric)
+        candidates.append({
+            "author_id": entry["author_id"],
+            "author_name": entry["author_name"],
+            "score": round(float(similarity), 6),
+            "distance": round(float(distance), 6),
+            "texts_in_profile": entry["texts_in_profile"],
+        })
+
+    candidates.sort(key=lambda item: (item["distance"], -item["score"]))
+    for rank, item in enumerate(candidates, start=1):
+        item["rank"] = rank
+    return candidates

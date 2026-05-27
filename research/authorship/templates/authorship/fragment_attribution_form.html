@@ -1,0 +1,103 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <a href="{% url 'authorship/home' %}" class="btn btn-sm btn-secondary mb-3">&larr; Назад</a>
+
+    <h2>Атрибуция фрагментов текста</h2>
+    <p class="text-muted">
+        Текст разбивается на фрагменты, для каждого определяется
+        <strong>наиболее близкий авторский профиль</strong> по синтаксическим признакам.
+        Результаты носят исследовательский характер.
+    </p>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'warning' }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Список текстов (авторские профили)</label>
+                    <select class="form-select" name="text_list" required>
+                        <option value="">— выберите список —</option>
+                        {% for tl in text_lists %}
+                            <option value="{{ tl.id }}" {% if tl.id == selected_list_id %}selected{% endif %}>
+                                {{ tl.id }} — {{ tl.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Режим разбиения</label>
+                    <select class="form-select" name="mode" id="modeSelect" onchange="toggleWindowParams()">
+                        <option value="word_window" {% if mode == 'word_window' %}selected{% endif %}>
+                            Скользящее окно по словам
+                        </option>
+                        <option value="paragraphs" {% if mode == 'paragraphs' %}selected{% endif %}>
+                            По абзацам (двойной перенос строки)
+                        </option>
+                    </select>
+                </div>
+
+                <div id="windowParams">
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label">Размер окна (слов)</label>
+                            <input type="number" class="form-control" name="window_words"
+                                   value="{{ window_words }}" min="10" max="2000">
+                            <div class="form-text">Рекомендуется 300–500 слов.</div>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Шаг (слов)</label>
+                            <input type="number" class="form-control" name="step_words"
+                                   value="{{ step_words }}" min="10" max="2000">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Порог надёжности (слов)</label>
+                    <input type="number" class="form-control" name="min_words_warn"
+                           value="{{ min_words_warn }}" min="1" max="1000" style="max-width:160px">
+                    <div class="form-text">
+                        Фрагменты короче этого значения помечаются как <strong>ненадёжные</strong>.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Метрика расстояния</label>
+                    <select class="form-select" name="metric" style="max-width:220px">
+                        <option value="manhattan" {% if metric == 'manhattan' %}selected{% endif %}>Манхэттенская</option>
+                        <option value="cosine" {% if metric == 'cosine' %}selected{% endif %}>Косинусная</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Текст для анализа</label>
+                    <textarea class="form-control" name="raw_text" rows="14"
+                              placeholder="Вставьте текст (рекомендуется не менее 500 слов общего объёма)…" required>{{ raw_text }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Атрибутировать фрагменты</button>
+    </form>
+</div>
+
+<script>
+function toggleWindowParams() {
+    var mode = document.getElementById('modeSelect').value;
+    document.getElementById('windowParams').style.display =
+        (mode === 'word_window') ? 'block' : 'none';
+}
+toggleWindowParams();
+</script>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <a href="{% url 'authorship/fragment_attribution' %}" class="btn btn-sm btn-secondary mb-3">
+        &larr; Новый анализ
+    </a>
+
+    <h2>Результаты атрибуции фрагментов</h2>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <table class="table table-sm table-bordered">
+                <tr><th>Список профилей</th><td>{{ text_list.name }}</td></tr>
+                <tr><th>Режим</th><td>
+                    {% if mode == 'word_window' %}
+                        Скользящее окно ({{ window_words }} сл., шаг {{ step_words }} сл.)
+                    {% else %}
+                        По абзацам
+                    {% endif %}
+                </td></tr>
+                <tr><th>Порог надёжности</th><td>&ge; {{ min_words_warn }} слов</td></tr>
+                <tr><th>Метрика</th><td>{{ metric }}</td></tr>
+                <tr><th>Фрагментов</th><td>{{ fragments|length }}</td></tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            {% if raw_text_preview %}
+            <div class="border rounded p-2 bg-light">
+                <small class="text-muted">Начало текста:</small><br>
+                <small>{{ raw_text_preview }}{% if raw_text_preview|length == 200 %}…{% endif %}</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if has_unreliable %}
+    <div class="alert alert-warning">
+        <strong>⚠ Внимание:</strong> часть фрагментов содержит меньше {{ min_words_warn }} слов.
+        Для коротких фрагментов точность снижается — результаты могут быть неустойчивыми.
+    </div>
+    {% endif %}
+
+    <div class="alert alert-info">
+        Результаты показывают <strong>наиболее близкий авторский профиль</strong> по синтаксическим признакам.
+        Они не равнозначны точному определению авторства.
+    </div>
+
+    {% if fragments %}
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width:40px">№</th>
+                    <th style="width:60px">Слов</th>
+                    <th>Предпросмотр фрагмента</th>
+                    <th>Наиболее близкий профиль</th>
+                    <th>Топ кандидаты (дистанция)</th>
+                    <th style="width:90px">Надёжность</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in fragments %}
+                <tr class="{% if not f.reliable %}table-warning{% endif %}">
+                    <td class="text-center">{{ f.index }}</td>
+                    <td class="text-center">{{ f.word_count }}</td>
+                    <td>
+                        <small class="text-muted font-monospace">{{ f.preview }}</small>
+                    </td>
+                    <td>
+                        {% if f.predicted_author != "—" %}
+                            <strong>{{ f.predicted_author }}</strong>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small>
+                            {% for s in f.scores %}
+                                {{ s.author }}:&nbsp;{{ s.distance }}{% if not forloop.last %}&ensp;|&ensp;{% endif %}
+                            {% endfor %}
+                        </small>
+                    </td>
+                    <td class="text-center">
+                        {% if f.reliable %}
+                            <span class="text-success" title="Достаточно слов">&#10004;</span>
+                        {% else %}
+                            <span class="text-warning" title="{{ f.warning }}">&#9888;</span>
+                            <br><small class="text-muted" style="font-size:0.7em">{{ f.warning }}</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-muted">Фрагменты не были получены. Проверьте входной текст и параметры.</div>
+    {% endif %}
+</div>
+{% endblock %}

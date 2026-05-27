@@ -13,6 +13,7 @@ from research.authorship.views.authorship_views import (
     experiment_list_view,
     attribute_text_view,
     compare_methods_view,
+    fragment_attribution_view,
 )
 
 urlpatterns = [
@@ -24,5 +25,6 @@ urlpatterns = [
     path('experiments/run', run_experiment_view, name='authorship/run_experiment'),
     path('experiments/<int:experiment_id>', experiment_detail_view, name='authorship/experiment_detail'),
     path('attribute/', attribute_text_view, name='authorship/attribute_text'),
+    path('attribute/fragments/', fragment_attribution_view, name='authorship/fragment_attribution'),
     path('compare/', compare_methods_view, name='authorship/compare_methods'),
 ]

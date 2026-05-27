@@ -7,7 +7,10 @@
             <h2 class="mb-1">Определение авторства текста</h2>
             <div class="text-muted">Natasha/Razdel -> 193 признака -> profile/ML -> результаты</div>
         </div>
-        <a href="{% url 'authorship/demo' %}" class="btn btn-outline-secondary btn-sm">Отчетные корпуса</a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'authorship/demo' %}" class="btn btn-outline-secondary btn-sm">Отчетные корпуса</a>
+            <a href="{% url 'authorship/fragment_attribution' %}" class="btn btn-outline-secondary btn-sm">Атрибуция фрагментов</a>
+        </div>
     </div>
 
     {% if messages %}

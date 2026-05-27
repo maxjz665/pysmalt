@@ -465,3 +465,90 @@ def compare_methods_view(request: HttpRequest) -> HttpResponse:
             "neither": neither,
         },
     })
+
+
+# ────────────────────────────────────────────────────────────
+#  Атрибуция фрагментов текста
+# ────────────────────────────────────────────────────────────
+
+def fragment_attribution_view(request: HttpRequest) -> HttpResponse:
+    """Разбивает текст на фрагменты и атрибутирует каждый по профильному методу."""
+    text_lists = TblTextListDescription.get_items(
+        user=request.user, exclude_deleted=True
+    ).order_by("name")
+
+    defaults = {
+        "mode": "word_window",
+        "window_words": 300,
+        "step_words": 150,
+        "min_words_warn": 150,
+        "metric": "manhattan",
+    }
+
+    if request.method == "GET":
+        return render(request, "authorship/fragment_attribution_form.html", {
+            "text_lists": text_lists,
+            **defaults,
+        })
+
+    # POST
+    list_id = int(request.POST.get("text_list", 0) or 0)
+    raw_text = request.POST.get("raw_text", "").strip()
+    mode = request.POST.get("mode", "word_window")
+    metric = request.POST.get("metric", "manhattan")
+    try:
+        window_words = max(1, int(request.POST.get("window_words", 300)))
+        step_words = max(1, int(request.POST.get("step_words", 150)))
+        min_words_warn = max(1, int(request.POST.get("min_words_warn", 150)))
+    except (ValueError, TypeError):
+        window_words, step_words, min_words_warn = 300, 150, 150
+
+    form_ctx = {
+        "text_lists": text_lists,
+        "mode": mode,
+        "window_words": window_words,
+        "step_words": step_words,
+        "min_words_warn": min_words_warn,
+        "metric": metric,
+        "selected_list_id": list_id,
+        "raw_text": raw_text,
+    }
+
+    if not list_id:
+        messages.error(request, "Выберите список текстов.")
+        return render(request, "authorship/fragment_attribution_form.html", form_ctx)
+
+    if not raw_text:
+        messages.error(request, "Введите текст для анализа.")
+        return render(request, "authorship/fragment_attribution_form.html", form_ctx)
+
+    try:
+        text_list = TblTextListDescription.get_item(request.user, list_id)
+        from research.authorship.utils.fragment_attribution import attribute_fragments
+        fragments = attribute_fragments(
+            raw_text=raw_text,
+            text_list=text_list,
+            mode=mode,
+            window_words=window_words,
+            step_words=step_words,
+            min_words_warn=min_words_warn,
+            metric=metric,
+        )
+    except Exception as exc:
+        logger.exception("Fragment attribution failed")
+        messages.error(request, f"Ошибка: {exc}")
+        return render(request, "authorship/fragment_attribution_form.html", form_ctx)
+
+    has_unreliable = any(not f["reliable"] for f in fragments)
+
+    return render(request, "authorship/fragment_attribution_results.html", {
+        "text_list": text_list,
+        "fragments": fragments,
+        "mode": mode,
+        "window_words": window_words,
+        "step_words": step_words,
+        "min_words_warn": min_words_warn,
+        "metric": metric,
+        "raw_text_preview": raw_text[:200],
+        "has_unreliable": has_unreliable,
+    })
