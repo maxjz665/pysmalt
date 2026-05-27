@@ -226,6 +226,7 @@ def run_experiment_view(request: HttpRequest) -> HttpResponse:
         params = {
             "metric": metric,
             "cv": "leave-one-out",
+            "extract_features": True,   # worker will extract if not yet present
         } if method == 'profile' else {
             "pipeline": "StandardScaler -> SelectKBest(f_classif) -> SVC",
             "outer_cv": "leave-one-out",

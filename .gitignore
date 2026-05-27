@@ -14,3 +14,6 @@ db.sqlite3
 reports/*.html
 reports/*.md
 reports/*.pdf
+
+# SQL dumps — do not commit to GitHub
+*.sql.gz

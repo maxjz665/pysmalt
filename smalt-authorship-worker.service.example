@@ -1,0 +1,26 @@
+# systemd service template for SMALT Authorship Worker
+#
+# Usage:
+#   1. Copy to /etc/systemd/system/smalt-authorship-worker.service
+#   2. Replace /path/to/pysmalt with the actual project path
+#   3. Replace 'smalt' with the actual user account
+#   4. sudo systemctl daemon-reload
+#   5. sudo systemctl enable smalt-authorship-worker
+#   6. sudo systemctl start smalt-authorship-worker
+#
+# This is an EXAMPLE TEMPLATE — do not install as-is.
+
+[Unit]
+Description=SMALT Authorship Worker
+After=network.target
+
+[Service]
+WorkingDirectory=/path/to/pysmalt
+ExecStart=/path/to/pysmalt/.venv/bin/python manage.py run_authorship_worker --settings=shower.settings.demo
+Restart=always
+RestartSec=5
+User=smalt
+Environment=DJANGO_SETTINGS_MODULE=shower.settings.demo
+
+[Install]
+WantedBy=multi-user.target
