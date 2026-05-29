@@ -4,9 +4,7 @@
 {% block content %}
 <div class="container mt-4 mb-5">
 
-  <!-- ══════════════════════════════════════════════════════
-       HERO
-  ══════════════════════════════════════════════════════ -->
+  <!-- Шапка -->
   <div class="p-4 mb-4 rounded" style="background: linear-gradient(135deg,#1a237e 0%,#0d47a1 60%,#1565c0 100%); color:#fff;">
     <div class="d-flex align-items-center mb-2">
       <span class="badge badge-warning mr-2" style="font-size:.85rem;">Дипломная работа</span>
@@ -29,9 +27,7 @@
     </a>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════
-       STAT CARDS
-  ══════════════════════════════════════════════════════ -->
+  <!-- Ключевые цифры -->
   <div class="row mb-4">
     <div class="col-6 col-md-3 mb-3">
       <div class="card text-center h-100 border-0 shadow-sm">
@@ -67,9 +63,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════
-       METHOD CARDS
-  ══════════════════════════════════════════════════════ -->
+  <!-- Методы -->
   <h4 class="mb-3">Методы атрибуции</h4>
   <div class="row mb-4">
 
@@ -130,9 +124,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════
-       COMPARISON TABLE
-  ══════════════════════════════════════════════════════ -->
+  <!-- Сравнение корпусов -->
   <h4 class="mb-3">Сравнение корпусов</h4>
   <div class="card border-0 shadow-sm mb-4">
     <div class="table-responsive">
@@ -214,9 +206,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════
-       FEATURE VECTOR INFO
-  ══════════════════════════════════════════════════════ -->
+  <!-- Вектор признаков -->
   <h4 class="mb-3">Вектор синтаксических признаков (193 компонента)</h4>
   <div class="row mb-4">
     <div class="col-md-6 mb-3">
@@ -275,47 +265,19 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════
-       CONCLUSION
-  ══════════════════════════════════════════════════════ -->
+  <!-- Выводы -->
   <div class="card border-0 shadow-sm" style="border-left:4px solid #1565c0 !important;">
     <div class="card-body">
       <h5 class="card-title" style="color:#1565c0;">Выводы</h5>
-      <div class="row">
-        <div class="col-md-4 mb-2">
-          <div class="d-flex">
-            <span style="color:#2e7d32;font-size:1.3rem;margin-right:8px;">✓</span>
-            <div>
-              <strong>Оба метода работают</strong><br>
-              <span class="small text-muted">F1 выше 74% на всех корпусах</span>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 mb-2">
-          <div class="d-flex">
-            <span style="color:#2e7d32;font-size:1.3rem;margin-right:8px;">✓</span>
-            <div>
-              <strong>Профильный метод лучше</strong><br>
-              <span class="small text-muted">F1 = {{ best.profile_f1 }}% vs {{ best.ml_f1 }}% у ML</span>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 mb-2">
-          <div class="d-flex">
-            <span style="color:#2e7d32;font-size:1.3rem;margin-right:8px;">✓</span>
-            <div>
-              <strong>Лучший корпус — {{ best.label }}</strong><br>
-              <span class="small text-muted">{{ best.n_authors }} авторов, {{ best.n_texts }} текстов</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ul class="mb-2">
+        <li>Оба метода работают: F1 выше 74% на всех корпусах.</li>
+        <li>Профильный метод точнее ML: {{ best.profile_f1 }}% против {{ best.ml_f1 }}%.</li>
+        <li>Лучший корпус — {{ best.label }} ({{ best.n_authors }} авторов, {{ best.n_texts }} текстов).</li>
+      </ul>
       <hr class="my-2">
       <p class="small text-muted mb-0">
-        Синтаксические признаки, извлечённые библиотекой <strong>Natasha</strong> (dependency parsing),
-        позволяют устойчиво различать стиль авторов русской публицистики XIX века.
-        Профильный метод превосходит ML в условиях малой выборки (LOO на 42 текстах),
-        что типично для авторитетных корпусов исторических текстов.
+        Синтаксические признаки (Natasha, dependency parsing) различают стиль авторов
+        русской публицистики XIX века. На малой выборке (LOO) профильный метод точнее ML.
       </p>
     </div>
   </div>
