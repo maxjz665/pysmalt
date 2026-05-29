@@ -116,10 +116,7 @@ RUN_AUTHORSHIP_WORKER.bat
 # Windows PowerShell:
 .\RUN_AUTHORSHIP_WORKER.ps1
 
-# Linux:
-bash smalt-authorship-worker.sh
-
-# Или напрямую:
+# Linux / напрямую (демо):
 python manage.py run_authorship_worker --settings=shower.settings.demo
 ```
 
@@ -131,7 +128,15 @@ Bat/sh-скрипты запуска (`run_smoke_authorship.bat` / `run_full_aut
 
 ### systemd (Linux, production)
 
-Используйте шаблон: `smalt-authorship-worker.service.example`
+Authorship-worker оформлен по той же схеме, что tree/ngram-воркеры SMALT
+(см. `service/`):
+
+- `service/smalt-authorship-app.service`
+- `service/smalt-authorship-app.sh`
+
+Установка — как в `service/readme.md`: поправить пути, скопировать
+`*.service` в `/etc/systemd/system`, включить и запустить. На боевом сервере
+worker идёт в основную БД (без `--settings=shower.settings.demo`).
 
 ---
 

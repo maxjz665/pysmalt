@@ -32,7 +32,11 @@ WORKER (нужен для кнопок Profile / ML)
 Если нужно запустить вручную:
   Windows:  RUN_AUTHORSHIP_WORKER.bat
   Windows:  RUN_AUTHORSHIP_WORKER.ps1
-  Linux:    bash smalt-authorship-worker.sh
+  Linux:    python manage.py run_authorship_worker --settings=shower.settings.demo
+
+Боевой systemd-сервис для smalt: см. папку service/
+(smalt-authorship-app.service / smalt-authorship-app.sh,
+ по аналогии с tree/ngram-воркерами).
 
 
 ЧТО ДОСТУПНО В ИНТЕРФЕЙСЕ

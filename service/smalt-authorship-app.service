@@ -1,0 +1,15 @@
+[Unit]
+Description=SMALT authorship attribution worker
+After=network.target remote-fs.target nss-lookup.target mysql.service
+StartLimitIntervalSec=1d
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/var/www/pysmalt/service/smalt-authorship-app.sh
+Restart=on-failure
+RestartSec=5s
+User=kulakov
+
+[Install]
+WantedBy=multi-user.target
