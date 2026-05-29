@@ -52,6 +52,22 @@ class AuthorshipPipelineTests(TestCase):
         response = Client().get("/research/authorship/")
         self.assertEqual(response.status_code, 200)
 
+    def test_home_run_profile_button_queues_experiment(self):
+        """Кнопка Profile на главной ставит эксперимент в очередь (async), не считает синхронно."""
+        from research.authorship.models import TblAttributionExperiment
+        before = TblAttributionExperiment.objects.count()
+        response = Client().post("/research/authorship/", {
+            "action": "run_profile",
+            "text_list": self.text_list.id,
+        })
+        self.assertEqual(response.status_code, 302)  # redirect на страницу эксперимента
+        self.assertEqual(TblAttributionExperiment.objects.count(), before + 1)
+        exp = TblAttributionExperiment.objects.latest("id")
+        self.assertEqual(exp.build_status, "queued")
+        self.assertEqual(exp.method, "profile")
+        # синхронно ничего не считалось — результатов пока нет
+        self.assertEqual(TblAttributionResult.objects.filter(experiment=exp).count(), 0)
+
     # ── Stage G: Fragment attribution ────────────────────────
 
     def test_attribute_fragments_returns_fragments(self):

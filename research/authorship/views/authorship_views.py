@@ -37,26 +37,33 @@ def authorship_home(request: HttpRequest) -> HttpResponse:
                 raise ValueError("Выберите список текстов.")
             text_list = TblTextListDescription.get_item(request.user, selected_list_id)
 
-            if action == "run_profile":
-                from research.authorship.utils.profile_method import run_experiment
-                experiment = run_experiment(
+            if action in ("run_profile", "run_ml"):
+                # Постановка в очередь (как форма /experiments/run); считает worker.
+                if action == "run_profile":
+                    method, metric = "profile", "manhattan"
+                    name = f"Profile (manhattan) - {text_list.name}"
+                    params = {
+                        "metric": "manhattan",
+                        "cv": "leave-one-out",
+                        "extract_features": True,
+                    }
+                else:
+                    method, metric = "ml", "f1_macro"
+                    name = f"ML SVC - {text_list.name}"
+                    params = {
+                        "pipeline": "StandardScaler -> SelectKBest(f_classif) -> SVC",
+                        "outer_cv": "leave-one-out",
+                        "classifier_type": "svm",
+                    }
+                experiment = TblAttributionExperiment.objects.create(
+                    name=name,
+                    method=method,
+                    metric=metric,
                     text_list=text_list,
-                    metric="manhattan",
                     owner=request.user if request.user.is_authenticated else None,
+                    params=params,
+                    build_status="queued",
                 )
-                if experiment.build_status != "completed":
-                    raise ValueError(experiment.build_status)
-                return redirect('authorship/experiment_detail', experiment_id=experiment.id)
-
-            if action == "run_ml":
-                from research.authorship.utils.ml_method import run_experiment
-                experiment = run_experiment(
-                    text_list=text_list,
-                    classifier_type="svm",
-                    owner=request.user if request.user.is_authenticated else None,
-                )
-                if experiment.build_status != "completed":
-                    raise ValueError(experiment.build_status)
                 return redirect('authorship/experiment_detail', experiment_id=experiment.id)
 
             if action == "attribute":
