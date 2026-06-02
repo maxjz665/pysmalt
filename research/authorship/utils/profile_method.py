@@ -23,7 +23,11 @@ from text_app.models.tbl_textlist import TblTextListDescription, TblTextListItem
 
 logger = logging.getLogger(__name__)
 
-BLOCK_WEIGHTS = (0.35, 1.0, 1.2, 0.9, 0.8, 1.0, 1.3, 1.0)
+# Веса блоков признаков, подобранные эмпирически (LOO на корпусах SMALT).
+# Равномерное взвешивание устойчиво превосходит ручную настройку, а блок
+# синтаксических продукций (7-й) оказался избыточным (дублирует типы
+# зависимостей и POS-биграммы) и исключён из метрики (вес 0).
+BLOCK_WEIGHTS = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0)
 
 
 def _block_slices() -> Tuple[slice, ...]:
