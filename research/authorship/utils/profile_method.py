@@ -117,6 +117,25 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / denom)
 
 
+def symmetric_kl(a: np.ndarray, b: np.ndarray) -> float:
+    """
+    Симметрическая KL-дивергенция Джеффриса между двумя векторами.
+
+    z-нормализованные векторы могут содержать отрицательные компоненты и не
+    являются распределениями, поэтому перед расчётом они переводятся в
+    вероятностные распределения через softmax (экспоненцирование с
+    нормировкой). Возвращает J(P,Q) = sum (P_i - Q_i) * log(P_i / Q_i) >= 0.
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    pa = np.exp(a - a.max()); pa = pa / pa.sum()
+    pb = np.exp(b - b.max()); pb = pb / pb.sum()
+    eps = 1e-12
+    pa = pa + eps
+    pb = pb + eps
+    return float(np.sum((pa - pb) * np.log(pa / pb)))
+
+
 def _distance_or_score(test_vec: np.ndarray, profile_vec: np.ndarray, metric: str) -> Tuple[float, float]:
     if metric == "manhattan":
         distance = manhattan_distance(test_vec, profile_vec)
@@ -124,6 +143,9 @@ def _distance_or_score(test_vec: np.ndarray, profile_vec: np.ndarray, metric: st
     if metric == "cosine":
         similarity = cosine_similarity(test_vec, profile_vec)
         return 1.0 - similarity, similarity
+    if metric == "kl":
+        distance = symmetric_kl(test_vec, profile_vec)
+        return distance, 1.0 / (1.0 + distance)
     raise ValueError(f"Unsupported profile metric: {metric}")
 
 

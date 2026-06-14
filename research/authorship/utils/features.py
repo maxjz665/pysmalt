@@ -60,6 +60,12 @@ POS_TAG_INDEX = {tag: i for i, tag in enumerate(POS_TAGS)}
 DEP_TYPE_INDEX = {dep: i for i, dep in enumerate(DEP_TYPES)}
 FEATURE_BLOCKS = (4, 17, 38, 4, 15, 30, 25, 60)
 
+# Размеры блоков, не покрытых отдельными словарями (POS_TAGS, DEP_TYPES и т.д.):
+# скалярные характеристики, типы предложений, распределение глубин деревьев.
+_N_SCALAR = FEATURE_BLOCKS[0]   # 4  — скалярные характеристики
+_N_CLAUSE = FEATURE_BLOCKS[3]   # 4  — типы предложений
+_N_DEPTH = FEATURE_BLOCKS[4]    # 15 — распределение глубин деревьев зависимостей
+
 
 # ────────────────────────────────────────────────────────────
 #  Расширенные синтаксические признаки

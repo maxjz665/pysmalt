@@ -24,7 +24,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--metric",
             default="manhattan",
-            choices=["manhattan", "cosine"],
+            choices=["manhattan", "cosine", "kl"],
             help="Profile metric. The report pipeline uses Manhattan.",
         )
         parser.add_argument(

@@ -26,9 +26,29 @@ SVM_PARAM_GRID = {
     "classifier__kernel": ["rbf", "linear"],
 }
 
+# Альтернативный классификатор — Random Forest. Сетка соответствует
+# табл. «Сетка гиперпараметров GridSearchCV (Random Forest)» отчёта.
+RF_PARAM_GRID = {
+    "selector__k": [50, 100, "all"],
+    "classifier__n_estimators": [100, 300],
+    "classifier__max_depth": [5, 10, None],
+}
+
+
+def _classifier_meta(classifier_type: str):
+    """Возвращает (описание пайплайна, сетку гиперпараметров, метку) по типу классификатора."""
+    if classifier_type == "rf":
+        return (
+            "StandardScaler -> SelectKBest(f_classif) -> RandomForestClassifier",
+            RF_PARAM_GRID,
+            "RF",
+        )
+    return "StandardScaler -> SelectKBest(f_classif) -> SVC", SVM_PARAM_GRID, "SVC"
+
 
 def _load_sklearn():
     try:
+        from sklearn.ensemble import RandomForestClassifier
         from sklearn.feature_selection import SelectKBest, f_classif
         from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
         from sklearn.model_selection import GridSearchCV, LeaveOneOut, StratifiedKFold
@@ -55,6 +75,7 @@ def _load_sklearn():
         "StandardScaler": StandardScaler,
         "StratifiedKFold": StratifiedKFold,
         "SVC": SVC,
+        "RandomForestClassifier": RandomForestClassifier,
     }
 
 
@@ -110,19 +131,32 @@ def _make_svm_pipeline(sk):
     ])
 
 
+def _make_rf_pipeline(sk):
+    return sk["Pipeline"]([
+        ("scaler", sk["StandardScaler"]()),
+        ("selector", sk["SelectKBest"](score_func=sk["f_classif"], k="all")),
+        ("classifier", sk["RandomForestClassifier"](random_state=42)),
+    ])
+
+
+def _make_pipeline(sk, classifier_type: str):
+    return _make_rf_pipeline(sk) if classifier_type == "rf" else _make_svm_pipeline(sk)
+
+
 def _can_grid_search(y_train: np.ndarray) -> bool:
     _, counts = np.unique(y_train, return_counts=True)
     return len(counts) >= 2 and int(counts.min()) >= 2
 
 
-def _fit_estimator(sk, X_train: np.ndarray, y_train: np.ndarray):
-    pipeline = _make_svm_pipeline(sk)
+def _fit_estimator(sk, X_train: np.ndarray, y_train: np.ndarray, classifier_type: str = "svm"):
+    pipeline = _make_pipeline(sk, classifier_type)
+    param_grid = RF_PARAM_GRID if classifier_type == "rf" else SVM_PARAM_GRID
     if _can_grid_search(y_train):
         _, counts = np.unique(y_train, return_counts=True)
         inner_splits = min(3, int(counts.min()))
         search = sk["GridSearchCV"](
             pipeline,
-            SVM_PARAM_GRID,
+            param_grid,
             cv=sk["StratifiedKFold"](n_splits=inner_splits, shuffle=True, random_state=42),
             scoring="f1_macro",
             n_jobs=1,
@@ -161,16 +195,17 @@ def run_experiment(
     **classifier_params,
 ) -> TblAttributionExperiment:
     text_list = _resolve_text_list(text_list)
+    pipeline_desc, param_grid, clf_label = _classifier_meta(classifier_type)
     experiment = TblAttributionExperiment.objects.create(
-        name=name or f"ML SVC - {text_list.name}",
+        name=name or f"ML {clf_label} - {text_list.name}",
         method="ml",
         metric="f1_macro",
         text_list=text_list,
         owner=owner,
         params={
-            "pipeline": "StandardScaler -> SelectKBest(f_classif) -> SVC",
+            "pipeline": pipeline_desc,
             "outer_cv": "leave-one-out",
-            "param_grid": SVM_PARAM_GRID,
+            "param_grid": param_grid,
             "classifier_type": classifier_type,
             "vector_size": VECTOR_SIZE,
         },
@@ -178,8 +213,8 @@ def run_experiment(
     )
 
     try:
-        if classifier_type != "svm":
-            raise ValueError("The report ML pipeline uses classifier_type='svm'.")
+        if classifier_type not in ("svm", "rf"):
+            raise ValueError("classifier_type must be 'svm' or 'rf'.")
 
         sk = _load_sklearn()
         X, y, text_ids, author_map = _prepare_dataset(text_list)
@@ -192,7 +227,7 @@ def run_experiment(
         for train_idx, test_idx in sk["LeaveOneOut"]().split(X, y):
             X_train, X_test = X[train_idx], X[test_idx]
             y_train = y[train_idx]
-            estimator, best_params = _fit_estimator(sk, X_train, y_train)
+            estimator, best_params = _fit_estimator(sk, X_train, y_train, classifier_type)
             prediction, fold_scores, confidence = _prediction_scores(estimator, X_test)
             y_pred.append(prediction)
             best_params_by_fold.append(best_params)
@@ -217,7 +252,7 @@ def run_experiment(
         macro_f1 = sk["f1_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
         cm = sk["confusion_matrix"](y, y_pred_arr, labels=labels)
 
-        final_estimator, best_params = _fit_estimator(sk, X, y)
+        final_estimator, best_params = _fit_estimator(sk, X, y, classifier_type)
 
         by_author = {}
         for author_id in labels:
@@ -279,8 +314,9 @@ def execute_existing_experiment(experiment: TblAttributionExperiment) -> None:
     Run an ML experiment that has already been persisted (called by the worker).
     Raises on failure — the worker handles build_status and error_message.
     """
-    if experiment.method == 'ml' and experiment.params.get("classifier_type", "svm") != "svm":
-        raise ValueError("The report ML pipeline uses classifier_type='svm'.")
+    classifier_type = experiment.params.get("classifier_type", "svm")
+    if experiment.method == 'ml' and classifier_type not in ("svm", "rf"):
+        raise ValueError("classifier_type must be 'svm' or 'rf'.")
 
     sk = _load_sklearn()
     X, y, text_ids, author_map = _prepare_dataset(experiment.text_list)
@@ -293,7 +329,7 @@ def execute_existing_experiment(experiment: TblAttributionExperiment) -> None:
     for train_idx, test_idx in sk["LeaveOneOut"]().split(X, y):
         X_train, X_test = X[train_idx], X[test_idx]
         y_train = y[train_idx]
-        estimator, best_params = _fit_estimator(sk, X_train, y_train)
+        estimator, best_params = _fit_estimator(sk, X_train, y_train, classifier_type)
         prediction, fold_scores, confidence = _prediction_scores(estimator, X_test)
         y_pred.append(prediction)
         best_params_by_fold.append(best_params)
@@ -318,7 +354,7 @@ def execute_existing_experiment(experiment: TblAttributionExperiment) -> None:
     macro_f1 = sk["f1_score"](y, y_pred_arr, labels=labels, average="macro", zero_division=0)
     cm = sk["confusion_matrix"](y, y_pred_arr, labels=labels)
 
-    final_estimator, best_params = _fit_estimator(sk, X, y)
+    final_estimator, best_params = _fit_estimator(sk, X, y, classifier_type)
 
     by_author = {}
     for author_id in labels:
@@ -402,5 +438,44 @@ def attribute_text(raw_text: str, experiment: TblAttributionExperiment) -> List[
     return candidates
 
 
-def get_feature_importance(_experiment: TblAttributionExperiment) -> List[dict]:
-    return []
+def get_feature_importance(experiment: TblAttributionExperiment, top_n: int = 20) -> List[dict]:
+    """
+    Наиболее дискриминативные признаки завершённого ML-эксперимента.
+
+    - Random Forest: встроенные ``feature_importances_`` (среднее снижение
+      примеси), отображённые обратно на исходные имена признаков через маску
+      SelectKBest.
+    - SVM: F-баллы ANOVA из SelectKBest (``scores_``) как прокси
+      дискриминативности, поскольку RBF-SVC не даёт пофичерных весов.
+
+    Возвращает список ``{"feature", "importance"}``, отсортированный по
+    убыванию важности (не более ``top_n`` элементов).
+    """
+    if not experiment or not experiment.trained_model:
+        return []
+    try:
+        estimator = pickle.loads(experiment.trained_model)
+        selector = estimator.named_steps.get("selector")
+        classifier = estimator.named_steps.get("classifier")
+    except Exception:
+        return []
+
+    pairs: List[dict] = []
+    if classifier is not None and hasattr(classifier, "feature_importances_"):
+        importances = classifier.feature_importances_
+        if selector is not None and hasattr(selector, "get_support"):
+            indices = selector.get_support(indices=True)
+        else:
+            indices = list(range(len(importances)))
+        for idx, value in zip(indices, importances):
+            name = FEATURE_NAMES[idx] if idx < len(FEATURE_NAMES) else str(idx)
+            pairs.append({"feature": name, "importance": round(float(value), 6)})
+    elif selector is not None and hasattr(selector, "scores_"):
+        for idx, value in enumerate(selector.scores_):
+            name = FEATURE_NAMES[idx] if idx < len(FEATURE_NAMES) else str(idx)
+            pairs.append({"feature": name, "importance": round(float(np.nan_to_num(value)), 6)})
+    else:
+        return []
+
+    pairs.sort(key=lambda item: item["importance"], reverse=True)
+    return pairs[:top_n]
